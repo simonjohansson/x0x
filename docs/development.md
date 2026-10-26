@@ -1,6 +1,6 @@
 # Development and verification
 
-The initial scaffold has independent host, C control and assembled CPU tests.
+The scaffold has independent host, C adapter and assembled CPU tests.
 The synthetic probe is test equipment, not an 808/909 implementation or a VST
 reference. Production audio will use assembly; native pages and full firmware
 adapter tests remain separate work.
@@ -39,9 +39,12 @@ different emulator installation for the pinned submodule.
 ## Independent checks
 
 ```sh
-mise run test              # host tests and compiled C control boundary
+mise run test              # host tests and all compiled C adapter boundaries
 mise run test:host         # no assembler, firmware, emulator or native pages
-mise run test:ui           # production C conversion with a fake receiver
+mise run test:ui           # common controls plus DT, DN and DN2 C adapters
+mise run test:ui:dt        # Digitakt C alone, no assembler/emulator/firmware
+mise run test:ui:dn        # Digitone C alone
+mise run test:ui:dn2       # Digitone II C alone
 mise run test:ui:coldfire  # no unsupported runtime imports in the target object
 mise run test:coldfire     # assemble and execute in digiemu
 mise run test:sharc        # assemble and execute in Digikit
@@ -95,6 +98,89 @@ digiemu's native JIT needs executable-memory permission. In the Codex sandbox
 used during setup, the ColdFire process terminated with SIGILL; the same bounded
 command passed when run with the executor's required native-code permission.
 Digikit's instruction interpreter and the host/C tests ran inside the sandbox.
+
+## Device adapter slices
+
+The private adapters live under `machines/`. Callers supply control bindings;
+these files reserve no permanent machine IDs or saved sound positions. They
+preserve exact delivered fractions and reject a malformed frame before any
+receiver notification. Native START/fresh metadata is retained without claiming
+it identifies a particular analog retrigger or a newly allocated note.
+
+```sh
+mise run test:adapters       # all three firmware-independent C-to-ASM components
+mise run test:dt:component   # compiled C + ColdFire ASM, native-service fakes
+mise run test:dn:component   # compiled C + ColdFire ASM, native-service fakes
+mise run test:dn2:component  # host-compiled C snapshots + SHARC ASM and bridge
+
+# Require the latest local stock firmware; native calls also require the baseline:
+mise run firmware:dt
+mise run test:dt:native
+mise run test:dn:companion
+mise run firmware:dn
+mise run test:dn:native
+```
+
+Each command emits a JSON report on stdout; use `> out/<name>.json` to retain it.
+Failures return 1 and unavailable prerequisites return 77. These commands cover
+different layers and do not replace the full firmware gates:
+
+| Device | Implemented evidence | Still required for its adapter foundation |
+| --- | --- | --- |
+| DT, OS 1.54 | C-to-ASM component; 105 bounded calls into real stock routines and linked SDK, with 53 observations of edits, smoothing, lock apply/restore and LFO values across eight tracks | Full OS event/render-hook dispatch, native lifecycle/onset and downstream audio |
+| DN, OS 1.44 | C-to-ASM component across eight slots; actual pinned companion with stock parameter records; bounded native live edit through linked `core_sound_set`, `dnm_knob`, C adapter and ASM | Post-smoothing/lock/LFO render-frame delivery, native allocation and full event/render path |
+| DN2, OS 1.12 | Host C trace fed to the actual SHARC diagnostic; 82 executions of the pinned upstream bridge with synthetic stock DSP frames across sixteen slots | Coupled OS encoder/MIDI/lock/smoothing transport, native identity and downstream processing |
+
+The DT native test executes real routines from the verified Core/companion
+baseline but supplies bounded initial state itself. DN's companion test compiles
+the actual pinned `machines.c`, supplies synthetic voice frames, and reads ranges
+from the verified stock parameter table. Its native live-edit test exercises the
+actual target buffer; it does not establish that this is the final modulated
+render frame. The native smoother/Core event probe observes
+`370, 730, 1078, 1416, 1744, 2062, 2370, 2670` while the adapter reads target
+`12345` throughout. Its passing diagnostic explicitly reports
+`render_frame_delivered: false`; [#75](https://github.com/simonjohansson/x0z/issues/75)
+tracks the missing delivered-control route. Neither bounded routine test boots
+the full OS.
+
+DN's raw encodings must come from `dnm_knob_range`: for example, the stock HARM
+record has raw bounds 9472..22784 even though its display uses -26..26. The adapter
+does not apply AMP or velocity. The companion test checks their default
+application once and verifies that `DNM_OWN_ENV` bypasses **both**, so intrinsic
+kick decay alone is not sufficient reason to enable that flag.
+
+DN2's C plumbing runs on ColdFire; SHARC receives the settled callback frame.
+Its component serializes the host-compiled C receiver output before executing
+the SHARC callback. A separate test executes the actual upstream bridge with
+synthetic packed frames, including all forty halfwords, undeclared `0xffff`
+values and stock-caller pass-through. It observes a silent trigger-edge block
+followed by START in the next settled block. This is bridge evidence, not native
+OS control delivery. Test-only machine 31 exists only in emulator memory.
+Faulty C variants must be rejected: fraction loss, wrong slot and unwanted level
+scaling on DN2; fraction loss, unconditional reassignment and overwritten velocity
+on DN.
+
+### Coupled DN2 setup blocker
+
+The pinned Digikit coupled emulator also needs the complete ADSP-2156x hardware
+manual text at `vendor/digikit/out/refs/adsp-2156x-hwr/all.txt` to construct cold
+MMR reset state. The public source is the
+[ADI hardware reference](https://www.analog.com/media/en/dsp-documentation/processor-manuals/adsp-2156x_hwr.pdf).
+The download failed in this environment; the located mirror failed certificate
+validation. No incomplete reset table was substituted. The manual and extracted
+text belong in ignored research/build storage, not Git.
+Its recovery URL and failed retrieval status are retained in the tracked
+[component manifest](../research/manifest-components.json), source S42.
+
+The firmware-free strict transpilation completed with 338 functions translated,
+zero untranslated functions and 185 explicit trap sites. The subsequent
+`tools.emulator.ready` command stopped on that missing text before native build
+or OS boot. To resume with the complete manual available, follow the pinned
+Digikit [source preparation](../vendor/digikit/docs/sharc/SOURCES.md) and
+[emulator commands](../vendor/digikit/README.md#run-the-emulator). Preserve the
+full reset-table validation and bounded execution; a generated core is not a
+passing coupled-emulator test. Foundation [#7](https://github.com/simonjohansson/x0z/issues/7)
+remains open for that work.
 
 ## Fixtures, results and measurements
 

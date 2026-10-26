@@ -1,6 +1,6 @@
 # Implementation plan: two CPU backends, six device cells
 
-Planning baseline: 26 October 2026. The shared contract, host fixtures, analyzer/comparisons and isolated C control tests are implemented. Bounded ColdFire arithmetic/EMAC and DN2 callback/state harnesses pass in the required emulators. Native UI/firmware transport and both kick engines remain unimplemented. The [research](kick-drum-research.md) defines the circuit basis; [development and verification](development.md) records commands and emulator limitations, and [roadmap #1](https://github.com/simonjohansson/x0z/issues/1) tracks execution.
+Planning baseline: 26 October 2026. The shared contract, host fixtures, analyzer/comparisons and isolated C adapter tests are implemented. Bounded ColdFire arithmetic/EMAC, DN2 callback/state and all three C-to-ASM adapter components pass in the required emulators. DT additionally executes native edit/smoothing/lock/LFO routines; DN executes its companion and bounded native live edits. DN2 executes the upstream bridge with synthetic stock frames. Full OS UI/firmware transport and both kick engines remain unimplemented. The [research](kick-drum-research.md) defines the circuit basis; [development and verification](development.md) records commands and emulator limitations, and [roadmap #1](https://github.com/simonjohansson/x0z/issues/1) tracks execution.
 
 Completed foundation scope: [shared semantics #4](https://github.com/simonjohansson/x0z/issues/4), [fixtures/test entry points #36](https://github.com/simonjohansson/x0z/issues/36), [known-signal analyzer #3](https://github.com/simonjohansson/x0z/issues/3), [oracle/CPU comparisons #38](https://github.com/simonjohansson/x0z/issues/38), [ColdFire harness #37](https://github.com/simonjohansson/x0z/issues/37) and [SHARC callback harness #5](https://github.com/simonjohansson/x0z/issues/5). These are emulator/test-equipment results, not device or kick-fidelity qualification. VST captures and calibrated timbre gates remain deferred. Firmware support is restricted to the [latest official baseline](../firmware/README.md); builds use the pinned Elekloader PR #200 revision.
 
@@ -26,9 +26,21 @@ Start the shared behavior/interface review, measurement checks and VST selection
 | [#40](https://github.com/simonjohansson/x0z/issues/40) Digitone foundation: Pin and test the C adapter with diagnostic ASM | Prove the Digitone device boundary before any complete kick engine. | [#36](https://github.com/simonjohansson/x0z/issues/36), [#37](https://github.com/simonjohansson/x0z/issues/37) |
 | [#7](https://github.com/simonjohansson/x0z/issues/7) Digitone II foundation: Pin and test the C adapter with diagnostic ASM | Prove the Digitone II device boundary before any complete kick engine. | [#36](https://github.com/simonjohansson/x0z/issues/36), [#5](https://github.com/simonjohansson/x0z/issues/5) |
 
-808 reference selection [#2](https://github.com/simonjohansson/x0z/issues/2) and 909 reference selection [#21](https://github.com/simonjohansson/x0z/issues/21) can run in parallel. Their capture/tolerance work is [#8](https://github.com/simonjohansson/x0z/issues/8) and [#22](https://github.com/simonjohansson/x0z/issues/22). DN2 packaging/persistence review [#23](https://github.com/simonjohansson/x0z/issues/23) is local to DN2 and does not block ColdFire.
+808 reference selection [#2](https://github.com/simonjohansson/x0z/issues/2) and 909 reference selection [#21](https://github.com/simonjohansson/x0z/issues/21) can run in parallel. Their capture/tolerance work is [#8](https://github.com/simonjohansson/x0z/issues/8) and [#22](https://github.com/simonjohansson/x0z/issues/22). DN2 packaging/persistence review [#23](https://github.com/simonjohansson/x0z/issues/23) is local to DN2 and does not block ColdFire. Its [nonbinding proposal](dn2-packaging-proposal.md) compares separate development variants, a combined selector and upstream multiple registrations; no saved layout is adopted.
 
 The shared interface is a private development contract. Concrete permanent IDs and saved control layouts need review before becoming stable. Pin each device's actual firmware/core/headers in its adapter work. DN2 development uses the exact Elekloader PR #200 head rather than waiting for a merge; changing that revision requires matched header/adapter checks.
+
+The adapter foundations #39, #40 and #7 remain open. Their C boundaries and
+diagnostic assembly components are now independently executable; each issue
+retains its missing native transport/lifecycle gates. Next, establish complete
+event-to-render traces per device without reserving permanent IDs. DT's bounded
+routine results and DN's target-buffer results do not close their full OS gates.
+The measured DN target-versus-smoothed-frame gap has a bounded follow-up,
+[#75](https://github.com/simonjohansson/x0z/issues/75), before delivered controls
+can satisfy #40.
+DN2 coupled setup currently stops on the missing complete hardware-manual reset
+table input; its bridge component can continue independently. See the
+[adapter evidence and setup blocker](development.md#device-adapter-slices).
 
 ## Independent delivery matrix
 

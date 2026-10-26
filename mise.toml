@@ -28,10 +28,10 @@ run = [
 ]
 
 [tasks.test]
-description = "Run host fixtures, measurements and isolated C control tests"
+description = "Run host fixtures, measurements and isolated C adapter tests"
 run = [
   "python -m unittest discover -s tests/host -p 'test_*.py'",
-  "python -m x0z.ui_test",
+  "mise run test:ui",
 ]
 
 [tasks."test:host"]
@@ -39,8 +39,25 @@ description = "Run host fixtures and measurements without firmware or emulators"
 run = "python -m unittest discover -s tests/host -p 'test_*.py'"
 
 [tasks."test:ui"]
-description = "Compile and run the C control boundary with fake native services"
-run = "python -m x0z.ui_test"
+description = "Compile and run all C boundaries with fake native services"
+run = [
+  "python -m x0z.ui_test",
+  "mise run test:ui:dt",
+  "mise run test:ui:dn",
+  "mise run test:ui:dn2",
+]
+
+[tasks."test:ui:dt"]
+description = "Test the Digitakt C adapter without firmware or an emulator"
+run = "python -m x0z.digitakt_adapter --host"
+
+[tasks."test:ui:dn"]
+description = "Test the Digitone C adapter without firmware or an emulator"
+run = "python -m x0z.digitone_adapter --host"
+
+[tasks."test:ui:dn2"]
+description = "Test the Digitone II C adapter without firmware or an emulator"
+run = "python -m x0z.digitone2_adapter --host"
 
 [tasks."test:ui:coldfire"]
 description = "Check that C controls cross-compile without unsupported runtime helpers"
@@ -65,6 +82,34 @@ run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0z.sha
 [tasks."test:emulators"]
 description = "Run both bounded instruction diagnostics"
 run = ["mise run test:coldfire", "mise run test:sharc", "mise run test:coldfire:arithmetic", "mise run test:sharc:callback"]
+
+[tasks."test:dt:component"]
+description = "Execute the compiled Digitakt C adapter and ASM with native-service fakes"
+run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0z.digitakt_adapter'
+
+[tasks."test:dt:native"]
+description = "Test bounded Digitakt OS routines, linked SDK values and the C-to-ASM path"
+run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0z.digitakt_adapter --native'
+
+[tasks."test:dn:component"]
+description = "Execute the compiled Digitone C adapter and ASM with native-service fakes"
+run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0z.digitone_adapter'
+
+[tasks."test:dn:companion"]
+description = "Test Digitone companion START, gate and AMP/velocity with stock parameter records"
+run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0z.digitone_adapter --companion'
+
+[tasks."test:dn:native"]
+description = "Test bounded Digitone OS live edits through the linked SDK and C-to-ASM path"
+run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0z.digitone_adapter --native'
+
+[tasks."test:dn2:component"]
+description = "Test Digitone II C snapshots and the pinned SHARC bridge in Digikit"
+run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0z.digitone2_adapter'
+
+[tasks."test:adapters"]
+description = "Run firmware-independent C-to-ASM adapter component checks"
+run = ["mise run test:dt:component", "mise run test:dn:component", "mise run test:dn2:component"]
 
 [tasks."firmware:verify"]
 description = "Verify the latest-only local stock images and pinned SDK identities"

@@ -154,5 +154,16 @@
     "status": "downloaded",
     "bytes": 324812,
     "sha256": "aa4803e723bcd6bb29a2e14b3493d6763d38656f7335f7dd07aeef2a72feb74d"
+  },
+  {
+    "id": "S42",
+    "title": "ADSP-2156x SHARC+ Processor Hardware Reference",
+    "url": "https://www.analog.com/media/en/dsp-documentation/processor-manuals/adsp-2156x_hwr.pdf",
+    "authority": "Manufacturer processor manual",
+    "retrieved": "2026-10-26",
+    "path": "sources/adsp-2156x-hwr.pdf",
+    "status": "failed",
+    "error": "Official download failed with HTTP/2 INTERNAL_ERROR; located mirrors failed certificate validation or required a browser challenge.",
+    "availability_note": "Complete PDF not saved. Pinned Digikit needs the full register reset tables extracted to vendor/digikit/out/refs/adsp-2156x-hwr/all.txt for coupled native setup. Its source notes name revision 1.0 (December 2020); verify any replacement revision and retain its hash before use. Do not substitute partial tables."
   }
 ]
