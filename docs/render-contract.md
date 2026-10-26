@@ -154,6 +154,8 @@ review; in particular, DN's existing ratio/algorithm slots cannot be assumed to
 behave like a full-range continuous knob. The trigger-strength path remains
 subject to the adapter's accent/velocity trace. No candidate appears in a
 firmware descriptor, and the private C enums are unrelated to these IDs.
+The [DN2 packaging proposal](dn2-packaging-proposal.md) expands its candidates
+and coexistence limits for review; it does not approve them.
 
 ## Independent acceptance
 
