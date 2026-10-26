@@ -1,0 +1,96 @@
+{
+  "policy": "Only the latest official firmware per active device is supported. Recheck the support page before updating; unsupported new firmware requires a reviewed SDK/profile port, never an automatic downgrade.",
+  "entries": [
+    {
+      "device": "digitakt-mk1",
+      "name": "Digitakt",
+      "version": "1.54",
+      "verified_latest_at_utc": "2026-10-26T15:40:53+00:00",
+      "support_url": "https://www.elektron.se/support-downloads/digitakt",
+      "download_url": "https://www.elektron.se/wp-content/uploads/2026/10/Digitakt_OS1.54_dist.zip",
+      "resolved_download_url": "https://www.elektron.se/wp-content/uploads/2026/10/Digitakt_OS1.54_dist.zip",
+      "archive": {
+        "path": "Digitakt_OS1.54_dist.zip",
+        "bytes": 1162046,
+        "sha256": "e9cd25070fa07adc1a57b0113c991693ae5d1e519d5e34a0aea72177ffcc94a6"
+      },
+      "image": {
+        "path": "Digitakt_OS1.54.syx",
+        "archive_member": "Digitakt_OS1.54.syx",
+        "bytes": 1423776,
+        "sha256": "f78ba80fa7b1da5fb0e1ff61ad61e9e71aafe79f4364fc49679f3651353e3cf6"
+      },
+      "container": "ELE3 SysEx",
+      "validation": {
+        "archive_crc": "pass",
+        "sdk_device": "digitakt-mk1",
+        "sdk_release": "1.54",
+        "stock_sha256": "matches pinned release profile",
+        "main_identity": "matches pinned release hash and length",
+        "stock_verify": "pass: SysEx shape/counters/checksums, container, protected stock ranges and in-place depack",
+        "hmac": "not applicable"
+      }
+    },
+    {
+      "device": "digitone-mk1",
+      "name": "Digitone",
+      "version": "1.44",
+      "verified_latest_at_utc": "2026-10-26T15:40:53+00:00",
+      "support_url": "https://www.elektron.se/support-downloads/digitone",
+      "download_url": "https://www.elektron.se/wp-content/uploads/2026/10/Digitone_and_Digitone_Keys_OS1.44_dist.zip",
+      "resolved_download_url": "https://www.elektron.se/wp-content/uploads/2026/10/Digitone_and_Digitone_Keys_OS1.44_dist.zip",
+      "archive": {
+        "path": "Digitone_and_Digitone_Keys_OS1.44_dist.zip",
+        "bytes": 1294581,
+        "sha256": "ba0d23876d8da28ee417ab6a77990bdf8ca01c8c743454c3bdd12f144f4468a5"
+      },
+      "image": {
+        "path": "Digitone_and_Digitone_Keys_OS1.44.syx",
+        "archive_member": "Digitone_and_Digitone_Keys_OS1.44.syx",
+        "bytes": 1673760,
+        "sha256": "d4f200d04484333d82822db7744e6484d0def8f2db8ddf55ee2b780cc13c9659"
+      },
+      "container": "ELE3 SysEx",
+      "validation": {
+        "archive_crc": "pass",
+        "sdk_device": "digitone-mk1",
+        "sdk_release": "1.44",
+        "stock_sha256": "matches pinned release profile",
+        "main_identity": "matches pinned release hash and length",
+        "stock_verify": "pass: SysEx shape/counters/checksums, container, protected stock ranges and in-place depack",
+        "hmac": "not applicable"
+      }
+    },
+    {
+      "device": "digitone-mk2",
+      "name": "Digitone II",
+      "version": "1.12",
+      "verified_latest_at_utc": "2026-10-26T15:40:53+00:00",
+      "support_url": "https://www.elektron.se/support-downloads/digitone-ii",
+      "download_url": "https://www.elektron.se/wp-content/uploads/2026/10/Digitone_II_OS1.12_dist.zip",
+      "resolved_download_url": "https://www.elektron.se/wp-content/uploads/2026/10/Digitone_II_OS1.12_dist.zip",
+      "archive": {
+        "path": "Digitone_II_OS1.12_dist.zip",
+        "bytes": 1941247,
+        "sha256": "25213a73e1d45757fb5e38e7cd2aa4cfaaca17c68b9c30bd6e280d38e5456859"
+      },
+      "image": {
+        "path": "Digitone_II_OS1.12.syx",
+        "archive_member": "Digitone_II_OS1.12.syx",
+        "bytes": 2390304,
+        "sha256": "7e5b8a733d4ab1fdf7e5d22757f7d8eddaa3cbf71d0858874a791844c02ceb35"
+      },
+      "container": "ELE3 SysEx",
+      "validation": {
+        "archive_crc": "pass",
+        "sdk_device": "digitone-mk2",
+        "sdk_release": "1.12",
+        "stock_sha256": "matches pinned release profile",
+        "main_identity": "matches pinned release hash and length",
+        "stock_verify": "pass: SysEx shape/counters/checksums, container, protected stock ranges and in-place depack",
+        "hmac": "verified"
+      }
+    }
+  ],
+  "elekloader_revision": "2ab5f424c4721e4277d2112a5ae755d9938f50d6"
+}

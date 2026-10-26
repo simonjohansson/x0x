@@ -4,6 +4,7 @@
 /out/
 /firmware/*
 !/firmware/README.md
+!/firmware/manifest.json
 __pycache__/
 *.py[cod]
 /.venv/
