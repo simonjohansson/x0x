@@ -4,6 +4,13 @@ The frequency estimate is intended for a tonal body, not a noisy attack. It uses
 positive zero-crossing periods, checks peak periods independently, excludes the
 first 10 ms after onset, and masks amplitudes below -80 dB relative to the peak
 or 1e-9 FS. It does not subtract DC, align time, or normalize gain.
+
+Decay fits expose an approximate two-standard-error slope interval. A time
+constant is applicable only when that interval is strictly negative and the
+slope exceeds the numerical flat-trend bound. ``valid`` means a regression can
+be computed; ``applicable`` means its declining trend is resolved. The interval
+assumes independent, constant-variance log-amplitude residuals; peak selection can violate those
+assumptions. It is estimator uncertainty, not a timbre-fidelity threshold.
 """
 
 import cmath
@@ -26,21 +33,34 @@ def _extrema(samples, sign):
 def _decay(peaks, rate, onset, floor):
     selected = [(sample / rate, math.log(amplitude)) for sample, amplitude in peaks
                 if sample >= onset + .01 * rate and amplitude >= floor]
-    result = {"valid": False, "points": len(selected), "time_constant_s": None,
+    result = {"valid": False, "applicable": False, "points": len(selected), "time_constant_s": None,
               "slope_db_per_s": None, "log_amplitude_rms_residual": None,
-              "r_squared": None}
+              "r_squared": None, "slope_log_amplitude_per_s": None,
+              "slope_standard_error_per_s": None,
+              "slope_two_standard_error_interval_per_s": None}
     if len(selected) < 3 or selected[-1][0] - selected[0][0] < .03:
         result["reason"] = "fewer than three peaks spanning 30 ms above the floor"
         return result
     xs, ys = zip(*selected)
     xm, ym = statistics.fmean(xs), statistics.fmean(ys)
-    slope = math.fsum((x - xm) * (y - ym) for x, y in selected) / math.fsum(
-        (x - xm) ** 2 for x in xs)
+    sxx = math.fsum((x - xm) ** 2 for x in xs)
+    slope = math.fsum((x - xm) * (y - ym) for x, y in selected) / sxx
     residual = math.fsum((y - ym - slope * (x - xm)) ** 2 for x, y in selected)
     variance = math.fsum((y - ym) ** 2 for y in ys)
-    result.update(valid=True, reason=None, start_s=xs[0], end_s=xs[-1],
-                  time_constant_s=-1 / slope if slope < -1e-9 else None,
+    standard_error = math.sqrt(residual / (len(xs) - 2) / sxx)
+    interval = [slope - 2 * standard_error, slope + 2 * standard_error]
+    applicable = slope < -1e-9 and interval[1] < 0
+    reason = None
+    if slope >= -1e-9:
+        reason = "nondecaying or numerically flat log-amplitude trend"
+    elif not applicable:
+        reason = "decay unresolved by approximate two-standard-error slope interval"
+    result.update(valid=True, applicable=applicable, reason=reason, start_s=xs[0], end_s=xs[-1],
+                  time_constant_s=-1 / slope if applicable else None,
                   slope_db_per_s=slope * 20 / math.log(10),
+                  slope_log_amplitude_per_s=slope,
+                  slope_standard_error_per_s=standard_error,
+                  slope_two_standard_error_interval_per_s=interval,
                   log_amplitude_rms_residual=math.sqrt(residual / len(xs)),
                   r_squared=1 - residual / variance if variance > 1e-20 else None)
     return result

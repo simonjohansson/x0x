@@ -1,5 +1,6 @@
 import json
 import math
+import random
 import unittest
 
 from x0z.analysis import analyze
@@ -23,9 +24,27 @@ class AnalysisTests(unittest.TestCase):
                 for name in ('decay_positive', 'decay_negative'):
                     fit = report[name]
                     self.assertTrue(fit['valid'])
+                    self.assertTrue(fit['applicable'])
                     self.assertAlmostEqual(fit['time_constant_s'], .2, delta=1e-5)
+                    self.assertGreaterEqual(fit['slope_standard_error_per_s'], 0)
+                    self.assertLess(fit['slope_two_standard_error_interval_per_s'][1], 0)
                     self.assertGreater(fit['r_squared'], .999999)
                     self.assertLess(fit['log_amplitude_rms_residual'], 1e-5)
+                json.dumps(report, allow_nan=False)
+
+    def test_stationary_noise_does_not_claim_a_resolved_decay(self):
+        for seed in (0, 1):
+            with self.subTest(seed=seed):
+                generator = random.Random(seed)
+                signal = [generator.uniform(-.25, .25) for _ in range(RATE // 2)]
+                report = analyze(signal, RATE)
+                fit = report['decay_positive']
+                self.assertTrue(fit['valid'])  # Regression is computable, decay is not resolved.
+                self.assertFalse(fit['applicable'])
+                self.assertIsNone(fit['time_constant_s'])
+                self.assertIsNotNone(fit['reason'])
+                self.assertGreater(fit['slope_standard_error_per_s'], 0)
+                self.assertGreaterEqual(fit['slope_two_standard_error_interval_per_s'][1], 0)
                 json.dumps(report, allow_nan=False)
 
     def test_raw_gain_energy_and_one_sample_delay_survive_analysis(self):
