@@ -5,20 +5,19 @@
 registration is adopted by this document. Approval is required before making
 these persisted choices. The [private contract](render-contract.md) still applies.
 
-## Recommendation and its limit
+## Selected packaging direction
 
-Use separate **808 and 909 firmware variants** for the first independent slices,
-with candidate synth IDs **18 and 19** respectively. Start with 808. This uses
-the exact pinned SDK without changing its registration ABI and avoids adding a
-model switch to the first sound format. Keep each ID and its control meanings
-stable once approved; never make the 909 variant reuse the 808 ID.
+The selected direction is **one registered synth with an 808/909 selector**.
+Each sound saves its model selection and controls, so both models can coexist
+on different allocated voices in one firmware image. This uses the pinned
+single-registration path and puts both kernels in one SHARC payload. Start
+with the 808 implementation, retaining this packaging direction for the 909.
 
-This is suitable for incremental development, but **one installed variant cannot
-play both models**. A project may retain sounds with both IDs while the absent
-model stays silent. If playing 808 and 909 together is required for the first
-combined release, choose the combined selector before publishing the first
-saved layout, or implement the upstream registration extension described below.
-Separate variants do not solve that product requirement.
+The exact candidate **ID 20**, name, clone, slots/defaults and switching policy
+below still require user review before production registration or a persisted
+layout is implemented. Choosing the packaging direction does not approve those
+details. IDs 18/19 were earlier review candidates only and were never adopted;
+there is no existing production format to migrate.
 
 ## What the pinned implementation actually permits
 
@@ -51,9 +50,9 @@ Inspected Elekloader PR #200 head
 
 | Option | Save/load identity and coexistence | Work and tradeoff |
 | --- | --- | --- |
-| One registered machine, model selector | One candidate ID, with each sound saving its selector and knobs; both models can run on different allocated voices in one image. | Supported by the current packaging. Requires both DSPs in one payload, a permanent selector slot, per-voice model state and reviewed switching semantics. One static page cannot change its labels with the model through the current page API. |
-| Separate firmware variants | 808 saves ID 18; 909 saves ID 19. Only the installed model renders. | Smallest current-pin implementation and simplest first persistence contract. Switching firmware interrupts all audio. Keep both sound backups and the companion when exchanging variants. |
-| Upstream multiple native SHARC registrations | Separate stable IDs 18/19 and independent pages; both models coexist in one image. | Clearest native user experience, but unavailable at this pin. Requires coordinated artifact, linker, bridge and test changes, rather than disabling one linker refusal. |
+| One registered machine, model selector — selected | One candidate ID, with each sound saving its selector and knobs; both models can run on different allocated voices in one image. | Supported by the current packaging. Requires both DSPs in one payload, a permanent selector slot, per-voice model state and reviewed switching semantics. One static page cannot change its labels with the model through the current page API. |
+| Separate firmware variants — alternative only | Separate candidate IDs 18/19; only the installed model renders. | Simpler first persistence contract, but cannot play both models in one image. Switching firmware interrupts all audio. These IDs were never adopted. |
+| Upstream multiple native SHARC registrations — alternative only | Separate stable IDs and independent pages; both models coexist in one image. | Unavailable at this pin. Requires coordinated artifact, linker, bridge and test changes, rather than disabling one linker refusal. |
 
 With `machines-dn2` retained, an absent synth ID 5..31 is preserved on load,
 reported as MISSING by name accessors and mapped to silent MIDI DSP type.
@@ -63,39 +62,35 @@ FM TONE. These are inspected implementation paths, not a completed x0z
 project/sound round-trip qualification. Do not overwrite the only saved copy
 while checking missing registrations.
 
-## Concrete layout candidates for review
+## Concrete layout candidate for review
 
-Both variants propose clone/default type **0 (FM TONE)**, one SYN page and the
-following positions. Clone 0 selects stock defaults, permissions and positional
-MIDI mapping; it does not make the kick use FM DSP. Its AMP/filter defaults and
-track assignment behavior still need emulator checks.
+Review candidate **ID 20**, name **`X0Z KICKS`**, short label **`KICKS`**,
+clone/default type **0 (FM TONE)** and one SYN page. Clone 0 selects stock
+defaults, permissions and positional MIDI mapping; it does not make the kick
+use FM DSP. Its AMP/filter defaults and track assignment behavior still need
+emulator checks.
 
-| SYN1 knob | Sound slot / callback parameter | ID 18, name `X0Z 808`, label `808` | ID 19, name `X0Z 909`, label `909` | Integer default |
-| --- | --- | --- | --- | --- |
-| A | 25 / 0 | `LEVEL` | `LEVEL` | 100 |
-| B | 26 / 1 | `TONE` | `TUNE` | 64 |
-| C | 27 / 2 | `DECAY` | `DECAY` | 64 |
-| D | 28 / 3 | empty | `ATTK` | empty / 64 |
-| E | 29 / 4 | `STR` candidate | `STR` candidate | 127 |
-| F–H | 30–32 / 5–7 | empty | empty | no declaration |
+| SYN1 knob | Sound slot / callback parameter | Static label and meaning | Integer default |
+| --- | --- | --- | --- |
+| A | 25 / 0 | `LEVEL`, linear instrument gain | 100 |
+| B | 26 / 1 | `TNTUN`, 808 Tone / 909 Tune | 64 |
+| C | 27 / 2 | `DECAY`, selected model's decay control | 64 |
+| D | 28 / 3 | `ATTK`, 909 attack branch; ignored in 808 | 64 |
+| E | 29 / 4 | undeclared | no declaration |
+| F | 30 / 5 | `MODEL`, 808/909 selector | 0 |
+| G–H | 31–32 / 6–7 | undeclared | no declaration |
 
 These are initial positions, not calibrated Roland factory presets: 64 means
 64/127 of the eventual physical control mapping. LEVEL 100 is 100/127 of the
-declared linear level range, not a change to digital full scale. `STR` proposes
-an explicit trigger-strength setting, latched at a trigger; approve it only
-after deciding its relation to native velocity/accent and downstream AMP gain.
-If deferred, leave E undeclared and use an explicitly documented fixed test
-strength. Ordinary note pitch must not turn the 808 into a tuned bass engine.
+declared linear level range, not a change to digital full scale. Trigger strength
+is deferred to native velocity/accent and downstream AMP research; E stays
+undeclared. Fixed strength belongs in test fixtures only and does not establish
+a production strength policy. Ordinary note pitch must not turn the 808 into a
+tuned bass engine. `TNTUN` is an explicit five-character compromise: `TONE/TUNE`
+exceeds the SDK label limit, and the current page API supplies static labels.
 Check ID conflicts against every selected mod before approval; no global
-allocator establishes that 18/19 are universally free. MIDI numbers must be
+allocator establishes that ID 20 is universally free. MIDI numbers must be
 verified from the chosen clone's actual slot mappings, not invented here.
-
-For a **combined alternative**, review a distinct candidate **ID 20**, name
-`X0Z KICKS`, label `KICKS`, clone 0. Keep A/C/E as above, B labelled `TNTUN`
-(Tone for 808, Tune for 909), D `ATTK` ignored in 808, and add F `MODEL`, default
-**0**. Static labels and both sets of saved values are unavoidable with this
-single-page proposal. ID 20 avoids silently changing a previously approved
-ID-18 sound's meaning; it is not reserved by this document.
 
 Proposed combined-selector policy for review:
 
@@ -118,23 +113,24 @@ note locks, model changes during release and slot reuse require explicit tests.
 
 ## Preserving the first 808 sounds
 
-There are currently no adopted x0z DN2 production IDs/layouts to migrate. Once
-an 808 layout is approved, preserve ID 18, slots, ranges and meanings across
-versions; do not reinterpret its empty slots or assume their saved contents
+There are no adopted x0z DN2 production IDs/layouts to migrate; IDs 18/19 remain
+unadopted candidates from the alternatives. Approve the combined layout before
+publishing the first 808 sounds, then preserve that ID, selector encoding,
+slots, ranges and meanings when adding the 909. In particular, keep MODEL 0
+meaning 808. Do not reinterpret empty slots or assume their saved contents
 equal a newly added default. Defaults run on synth selection, which does not
-prove migration of old sounds. A later combined ID 20 would require explicit
-copy/import or a separately reviewed migration; it must not silently convert
-ID 18. The upstream two-ID option can retain the original ID-18 layout directly.
+prove migration of old sounds. Future layout changes need separate review.
 
 Switching the native synth or loading another sound has separate host voice
 allocation/tail behavior that is not established by the isolated bridge tests.
 Do not promise tail preservation there. Firmware replacement always ends the
 running performance; separate variants offer no live model-switch facility.
 
-## Concrete upstream extension, separate from memory growth
+## Alternative upstream extension, separate from memory growth
 
-A minimal multi-registration design would package **one shared voice payload**
-containing both kernels and an explicit binding list for IDs 18/19. It would:
+The selected single-synth direction needs no multi-registration extension.
+For comparison, a minimal alternative would package **one shared voice payload**
+containing both kernels and an explicit binding list for candidate IDs 18/19:
 
 1. Extend/version the artifact contract and producer/validator to describe that
    list; retain strict duplicate-ID, clone-conflict, entry-range and stack checks.
@@ -164,8 +160,9 @@ capacity and render deadlines are three separate checks.
 
 ## Acceptance and unresolved decisions
 
-Before persisted implementation, review the variant/coexistence choice, candidate
-IDs/names/clone, slots/defaults, strength policy and any selector/tail policy.
+The single-synth packaging direction is selected. Before persisted implementation,
+review the exact candidate ID/name/clone, slots/defaults, selector encoding and
+tail policy. Strength research remains open; no strength control is proposed.
 Then test incrementally: C declarations and exact raw conversions; SHARC dispatch,
 per-slot state and guards; coupled-emulator selection/locks/modulation; sound
 save/reload/copy and missing-mod round trips; active tails and model/slot changes;

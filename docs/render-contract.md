@@ -145,7 +145,7 @@ layout commitments:
 | --- | --- | --- | --- |
 | Digitakt | 80 | 90 | Level, Tone/Tune, Decay, 909 Attack, trigger strength |
 | Digitone | 80 | 90 | Same semantic order; choose native slots after checking their unequal stock ranges |
-| Digitone II | 18 | 19 | Same semantic order on a native SYN page; separate-build candidates while the one-SHARC-synth limit applies |
+| Digitone II | 20 (shared) | 20 (shared) | One native SYN page with a MODEL selector; see the selected packaging direction and exact review candidate below |
 
 These values fall inside the pinned SDK's namespaces (DT 4–127, DN 1–127,
 DN2 5–31). Check resource conflicts with every selected mod before approval.
