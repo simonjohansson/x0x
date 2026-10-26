@@ -138,6 +138,23 @@ device tickets. No IDs or positions are reserved here. A combined selector
 requires reviewed quantization, switch timing and state-clearing behavior before
 it can become persistent. Until then, fixtures select one model explicitly.
 
+The following are concrete **review candidates**, not registrations or saved
+layout commitments:
+
+| Device | 808 candidate ID | 909 candidate ID | Proposed control order |
+| --- | --- | --- | --- |
+| Digitakt | 80 | 90 | Level, Tone/Tune, Decay, 909 Attack, trigger strength |
+| Digitone | 80 | 90 | Same semantic order; choose native slots after checking their unequal stock ranges |
+| Digitone II | 18 | 19 | Same semantic order on a native SYN page; separate-build candidates while the one-SHARC-synth limit applies |
+
+These values fall inside the pinned SDK's namespaces (DT 4–127, DN 1–127,
+DN2 5–31). Check resource conflicts with every selected mod before approval.
+The UI tickets must present actual slots, labels, defaults and raw ranges for
+review; in particular, DN's existing ratio/algorithm slots cannot be assumed to
+behave like a full-range continuous knob. The trigger-strength path remains
+subject to the adapter's accent/velocity trace. No candidate appears in a
+firmware descriptor, and the private C enums are unrelated to these IDs.
+
 ## Independent acceptance
 
 - C adapter/control tests use native-service fakes and a fake receiver to verify
