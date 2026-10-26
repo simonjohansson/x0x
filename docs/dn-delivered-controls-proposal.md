@@ -173,9 +173,21 @@ untouched. A recompiled transient MODEL store/restore during the missing-frame
 block is rejected by its intended write guard. Expired frame reads are also
 forbidden.
 
+The bounded fixture also executes `core_sound_set(2, 27, 20001)` between
+blocks 0 and 1. The actual stock live setter changes exactly the kit's edited
+word and target words for lanes 2 and 6. All other target/kit bytes, cached
+sound pointers and smoother-pointer fixtures remain unchanged, with exactly
+three guarded non-stack writes. Subsequent registered callbacks retain a
+fractional rising ramp below target 20001; lane 2's pre/final words start
+`377/2409`, `966/2997`, `1537/3568`. A separate native mutation replaces the
+verified live-target store (`35830812` at `SOUND_LIVE + 0x5c`) with two NOPs;
+the kit updates but the missing target changes fail the intended validator.
+This advances the native SDK edit gate with injected kit/ownership context,
+without claiming a panel/MIDI gesture or parameter-lock path.
+
 The test-only machine uses `DNM_OWN_ENV` to isolate this transport test. Separate
 companion tests cover AMP/velocity. No production envelope flag, permanent ID or
-saved layout is adopted. Native stages/settings, target words, companion note
+saved layout is adopted. Native stages/settings, initial target words, companion note
 events and pitch/track/gate are injected; this is not a full-OS machine test.
 `core_voice_on` occurs after `core_render_voices` in the real OS, so injecting
 `dnm_voice_on` before the diagnostic dispatch does not prove native START/frame

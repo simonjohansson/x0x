@@ -236,8 +236,20 @@ and parameters, and each lane's writes are guarded. A recompiled transient
 MODEL store/restore without a valid frame is rejected by the write guard; expired frame reads are
 forbidden even if their values are discarded.
 
+The same bounded test now calls the real SDK `core_sound_set(2, 27, 20001)`
+between blocks 0 and 1. With injected kit/ownership state, it executes the stock
+live setter and checks exactly three non-stack writes: the kit word and target
+words for track 2's lanes 2 and 6. Every other target/kit byte and both cached
+sound and smoother-pointer tables stay unchanged. Subsequent registered
+callbacks preserve a strictly increasing fractional smoothing ramp below the
+new target. Lane 2's pre-controller/final words begin `377/2409`, then
+`966/2997`, `1537/3568`; lane 6 begins `391/2423`, then `979/3010`,
+`1550/3581`. Replacing the verified stock live-target store with two NOPs is
+rejected even though its kit write still occurs. This proves a bounded native
+SDK edit route; panel/MIDI input, locks and timing remain separate.
+
 This fixture uses `DNM_OWN_ENV` to isolate transport from companion gain; it
-adopts no production envelope flag, machine ID or saved layout. Targets, native
+adopts no production envelope flag, machine ID or saved layout. Initial targets, native
 controller/LFO state, pitch/track/gate and companion note events are injected.
 In the real OS, `core_voice_on` follows `core_render_voices`; calling
 `dnm_voice_on` before the diagnostic dispatch therefore does not qualify native

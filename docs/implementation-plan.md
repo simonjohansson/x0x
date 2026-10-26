@@ -94,7 +94,10 @@ modes now feed one final semantic control plus raw MODEL through the private
 production reader/adapter to diagnostic ASM. Host tests cover all slots and
 capture lifetime; a recompiled target-buffer substitution fails. The separate
 `test:dn:machine` now exercises registered callbacks through the actual Core and
-companion dispatch across all eight slots. Its note/state injection does not
+companion dispatch across all eight slots. A bounded native SDK live edit now
+updates only the edited track's two lanes and retains fractional smoothing
+through those callbacks; an omitted stock live-target store is rejected. Its
+note/state injection does not
 qualify native START/frame ownership; the full-OS observer still uses an
 order-40 diagnostic receiver. Complete mappings, selector integration and native
 source/ownership/timing gates remain open.
