@@ -159,6 +159,10 @@ run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0z.dig
 description = "Execute the silent DN2 SHARC payload with the approved controls in Digikit"
 run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0z.digitone2_silent'
 
+[tasks."test:dn2:silent:full-os"]
+description = "Boot the installed DN2 mod through the public coupled emulator API"
+run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" SHARC_GEN_DIR="{{config_root}}/vendor/digikit/out/native/shared-core/gen" uv run --frozen --project vendor/digikit --python "$(mise which python)" python -m x0z.digitone2_silent --full-os'
+
 [tasks."firmware:dn2:silent"]
 description = "Build and verify the latest-OS silent DN2 mod without claiming coupled boot"
 run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0z.digitone2_silent --build'

@@ -218,6 +218,7 @@ does not qualify UART input or strict-emulator behavior.
 ```sh
 mise run test:dn2:silent      # actual SHARC callback, synthetic SDK frames
 mise run firmware:dn2:silent  # build and verify latest-OS firmware, no OS boot
+mise run test:dn2:silent:full-os  # native coupled emulator; prepared inputs required
 ```
 
 The approved ID20 page declarations live in `machines/digitone2/page.c`,
@@ -228,9 +229,17 @@ across sixteen slots, with next-START selection, zero output and state/buffer
 guards. It uses 390 code bytes, 128 state bytes and at most 335 instructions in
 the modeled runner. SDK link validation and the installed ID20/PC16 binding pass.
 
-Reports and firmware are regenerated under `out/dn2/silent/`. Packaging is not a
-coupled-emulator boot. The [missing reset-table input](#coupled-dn2-setup-blocker)
-still blocks native selection, controls, p-lock/LFO and save/reload; #7 stays open.
+The separate full-OS command now boots the installed mod through Digikit's
+documented public emulator API with the verified stock base hash. Native menu
+selection shows ID20 and exact A/B/C/F defaults. A held 808 voice keeps its model
+after a native MODEL edit; the next note starts a 909 voice while the old 808
+counter continues. Both active voice outputs are zero; final CF ready/error and
+DSP halt/missing-block checks pass.
+
+Reports and screenshots regenerate under `out/dn2/silent/`. Ordinary A/B/C edits,
+native p-lock/LFO, mixed-track and save/reload acceptance remain open in #7.
+Packaging, synthetic callback tests and coupled native evidence are separate.
+Prepared upstream inputs are documented in the [setup record](#coupled-dn2-setup-blocker).
 
 ## Device adapter slices
 
@@ -455,25 +464,35 @@ part of the device work.
 
 ### Coupled DN2 setup blocker
 
-The pinned Digikit coupled emulator also needs the complete ADSP-2156x hardware
-manual text at `vendor/digikit/out/refs/adsp-2156x-hwr/all.txt` to construct cold
-MMR reset state. The public source is the
-[ADI hardware reference](https://www.analog.com/media/en/dsp-documentation/processor-manuals/adsp-2156x_hwr.pdf).
-The download failed in this environment; the located mirror failed certificate
-validation. No incomplete reset table was substituted. The manual and extracted
-text belong in ignored research/build storage, not Git.
-Its recovery URL and failed retrieval status are retained in the tracked
-[component manifest](../research/manifest-components.json), source S42.
+**Resolved on 26 October 2026.** The supplied working example exposed the
+complete Rev.1.0 ADSP-2156x HWR (December2020,2331pages) that pinned Digikit
+expects. The unchanged extraction/parser accepts3558 reset rows,586 nonzero.
+The user-provided complete Rev.1.1 is preserved too; the current parser rejects
+conflicting DDE_CFG/DMA35_CFG rows in that edition. No rows were edited or
+suppressed. [Source S42](../research/manifest-components.json) records both file
+hashes, locations and provenance; PDFs/text remain ignored.
 
-The firmware-free strict transpilation completed with 338 functions translated,
-zero untranslated functions and 185 explicit trap sites. The subsequent
-`tools.emulator.ready` command stopped on that missing text before native build
-or OS boot. To resume with the complete manual available, follow the pinned
-Digikit [source preparation](../vendor/digikit/docs/sharc/SOURCES.md) and
-[emulator commands](../vendor/digikit/README.md#run-the-emulator). Preserve the
-full reset-table validation and bounded execution; a generated core is not a
-passing coupled-emulator test. Foundation [#7](https://github.com/simonjohansson/x0z/issues/7)
-remains open for that work.
+A fresh machine needs the pinned Digikit [shared core and source preparation](../vendor/digikit/docs/sharc/SOURCES.md)
+first. The native test checks the generated fingerprint, exact stock ready-input
+hash and daemon binary; missing prerequisites return unavailable/77. These are
+ordinary upstream tool inputs, not x0z firmware boot code. The working preparation
+commands below run from x0z root with that shared core generated:
+
+```sh
+mkdir -p out/dn2/hwr-source
+ln -sf "$PWD/research/sources/adsp-2156x-hwr-rev1.0.pdf" out/dn2/hwr-source/adsp-2156x-hwr.pdf
+mise exec -- env PYTHONPATH="$PWD/vendor/digikit" uv run --no-project --python "$(mise which python)" --with pymupdf python -m tools.devtools.refstext "$PWD/out/dn2/hwr-source/adsp-2156x-hwr.pdf" --out "$PWD/vendor/digikit/out/refs"
+mise exec -- env PYTHONPATH="$PWD/vendor/digikit" SHARC_GEN_DIR="$PWD/vendor/digikit/out/native/shared-core/gen" uv run --frozen --project vendor/digikit --python "$(mise which python)" python -m tools.emulator.ready dn2 --syx "$PWD/firmware/Digitone_II_OS1.12.syx" --out "$PWD/out/dn2/stock-ready"
+mise exec -- env PYTHONPATH="$PWD/vendor/digikit" SHARC_GEN_DIR="$PWD/vendor/digikit/out/native/shared-core/gen" uv run --frozen --project vendor/digikit --python "$(mise which python)" python -m tools.emulator.native_emu --daemon --auto-coupled --build-only "$PWD/firmware/Digitone_II_OS1.12.syx"
+```
+
+The initial direct `ready.py` attempt rejected the modified firmware's unknown
+hash before CF execution. That stock-oriented helper is not the patched-image
+loader. The normal documented `Emu.load` API accepts the SDK output with its
+verified stock base SHA and performs the emulator reset itself. Native x0z boot
+now passes using that API, as in the supplied example. The mod has no special
+cold-load requirement, loader implementation, boot shim or vendor alteration.
+Actual upstream boot failures will be reported rather than hidden in x0z.
 
 ## Fixtures, results and measurements
 

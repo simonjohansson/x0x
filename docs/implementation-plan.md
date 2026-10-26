@@ -65,7 +65,7 @@ Existing tests stay, but adding more edge-case coverage is not the priority.
 | --- | --- | --- |
 | DT, OS 1.54 | Real ID80 mod boots; selection defaults, native controls, p-lock/LFO, save/reload, mixed models and silent owned output pass | Native knob/page reset still restores stock defaults; #39 remains open |
 | DN, OS 1.44 | Real ID80 mod boots; native compact defaults/controls, screen, START-latched MODEL and silent owned output pass | Finish native p-lock/LFO, mixed tracks and save/reload |
-| DN2, OS 1.12 | Approved ID20 registration and silent voice payload package; actual SHARC callback passes synthetic-frame tests | Complete coupled-emulator setup and native smoke scenario |
+| DN2, OS 1.12 | ID20 boots in coupled Digikit; native defaults, MIDI notes, pending MODEL and concurrent 808/909 voices pass | Ordinary A/B/C edits, native p-lock/LFO, mixed tracks and save/reload |
 
 The user explicitly approved the combined DT/DN saved layouts on 26 October:
 ID 80 `X0Z KICKS`. The subsequently approved compact layout on all three
@@ -78,10 +78,10 @@ remain approved. MODEL changes latch at the next START and clear only that
 voice's old model state. The DN-only endpoint policy is also already approved.
 Approval is not a claim that native defaults or save/reload have passed.
 
-DN2's coupled emulator is still blocked on the complete ADSP-2156x hardware
-manual text needed for cold reset state. The [setup blocker](development.md#coupled-dn2-setup-blocker)
-retains the required path and research source; do not repeat failed downloads
-without new evidence. Packaging can proceed independently. DN's known strict
+DN2's complete reset-table input is now recovered from the supplied working
+example and coupled boot passes. The [setup record](development.md#coupled-dn2-setup-blocker)
+documents the exact manual revision and ordinary upstream emulator startup.
+The mod has no special boot requirement or boot shim. DN's known strict
 emulator failure remains recorded; the first milestone may use the working
 standard non-strict configuration, labelled accurately.
 

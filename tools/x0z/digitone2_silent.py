@@ -87,20 +87,198 @@ def build() -> dict:
                   firmware=str(output), firmware_sha256=hashlib.sha256(output.read_bytes()).hexdigest(),
                   stock=stock_report, component=component_report,
                   machine_id=20, sharc_entry_pc16=0xbc8400,
-                  coupled_boot="blocked: complete ADSP-2156x HWR reset-table text is unavailable",
+                  coupled_boot="not exercised by packaging",
                   unqualified=component_report["unqualified"])
     (FOLDER / "build-report.json").write_text(json.dumps(report, indent=2) + "\n")
     return report
 
 
+def full_os() -> dict:
+    """Exercise native controls through ordinary public emulator startup APIs."""
+    cpu.require_module("tools.control.digi_client", "digikit")
+    from tools.control.digi_client import Emu
+    from tools.emulator import digi_env, native_target
+    from tools.patchkit import pk_harness as H
+    import traceback
+
+    package = build()
+    out = FOLDER
+    stock, firmware_path = Path(package["stock"]["image"]), Path(package["firmware"])
+    ready = ROOT / "out/dn2/stock-ready"
+    meta = ready / "SOURCE.json"
+    if (
+        not meta.is_file()
+        or json.loads(meta.read_text())["syx_sha256"]
+        != package["stock"]["image_sha256"]
+    ):
+        raise cpu.Unavailable(
+            "prepare exact stock DN2 ready inputs with tools.emulator.ready first"
+        )
+    gen = digi_env.generated_dir()
+    digi_env.check_generated(gen)
+    binary = native_target.target_dir(gen) / "release/digi-emud"
+    if not binary.is_file():
+        raise cpu.Unavailable(
+            "build the pinned Digikit daemon with native_emu --daemon --auto-coupled --build-only"
+        )
+    firmware = firmware_path
+    report = dict(
+        status="failed",
+        scope="pinned Digikit coupled native firmware cold boot; no device",
+        firmware_sha256=hashlib.sha256(firmware.read_bytes()).hexdigest(),
+        elekloader_revision=package["stock"]["sdk_revision"],
+        digikit_revision=cpu.revision(ROOT / "vendor/digikit"),
+    )
+    try:
+        with Emu.spawn_coupled(
+            stock, ready, binary=binary, timeout=120, run_dir=out / "native-run"
+        ) as emu:
+            report["stock_status"] = emu.status()
+            report["load"] = emu.load(
+                firmware, start="cold", base_sha256=package["stock"]["image_sha256"]
+            )
+            (out / "firmware-load.json").write_text(
+                json.dumps(report["load"], indent=2) + "\n"
+            )
+            assert report["load"]["start_used"] == "cold", report["load"]
+            initial = emu.status()
+            assert initial["dsp"] == "sharc", initial
+            start = initial["dsp_frames"]
+            emu.run_until(frames=start + 100, timeout_wall_s=120)
+            report["boot_status"] = emu.status()
+            assert report["boot_status"]["audio"]["halted"] is None, report[
+                "boot_status"
+            ]
+            assert report["boot_status"]["audio"]["missing_blocks"] == 0, report[
+                "boot_status"
+            ]
+            report["binding"] = emu.dsp_peek(0x20093E00, 8)
+            assert bytes.fromhex(report["binding"]["hex"]) == struct.pack(
+                "<II", 0xBC8400, 20
+            ), report["binding"]
+            (out / "native-main.png").write_bytes(emu.frame_png())
+            for name in ("FUNC", "SYN"):
+                emu.button(H.button(name), True)
+            emu.step(3_000_000)
+            for name in ("SYN", "FUNC"):
+                emu.button(H.button(name), False)
+            emu.step(1_000_000)
+            (out / "native-machine-menu.png").write_bytes(emu.frame_png())
+            report["menu_status"] = emu.status()
+            for _ in range(4):
+                emu.tap(H.button("DOWN"), hold=3_000_000)
+                emu.step(4_000_000)
+            emu.tap(H.button("YES"), hold=3_000_000)
+            emu.step(6_000_000)
+            emu.tap(H.button("NO"), hold=3_000_000)
+            emu.step(6_000_000)
+            (out / "native-controls.png").write_bytes(emu.frame_png())
+            report["selected_frame_hash"] = emu.frame_hash()
+            report["before_note"] = emu.dsp_peek(0x20092000, 128)
+            emu.midi_in(bytes([0x90, 60, 100]))
+            target = emu.status()["dsp_frames"] + 100
+            emu.run_until(frames=target, timeout_wall_s=120)
+            report["after_note"] = emu.dsp_peek(0x20092000, 128)
+            report["callback_frame"] = emu.dsp_peek(0x20093D00, 20)
+            report["callback_params"] = emu.dsp_peek(0x20093D14, 160)
+            state = struct.unpack("<32I", bytes.fromhex(report["after_note"]["hex"]))
+            assert any(state[2 * i] > 0 and state[2 * i + 1] == 1 for i in range(16)), (
+                state
+            )
+            frame = struct.unpack("<5I", bytes.fromhex(report["callback_frame"]["hex"]))
+            output_base = frame[0] - 128 * frame[1]
+            report["voice_outputs"] = {
+                str(i): emu.dsp_peek(output_base + 128 * i, 128)
+                for i in range(16)
+                if state[2 * i] > 0
+            }
+            assert all(
+                bytes.fromhex(v["hex"]) == bytes(128)
+                for v in report["voice_outputs"].values()
+            ), report["voice_outputs"]
+            controls = struct.unpack(
+                "<40I", bytes.fromhex(report["callback_params"]["hex"])
+            )
+            assert [controls[i] for i in (0, 1, 2, 5)] == [16384, 16384, 16384, 0], (
+                controls
+            )
+            names = {
+                k: int(v, 0)
+                for k, v in json.loads((out / "x0z.syx.map.json").read_text()).items()
+            }
+            cc = {
+                str(k): (emu.peek32(names["dn2_t1"] + 60 * (321 + k) + 24) >> 16)
+                & 0xFFFF
+                for k in (0, 1, 2, 5)
+            }
+            report["native_cc"] = cc
+            assert all(v < 128 for v in cc.values()), cc
+            emu.midi_in(bytes([0xB0, cc["5"], 127]))
+            emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
+            pending = struct.unpack(
+                "<32I", bytes.fromhex(emu.dsp_peek(0x20092000, 128)["hex"])
+            )
+            report["pending_state"] = list(pending)
+            assert not any(pending[2 * i + 1] == 2 for i in range(16)), pending
+            emu.midi_in(bytes([0x80, 60, 0]))
+            emu.run_until(frames=emu.status()["dsp_frames"] + 30, timeout_wall_s=120)
+            emu.midi_in(bytes([0x90, 60, 100]))
+            emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
+            changed = struct.unpack(
+                "<32I", bytes.fromhex(emu.dsp_peek(0x20092000, 128)["hex"])
+            )
+            report["changed_state"] = list(changed)
+            assert any(
+                changed[2 * i] > 0 and changed[2 * i + 1] == 2 for i in range(16)
+            ), changed
+            for i in range(16):
+                if pending[2 * i] and pending[2 * i + 1] == 1:
+                    assert changed[2 * i] > pending[2 * i] and changed[2 * i + 1] == 1, changed
+            report["switched_voice_outputs"] = {
+                str(i): emu.dsp_peek(output_base + 128 * i, 128)
+                for i in range(16) if changed[2 * i] > 0
+            }
+            assert all(bytes.fromhex(v["hex"]) == bytes(128)
+                       for v in report["switched_voice_outputs"].values()), report["switched_voice_outputs"]
+            (out / "native-model-909.png").write_bytes(emu.frame_png())
+            report["final_status"] = emu.status()
+            final = report["final_status"]
+            assert final["cf"]["ready"] and final["cf"]["error"] is None, final
+            assert final["dsp"] == "sharc" and final["audio"]["halted"] is None, final
+            assert final["audio"]["missing_blocks"] == 0, final
+            report["status"] = "passed"
+    except Exception as error:
+        report["error"] = str(error)
+        report["traceback"] = traceback.format_exc()
+    report["unqualified"] = [
+        "ordinary A/B/C edits (defaults only were checked)",
+        "native sequencer p-lock/LFO",
+        "save/reload",
+        "mixed tracks",
+        "kick sound and real-device timing",
+    ]
+    (out / "native-boot-report.json").write_text(json.dumps(report, indent=2) + "\n")
+    return report
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--build", action="store_true", help="also package latest-OS silent firmware")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
+        "--build", action="store_true", help="also package latest-OS silent firmware"
+    )
+    mode.add_argument(
+        "--full-os",
+        action="store_true",
+        help="run the installed silent mod in coupled Digikit",
+    )
     args = parser.parse_args()
     try:
-        report = build() if args.build else component()[0]
+        report = (
+            full_os() if args.full_os else build() if args.build else component()[0]
+        )
         print(json.dumps(report))
-        return 0
+        return int(report["status"] != "passed")
     except cpu.Unavailable as error:
         print(json.dumps(dict(status="unavailable", reason=str(error))))
         return 77
