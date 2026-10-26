@@ -92,9 +92,12 @@ prioritizes existing Core events and a tested same-interrupt bank lifetime over
 a new public hook. Its self-contained `test:dn:frame` and `test:dn:transport`
 modes now feed one final semantic control plus raw MODEL through the private
 production reader/adapter to diagnostic ASM. Host tests cover all slots and
-capture lifetime; a recompiled target-buffer substitution fails. Voice metadata
-is still injected at the order-40 observer, so actual machine callbacks, complete
-mappings, selector/START ownership and native source/timing gates remain open.
+capture lifetime; a recompiled target-buffer substitution fails. The separate
+`test:dn:machine` now exercises registered callbacks through the actual Core and
+companion dispatch across all eight slots. Its note/state injection does not
+qualify native START/frame ownership; the full-OS observer still uses an
+order-40 diagnostic receiver. Complete mappings, selector integration and native
+source/ownership/timing gates remain open.
 
 ## Small sound slices
 

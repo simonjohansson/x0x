@@ -160,6 +160,7 @@ mise run test:dn:companion
 mise run firmware:dn
 mise run test:dn:native
 mise run test:dn:frame      # actual native stages, explicitly injected control state
+mise run test:dn:machine    # generated test machine, actual companion callbacks, injected native state
 mise run test:dn:transport  # 40 ms of standard non-strict full-OS Core event observation
 ```
 
@@ -170,7 +171,7 @@ different layers and do not replace the full firmware gates:
 | Device | Implemented evidence | Still required for its adapter foundation |
 | --- | --- | --- |
 | DT, OS 1.54 | C-to-ASM component; 105 bounded stock/SDK routine calls with 53 edit/smoothing/lock/LFO observations; full OS PLAY-to-START-to-C/ASM observer | Machine selection/replacement routing, native lifecycle/onset and downstream audio |
-| DN, OS 1.44 | C-to-ASM component and pinned companion; bounded native edits; final-frame C adapter to diagnostic ASM through existing Core events, tested in bounded native stages and a standard full-OS Session | Complete mappings and selector/START integration, native UI/MIDI/lock sources, allocator/lifecycle and audio timing; strict-model qualification |
+| DN, OS 1.44 | C-to-ASM component and pinned companion; bounded native edits; final-frame C adapter to diagnostic ASM through existing Core events; bounded registered-machine callbacks and separate standard full-OS observer | Complete mappings and selector/START integration, native UI/MIDI/lock sources, allocator/lifecycle and audio timing; strict-model qualification |
 | DN2, OS 1.12 | Host C trace fed to the actual SHARC diagnostic; 82 executions of the pinned upstream bridge with synthetic stock DSP frames across sixteen slots | Coupled OS encoder/MIDI/lock/smoothing transport, native identity and downstream processing |
 
 The DT native test executes real routines from the verified Core/companion
@@ -220,6 +221,29 @@ remains explicitly unavailable. Reports now record
 `production_adapter_consumption: true` with this narrow scope. Native sources,
 locks, allocator/START ownership, selector integration and audio timing remain
 open in #75; neither mode qualifies kick fidelity or a complete installed mod.
+
+`test:dn:machine` adds a separate bounded registered-machine proof. It reuses the
+self-contained build, contributing ID 127 only to ignored diagnostic firmware
+under `out/dn/machine`. The existing Core dispatcher runs ready at order 40,
+the actual companion and its registered callback at order 50, then invalidates
+at order 60. All eight slots consume final parameter 119 plus raw parameter 124
+through the production adapter; actual ASM writes each selected native voice
+buffer. Seven blocks produce 55 callbacks, 47 successful deliveries and 94
+mapped-frame reads. Checks include exact fractions, four interleaved tracks,
+same-track retrigger, observed track reassignment, gate release, an unselected
+FM lane and missing-frame recovery. Callback registers/stack, readonly metadata
+and parameters, and each lane's writes are guarded. A recompiled transient
+MODEL store/restore without a valid frame is rejected by the write guard; expired frame reads are
+forbidden even if their values are discarded.
+
+This fixture uses `DNM_OWN_ENV` to isolate transport from companion gain; it
+adopts no production envelope flag, machine ID or saved layout. Targets, native
+controller/LFO state, pitch/track/gate and companion note events are injected.
+In the real OS, `core_voice_on` follows `core_render_voices`; calling
+`dnm_voice_on` before the diagnostic dispatch therefore does not qualify native
+START/frame alignment. The standard full-OS observer above still uses its
+order-40 diagnostic receiver, not this registered machine. Complete mappings,
+MODEL latching, native sources/locks, allocation and audible timing remain open.
 
 The separate DT transport test follows ModelDigi's full-OS test pattern:
 `Session(hle=False)` with `never_fake_set_posts`, native panel PLAY/STOP and a

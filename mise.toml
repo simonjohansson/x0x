@@ -123,6 +123,10 @@ run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen -
 description = "Test final DN frames through the C adapter and ASM with injected native state"
 run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0z.digitone_transport'
 
+[tasks."test:dn:machine"]
+description = "Test final controls through actual DN companion callbacks with an ignored diagnostic machine"
+run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0z.digitone_machine'
+
 [tasks."test:dn:transport"]
 description = "Test DN final-frame adapter diagnostics in a standard non-strict full-OS Session"
 run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0z.digitone_transport --full-os'

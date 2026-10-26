@@ -157,6 +157,31 @@ callbacks and parameter-to-audio timing remain open. The known strict setup
 limitation remains explicit. No new SDK lifetime guarantee, machine ID, saved
 format or kick renderer is introduced.
 
+## Registered companion callback increment
+
+The separate `mise run test:dn:machine` builds an ignored ID-127 diagnostic
+machine and runs the existing Core event dispatcher, actual companion and
+registered callback. Ready at order 40 precedes all machine callbacks at order
+50; order 60 and render exit invalidate the view. Seven bounded blocks cover
+eight slots across four tracks, same-track retrigger, track reassignment,
+gate release, one unselected FM lane and missing-frame recovery. There are
+55 registered callbacks, 47 successful C-to-ASM deliveries and 94 mapped-frame
+reads. Each successful control/MODEL value matches its native final word,
+not its target. Per-callback memory, register, stack and metadata guards retain
+slot isolation; failed frame delivery leaves previous receiver/state/audio
+untouched. A recompiled transient MODEL store/restore during the missing-frame
+block is rejected by its intended write guard. Expired frame reads are also
+forbidden.
+
+The test-only machine uses `DNM_OWN_ENV` to isolate this transport test. Separate
+companion tests cover AMP/velocity. No production envelope flag, permanent ID or
+saved layout is adopted. Native stages/settings, target words, companion note
+events and pitch/track/gate are injected; this is not a full-OS machine test.
+`core_voice_on` occurs after `core_render_voices` in the real OS, so injecting
+`dnm_voice_on` before the diagnostic dispatch does not prove native START/frame
+alignment. MODEL is read raw; actual selector integration, native source/lock
+and ownership/audio-timing gates still keep #75 and #40 open.
+
 ## Fallback for Core review: one final-parameter observer
 
 Only if the existing-event route fails the required lifetime/ordering proof, propose a new Core event,

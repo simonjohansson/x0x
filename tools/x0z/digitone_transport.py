@@ -114,14 +114,14 @@ def validate_trace(traces):
         previous, previous_block = pointer, block
 
 
-def build(folder=FOLDER, adapter_source=None):
+def build(folder=FOLDER, adapter_source=None, machine_driver=None):
     entries, revision = firmware.baseline()
     stock = firmware.verify_entry(entries["digitone-mk1"], ROOT / "firmware", revision)
     if stock["version"] != "1.44":
         raise ValueError("DN transport sites require the reviewed latest OS 1.44")
     mod = folder / "observer"
     mod.mkdir(parents=True, exist_ok=True)
-    (mod / "probe.c").write_text(DRIVER)
+    (mod / "probe.c").write_text(machine_driver if machine_driver is not None else DRIVER)
     descriptor = dict(id="x0z-dn-transport-probe", version="0.0", title="DN test observer",
                       device="digitone-mk1", os="1.44", license="GPL-2.0-or-later",
                       sources=["probe.c", str(adapter_source or ROOT / "machines/digitone/adapter.c"),
@@ -132,6 +132,10 @@ def build(folder=FOLDER, adapter_source=None):
                               ("ev_render_in", "probe_in", 10), ("ev_render_params", "probe_pre", 100),
                               ("ev_render_voices", "probe_late", 40), ("ev_render_voices", "probe_end", 60),
                               ("ev_render_out", "probe_out", 90))])
+    if machine_driver is not None:
+        descriptor["contribute"] = [dict(to="dn_machines", order=50, data="00000000",
+                                       relocs=[[0, "abs32", "sym:probe_machine", 0]])]
+        descriptor["resources"] = dict(names=["dnmachine:127"], core="3.1")
     (mod / "mod.json").write_text(json.dumps(descriptor, indent=2) + "\n")
     artifacts, logs = [], []
     # Build every dependency here: no prerequisite baseline/prototype artifacts.
