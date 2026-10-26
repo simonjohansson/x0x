@@ -1,0 +1,11 @@
+{
+  "onset_samples": 0,
+  "peak_fs": 0.000001,
+  "dc_fs": 0.000001,
+  "rms_fs": 0.000001,
+  "waveform_rms_fs": 0.000001,
+  "waveform_peak_fs": 0.000001,
+  "frequency_cents": 0.1,
+  "decay_relative": 0.000001,
+  "band_power_fs2": 0.000001
+}

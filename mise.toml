@@ -1,0 +1,67 @@
+[tools]
+python = "3.12.13"
+uv = "0.11.8"
+cmake = "4.4.4"
+clang = "23.1.3"
+rust = "1.98.1"
+
+[bootstrap.packages]
+"brew:m68k-elf-gcc" = "latest"
+"brew:m68k-elf-binutils" = "latest"
+
+[env]
+_.path = ["/opt/homebrew/bin", "{{config_root}}/vendor/digikit/out/tools/selache/target/release"]
+PYTHONPATH = "{{config_root}}/tools:{{config_root}}/vendor/elekloader"
+ELEKLOADER_CROSS = "m68k-elf-"
+CC = "clang"
+CXX = "clang++"
+DIGIEMU_HOME = "{{config_root}}/out/digiemu"
+UV_CACHE_DIR = "{{config_root}}/out/uv-cache"
+
+[tasks.bootstrap]
+description = "Initialize the pinned dependencies and emulator toolchains"
+run = [
+  "git submodule update --init",
+  'uv sync --frozen --project vendor/digiemu --python "$(mise which python)"',
+  "cd vendor/digiemu && tools/install-patched-unicorn.sh",
+  "cd vendor/digikit && python -m tools.patchkit.pk_toolchains selache",
+]
+
+[tasks.test]
+description = "Run host fixtures, measurements and isolated C control tests"
+run = [
+  "python -m unittest discover -s tests/host -p 'test_*.py'",
+  "python -m x0z.ui_test",
+]
+
+[tasks."test:host"]
+description = "Run host fixtures and measurements without firmware or emulators"
+run = "python -m unittest discover -s tests/host -p 'test_*.py'"
+
+[tasks."test:ui"]
+description = "Compile and run the C control boundary with fake native services"
+run = "python -m x0z.ui_test"
+
+[tasks."test:dt"]
+description = "Digitakt firmware integration availability"
+run = "python -m x0z.cli unavailable dt"
+
+[tasks."test:dn"]
+description = "Digitone firmware integration availability"
+run = "python -m x0z.cli unavailable dn"
+
+[tasks."test:dn2"]
+description = "Digitone II firmware integration availability"
+run = "python -m x0z.cli unavailable dn2"
+
+[tasks.render]
+description = "Render a synthetic diagnostic fixture as test equipment"
+run = "python -m x0z.cli render"
+
+[tasks.analyze]
+description = "Measure a mono WAV or validated render result"
+run = "python -m x0z.cli analyze"
+
+[tasks.compare]
+description = "Compare fixture-matched render results against an independent oracle"
+run = "python -m x0z.cli compare"
