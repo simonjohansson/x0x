@@ -1,0 +1,3 @@
+/research/*
+!/research/manifest.json
+!/research/manifest-components.json
