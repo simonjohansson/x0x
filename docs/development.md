@@ -274,6 +274,15 @@ fractional contribution only on voices currently owned by track 0, including
 isolation when a voice changes tracks. Omitting the producer fails the intended
 next-block table check even though decoded CC input still updated raw state.
 
+CC2 breath now runs alongside CC1 on track 0 with a distinct input: CC2=64
+produces raw 16513. Its independent settled sequence starts
+`495, 976, 1442, 1894, 2333, 2758, 3171`, with the same later-pass consumption.
+The native controller stage sums separately truncated mod-wheel (1/8) and
+breath (1/16) contributions before the registered callback; reassigned voices
+stop receiving both track-0 sources. Independent raw/cache/Q31/table checks
+reject a mutated breath record that reads the mod-wheel source. The fixture's
+55 callbacks, 47 deliveries and 94 mapped-frame reads are unchanged.
+
 This is decoded-router/native-stage evidence with injected receive and mapping
 configuration. It does not exercise raw MIDI byte parsing, USB/DIN input,
 other controllers, or full-OS MIDI-to-audio latency. The producer's control-table
@@ -441,3 +450,14 @@ an explicit baseline/profile update rather than a fallback to an old version.
 VST selection, plugin captures and calibrated kick-fidelity gates remain deferred.
 All runs in this phase use host test equipment or the required emulators; no
 real device is operated.
+
+## Pending DN final-control endpoint review
+
+A separate bounded probe found a legitimate final control outside the stock UI
+range: target 32512 plus native CC1 modulation yields final word 32634 when the
+LFO targets another parameter. The ready production frame reader rejects it.
+This is a concrete saturation-qualification gap, not a completed gate. The
+[endpoint proposal](dn-final-control-endpoint-proposal.md) preserves observed raw
+words/UI bounds and proposes clamping only normalized positions and the DN-side
+MODEL argument passed to the existing selector. It remains unadopted pending
+review; no rejection policy or shared ASM/SHARC contract has changed.

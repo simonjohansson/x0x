@@ -223,6 +223,22 @@ Receive/initialized flags and mappings are configured by the fixture; other
 controllers, sequencer sources and native START/frame alignment remain open.
 The measured control-table ordering is separate from the stock DSP/audio lag.
 
+Decoded CC2 breath now runs alongside CC1 on track 0. Its distinct input 64
+scales through the stock router to raw 16513; its separate Q31 states produce
+`495, 976, 1442, 1894, 2333, 2758, 3171`. The next controller pass sums the
+mod-wheel 1/8 and breath 1/16 contributions with independent truncation.
+Changing a voice's track removes both contributions from that voice. A native
+record mutation that aliases breath to the mod-wheel raw source fails the
+intended breath-table check. Router/cache/source isolation and the existing
+55/47/94 callback/delivery/read totals remain intact.
+
+A separate final-frame boundary probe is recorded in the
+[pending endpoint proposal](dn-final-control-endpoint-proposal.md): with the
+LFO mapped away from LEVEL, native CC1 produces final 32634 against its stock
+UI maximum 32512, and the ready C frame reader returns failure. Native
+intermediate controller saturation alone was not used to infer this result.
+The proposed normalization/raw-reader change requires review before adoption.
+
 The test-only machine uses `DNM_OWN_ENV` to isolate this transport test. Separate
 companion tests cover AMP/velocity. No production envelope flag, permanent ID or
 saved layout is adopted. Native stages/settings, initial target words, companion note
