@@ -188,6 +188,31 @@ UI routing or on-switch overwrite was introduced to conceal that SDK gap.
 Reports, firmware and screenshots are regenerated under `out/dt/silent/`.
 This is silent integration evidence, not kick synthesis or physical qualification.
 
+## Silent Digitone mod
+
+```sh
+mise run test:ui:dn       # adapter and real descriptor with host-service fakes
+mise run firmware:dn:silent
+mise run test:dn:silent  # standard full-OS native panel/encoder smoke
+```
+
+The real ID80 machine uses the approved SYN2 A/B/C/F controls and the existing
+same-interrupt final-frame reader around the companion's render callback.
+Native menu selection loads the exact defaults. Native encoder edits move all
+three sound controls; real panel-triggered notes latch 808 then 909, keeping a
+MODEL edit pending until the next START. The first smoke observes 538 actual
+callbacks with zero owned output and unchanged other voice buffers.
+
+A small OS1.44-gated screen overlay follows the inspected OB-1 pattern, because
+stock SYN envelope artwork is not replaced by parameter metadata. It draws only
+the x0z SYN2 first page and leaves native input delivery intact. The smoke enters
+SYN1 then SYN2: pressing SYN2 again would toggle to the deliberately unused
+second page. No SDK/vendor or saved-layout change is involved.
+
+Reports and screenshots regenerate under `out/dn/silent/`. Native p-lock/LFO,
+mixed-track and save/reload acceptance remain open in #40; this first smoke
+does not qualify UART input or strict-emulator behavior.
+
 ## Silent Digitone II mod
 
 ```sh

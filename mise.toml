@@ -52,8 +52,8 @@ description = "Test Digitakt adapter and approved silent-machine declarations wi
 run = ["python -m x0z.digitakt_adapter --host", "python -m x0z.digitakt_silent --host"]
 
 [tasks."test:ui:dn"]
-description = "Test the Digitone C adapter without firmware or an emulator"
-run = "python -m x0z.digitone_adapter --host"
+description = "Test Digitone adapter and production-machine declarations without firmware"
+run = ["python -m x0z.digitone_adapter --host", "python -m x0z.digitone_silent --host"]
 
 [tasks."test:ui:dn2"]
 description = "Test the Digitone II C adapter and approved controls without firmware or an emulator"
@@ -142,6 +142,14 @@ run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen -
 [tasks."test:dn:transport"]
 description = "Test DN final-frame adapter diagnostics in a standard non-strict full-OS Session"
 run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0z.digitone_transport --full-os'
+
+[tasks."test:dn:silent"]
+description = "Boot the real silent DN mod and test native controls and MODEL delivery"
+run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0z.digitone_silent'
+
+[tasks."firmware:dn:silent"]
+description = "Build the latest-OS silent Digitone mod with the pinned SDK"
+run = "python -m x0z.digitone_silent --build"
 
 [tasks."test:dn2:component"]
 description = "Test Digitone II C snapshots and the pinned SHARC bridge in Digikit"

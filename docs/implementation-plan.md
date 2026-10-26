@@ -64,7 +64,7 @@ Existing tests stay, but adding more edge-case coverage is not the priority.
 | Device | Useful evidence already available | Work still needed for this milestone |
 | --- | --- | --- |
 | DT, OS 1.54 | Real ID80 mod boots; selection defaults, native controls, p-lock/LFO, save/reload, mixed models and silent owned output pass | Native knob/page reset still restores stock defaults; #39 remains open |
-| DN, OS 1.44 | Standard full OS boots; final-frame C reader and registered callbacks pass bounded tests | Real combined registration; connect final controls/START to its render callback; native smoke scenario |
+| DN, OS 1.44 | Real ID80 mod boots; native compact defaults/controls, screen, START-latched MODEL and silent owned output pass | Finish native p-lock/LFO, mixed tracks and save/reload |
 | DN2, OS 1.12 | Approved ID20 registration and silent voice payload package; actual SHARC callback passes synthetic-frame tests | Complete coupled-emulator setup and native smoke scenario |
 
 The user explicitly approved the combined DT/DN saved layouts on 26 October:
