@@ -102,8 +102,10 @@ voice isolation and the stock immediate smoother reset, independently of the
 remaining sequencer/editor lock-source gate. Decoded native CC1 and CC2 now run
 through the stock router and independent Q31 producers into subsequent
 controller passes and registered callbacks, including summed contribution and
-source/track isolation checks. Raw MIDI parsing,
-other controllers and full-OS latency remain separate. Its note/state injection does not
+source/track isolation checks. A prepared channel-pressure message now reaches
+the same callbacks through a bounded native handler prefix and its separate
+producer state. Full handler completion, other input paths, raw MIDI parsing
+and full-OS latency remain separate. Its note/state injection does not
 qualify native START/frame ownership; the full-OS observer still uses an
 order-40 diagnostic receiver. Complete mappings, selector integration and native
 source/ownership/timing gates remain open. The measured final-word/UI-range

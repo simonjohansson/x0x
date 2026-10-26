@@ -283,6 +283,23 @@ stop receiving both track-0 sources. Independent raw/cache/Q31/table checks
 reject a mutated breath record that reads the mod-wheel source. The fixture's
 55 callbacks, 47 deliveries and 94 mapped-frame reads are unchanged.
 
+Channel pressure adds a separate prepared-message path: bytes `D0 20` enter the
+actual handler at `0x400ea1ee`. The bounded slice performs its first channel
+lookup, scaling and raw setter, then stops at `0x400ea294` before UI telemetry.
+Configured channel 0 maps to track 0; auto channel is 15 and the other configured
+channels differ. The readonly message/arguments and exact stack displacement
+are checked; the only non-stack write is raw pressure 8256 at `0x80004630`.
+Its independent producer table at `0x80004670` yields
+`248, 488, 721, 947, 1166, 1379, 1585`; descriptor offset 68 contributes 1/32
+alongside mod wheel and breath. A mutation that feeds pressure from breath's
+raw source is rejected. The fourth normal-DN producer record is channel
+pressure; the first record (`0x80004648` to `0x800046a0`) is pitch bend.
+
+This covers one prepared channel-pressure message through a native handler
+prefix and registered callbacks. It does not complete the handler, execute its
+UI telemetry or qualify byte-stream parsing, other channel-routing paths,
+polyphonic aftertouch or full-OS input timing.
+
 This is decoded-router/native-stage evidence with injected receive and mapping
 configuration. It does not exercise raw MIDI byte parsing, USB/DIN input,
 other controllers, or full-OS MIDI-to-audio latency. The producer's control-table

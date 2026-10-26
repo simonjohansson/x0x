@@ -239,6 +239,24 @@ UI maximum 32512, and the ready C frame reader returns failure. Native
 intermediate controller saturation alone was not used to infer this result.
 The proposed normalization/raw-reader change requires review before adoption.
 
+Channel pressure now has an independent prepared-message route. The actual
+handler prefix `0x400ea1ee..0x400ea294` reads `D0 20`, resolves configured
+channel 0 to track 0, scales it to raw 8256 and calls the native raw setter.
+The slice stops immediately after that call, before unrelated UI telemetry;
+it does not return from or complete the full handler. Reads are confined to
+the two-byte message, required channel configuration and stack. The readonly
+message/arguments and stack displacement are checked; its sole non-stack write
+is the pressure word at `0x80004630`.
+
+The fourth normal-DN producer record supplies pressure's `0x80004670` table and
+Q31 state; controller descriptor offset 68 contributes 1/32. Settled values
+start `248, 488, 721, 947, 1166, 1379, 1585`, consumed in the next controller
+pass and summed with the independent mod-wheel/breath sources. A native
+pressure-to-breath source alias fails the intended pressure-table check. Pitch
+bend uses the separate first producer record, not this pressure route.
+Prepared-message prefix execution does not qualify raw MIDI byte parsing,
+other channel mappings, full handler completion or native input/audio timing.
+
 The test-only machine uses `DNM_OWN_ENV` to isolate this transport test. Separate
 companion tests cover AMP/velocity. No production envelope flag, permanent ID or
 saved layout is adopted. Native stages/settings, initial target words, companion note

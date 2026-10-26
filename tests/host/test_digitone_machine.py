@@ -105,7 +105,7 @@ class DigitoneMachineTests(unittest.TestCase):
                 machine.controller_step(state, raw)
 
     def test_native_decoded_cc_msb_scaling_with_zero_lsb_cache(self):
-        for msb, raw in ((0, 0), (1, 258), (64, 16513), (127, 32767)):
+        for msb, raw in ((0, 0), (1, 258), (32, 8256), (64, 16513), (127, 32767)):
             with self.subTest(msb=msb):
                 self.assertEqual(machine.controller_raw(msb), raw)
         for bad in (-1, 128, True):
@@ -120,6 +120,13 @@ class DigitoneMachineTests(unittest.TestCase):
             actual = machine.controller_step(state, machine.controller_raw(64))
             self.assertEqual(actual, want)
             state = actual[0]
+
+    def test_pressure_has_a_distinct_producer_trace(self):
+        state = 0x40000000
+        expected = [248, 488, 721, 947, 1166, 1379, 1585]
+        for want in expected:
+            state, actual = machine.controller_step(state, machine.controller_raw(32))
+            self.assertEqual(actual, want)
 
     def test_host_import_requires_no_firmware_or_emulator(self):
         with patch.dict(sys.modules, {"elekloader": None, "emu": None, "unicorn": None}):
