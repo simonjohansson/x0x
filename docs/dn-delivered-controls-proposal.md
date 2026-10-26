@@ -1,17 +1,17 @@
-# DN delivered controls: narrow proposal for review
+# DN delivered controls: pinned investigation and private adapter
 
 Investigation for [#75](https://github.com/simonjohansson/x0z/issues/75),
-26 October 2026. **Proposal only; no new hook, API or firmware patch is
-implemented or approved here.** [#40](https://github.com/simonjohansson/x0z/issues/40)
+26 October 2026. **Existing-event private implementation; no new public SDK
+hook or firmware patch.** [#40](https://github.com/simonjohansson/x0z/issues/40)
 remains open. Scope is Digitone mk1 OS **1.44**, Elekloader PR 200 commit
 `2ab5f424c4721e4277d2112a5ae755d9938f50d6` and digiemu
 `f57c2f237e84b8ff91bc3adb2a2931bccf9928e9`.
 
-The smallest candidate uses existing Core events: retain the
+The private implementation uses existing Core events: retain the
 `ev_render_params` pointer for this render interrupt, then read its final
-contents inside the later machine render callback. This needs proof of the
-bank's lifetime, event ordering and invalidation at this exact pin before
-production adoption; it does not create a public lifetime promise. If the
+contents during the late voices pass. Actual machine-callback consumption
+remains a separate integration gate. The tests below establish bank lifetime,
+event ordering and invalidation within their exact pinned diagnostic scope; it does not create a public lifetime promise. If the
 existing route cannot satisfy those checks, propose one read-only final-parameter event
 at the site below. Do not privately patch firmware or recreate its modulation
 arithmetic in x0z.
@@ -96,12 +96,12 @@ The strict flag is set in the first cycle; Session reports it after a slice.
 Standard-mode sequences must not be called strict-qualified, and their success
 does not resolve that model/setup limitation.
 
-## Preferred next step: prove the existing-event route
+## Existing-event route and next native integration gates
 
 The observer harness establishes the current-pin bank route under the stated
-emulator settings. The next increment is production adapter consumption and
-the remaining native source/lifecycle/timing checks below; the prototype alone
-does not close #75.
+emulator settings. The private adapter now consumes that route in the
+diagnostic below. Actual machine-callback consumption and the remaining native source/lifecycle/timing
+checks still do not close #75.
 
 Prove that the `ev_render_params` argument remains readable through the machine
 callback of the **same** render interrupt, with its contents modified by the
@@ -125,6 +125,37 @@ does not change `dnm_knob`, a machine ID, a saved slot or an engine contract.
 If the bank cannot be consumed safely within that interrupt, stop this approach
 instead of retaining an invalid pointer. An upstream documentation clarification
 could make a wider promise, but is not a prerequisite invented by this project.
+
+## Private adapter increment
+
+`x0z_dn_frame_begin/capture/ready/end` confines reads to the current late voices
+pass. The generated subscriber opens at `ev_render_in`, captures once at
+`ev_render_params`, marks ready at voices order 40, closes at order 60 and
+clears again at render exit. `x0z_dn_render_frame` resolves caller-supplied
+native parameter IDs through `fw_params`, validates the resolved slot/range,
+and stages exact fractions before committing assignment state or calling a
+receiver. `x0z_dn_frame_read` also exposes raw MODEL without adding MODEL to
+continuous control semantics. The old target-accessor diagnostic remains a
+separate path; failed frame delivery never falls back to it.
+
+The bounded harness now delivers final parameter 119 plus raw parameter 124
+through those production routines into actual diagnostic ASM. These are test
+bindings without an adopted saved layout. The receiver uses injected voice
+metadata at the order-40 observer, not a registered machine's order-50 callback.
+Five deliveries preserve the final fractional values; omitting both capture
+tokens preserves previous receiver/output state and recovers next block. There
+are 3,176 guarded frame reads. A recompiled target-buffer substitution is
+rejected for reading outside the allowed final frame. Host C tests separately
+cover all eight slots, both banks, MODEL boundary words, invalid records and
+missing/duplicate/early/expired access.
+
+The standard non-strict full-OS mode executes the same reader/adapter diagnostic
+for 59 cycles and 37,465 guarded reads, including the order-60 invalidator.
+`production_adapter_consumption` is true with this narrow scope. Complete
+control mappings, native UI/MIDI/locks, selector/START ownership, actual machine
+callbacks and parameter-to-audio timing remain open. The known strict setup
+limitation remains explicit. No new SDK lifetime guarantee, machine ID, saved
+format or kick renderer is introduced.
 
 ## Fallback for Core review: one final-parameter observer
 

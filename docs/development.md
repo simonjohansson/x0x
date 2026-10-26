@@ -170,7 +170,7 @@ different layers and do not replace the full firmware gates:
 | Device | Implemented evidence | Still required for its adapter foundation |
 | --- | --- | --- |
 | DT, OS 1.54 | C-to-ASM component; 105 bounded stock/SDK routine calls with 53 edit/smoothing/lock/LFO observations; full OS PLAY-to-START-to-C/ASM observer | Machine selection/replacement routing, native lifecycle/onset and downstream audio |
-| DN, OS 1.44 | C-to-ASM component and pinned companion; bounded native edits; final-frame observer through existing Core events, tested in bounded native stages and a standard full-OS Session | Production adapter consumption of final controls, native UI/MIDI/lock sources, allocator/lifecycle and audio timing; strict-model qualification |
+| DN, OS 1.44 | C-to-ASM component and pinned companion; bounded native edits; final-frame C adapter to diagnostic ASM through existing Core events, tested in bounded native stages and a standard full-OS Session | Complete mappings and selector/START integration, native UI/MIDI/lock sources, allocator/lifecycle and audio timing; strict-model qualification |
 | DN2, OS 1.12 | Host C trace fed to the actual SHARC diagnostic; 82 executions of the pinned upstream bridge with synthetic stock DSP frames across sixteen slots | Coupled OS encoder/MIDI/lock/smoothing transport, native identity and downstream processing |
 
 The DT native test executes real routines from the verified Core/companion
@@ -186,23 +186,40 @@ tracks the missing delivered-control route. Neither bounded routine test boots
 the full OS.
 
 The DN final-frame harness builds its own verified Core/companion and generated
-observer under `out/dn/transport`; earlier prototype artifacts are not required.
+subscriber under `out/dn/transport`; earlier prototype artifacts are not required.
 `test:dn:frame` runs six native sequences with explicit target, controller and
-LFO-state injection. The observer consumes the captured bank only inside the
-same render interrupt, then invalidates it; entry and exit also invalidate it.
-Five final-frame copies pass, while one deliberately missing capture leaves the
-previous snapshot untouched. The run checks 3,166 frame reads inside the 1264-byte
-view and observer writes inside its own state/stack. Real native final values
-are `2402, 2761, 3109, 3447, 3775, 4093`, distinct from target 12345.
+LFO-state injection. The private production reader opens at render entry,
+captures the existing parameter pointer once, and permits reads only after the
+late voices observer (order 40). An order-60 callback closes the view after the
+companion; render exit clears it again. Parameter IDs resolve to sound slots and
+ranges through the pinned SDK's documented stock records, without production
+firmware addresses or a copied knob lookup table. Missing/duplicate capture,
+early access and expired views fail closed; there is no target fallback.
+
+The diagnostic maps parameter 119 to one semantic control and reads parameter
+124 as raw MODEL metadata. These are test bindings, not adoption of the proposed
+DN saved layout. It feeds final words through the production C adapter into
+actual diagnostic ColdFire ASM, using explicitly injected voice metadata at
+order 40. It does not yet exercise the companion's order-50 machine callback.
+Five deliveries/copies pass; the omitted observer and production capture leaves
+the previous receiver/ASM output untouched and recovers next block. The run
+checks 3,176 frame reads inside the 1264-byte view, immutable frame/stock audio
+and subscriber writes inside its own state/stack. Final values are
+`2402, 2761, 3109, 3447, 3775, 4093`, distinct from target 12345. A recompiled
+adapter substituting the target buffer is rejected by the read guard.
+Host-only C tests independently cover both banks, all eight slots, exact
+fractions, MODEL boundary words, invalid records/ranges and view lifetime.
 
 The separate `test:dn:transport` boots OS 1.44 and observes 59 complete standard
-`Session(hle=False)` cycles over 40 ms, with 37,347 guarded reads, alternating
-banks and exact in/pre/controller/LFO/final/late/out order. It uses non-strict
-emulator settings. The earlier strict baseline and observer both flag a stock
-read at `0x4009de90` of `0x12a` with A0=0; that model/setup limitation remains
-explicitly unavailable in the report. Neither mode feeds the production adapter
-yet or proves native lock/allocator behavior. The reports retain
-`production_adapter_consumption: false`; #75 remains open.
+`Session(hle=False)` cycles over 40 ms, with 37,465 guarded reads, alternating
+banks and exact in/pre/controller/LFO/final/late/end/out order. It also executes
+the production adapter with the same diagnostic bindings and injected metadata.
+Its settings are non-strict. The earlier strict baseline and observer both flag
+a stock read at `0x4009de90` of `0x12a` with A0=0; that model/setup limitation
+remains explicitly unavailable. Reports now record
+`production_adapter_consumption: true` with this narrow scope. Native sources,
+locks, allocator/START ownership, selector integration and audio timing remain
+open in #75; neither mode qualifies kick fidelity or a complete installed mod.
 
 The separate DT transport test follows ModelDigi's full-OS test pattern:
 `Session(hle=False)` with `never_fake_set_posts`, native panel PLAY/STOP and a

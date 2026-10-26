@@ -1,4 +1,4 @@
-"""Probe existing DN Core events; no production adapter or firmware API changes.
+"""Test final DN frames through existing Core events and the private C adapter.
 
 Default: bounded native stages with explicitly injected state. --full-os:
 40 ms of the standard non-strict Session, separately from strict qualification.
@@ -22,19 +22,41 @@ ROOT = cpu.ROOT
 FOLDER = ROOT / "out/dn/transport"
 FRAME_BYTES = 8 * 79 * 2
 POINTERS = (0x80002006, 0x80002A96)
-ORDER = ["in", "pre", "controller", "lfo", "final", "late", "out"]
+ORDER = ["in", "pre", "controller", "lfo", "final", "late", "end", "out"]
 LIMIT, RETURN, STACK = 200000, 0xDEADBEE0, 0x470F0000
 STRICT_LIMIT = ("Unqualified: under the separate strict-stop model, both baseline and observer "
                 "stop at stock PC 0x4009de90 (b6a8012a), reading 0x12a with A0=0; "
                 "the standard Session result is not a strict-model pass.")
 DRIVER = r'''
 #include <stdint.h>
-#include "digitone-mk1/core3.h"
+#include "adapter.h"
+struct x0z_dn_frame probe_frame;
+struct x0z_dn_adapter probe_adapter;
+const struct x0z_dn_frame_mapping probe_mapping[] = {{X0Z_LEVEL, 119}};
+int32_t probe_status, probe_model, probe_output[32];
+uint32_t probe_seen[7];
+extern void x0z_diagnostic(int32_t *, int32_t);
+static void receive(void *context, const struct x0z_dn_input *in)
+{
+    (void)context;
+    probe_seen[0] = in->value[0].raw;
+    probe_seen[1] = in->value[0].minimum;
+    probe_seen[2] = in->value[0].maximum;
+    probe_seen[3] = in->value[0].position.numerator;
+    probe_seen[4] = in->value[0].position.denominator;
+    probe_seen[5] = in->slot; probe_seen[6] = in->track;
+    x0z_diagnostic(probe_output, in->value[0].raw);
+}
 volatile uint32_t probe_count[6], probe_pending, probe_capture_block, probe_pre_value;
 volatile int16_t probe_copy[632];
-void probe_in(void) { probe_pending = 0; ++probe_count[0]; }
+void probe_in(void)
+{
+    x0z_dn_frame_begin(&probe_frame);
+    probe_status = 0; probe_pending = 0; ++probe_count[0];
+}
 void probe_pre(int16_t *words)
 {
+    x0z_dn_frame_capture(&probe_frame, words);
     probe_pending = (uint32_t)words;
     probe_capture_block = probe_count[0];
     probe_pre_value = (uint16_t)words[79 * 3 + 27];
@@ -44,16 +66,25 @@ void probe_late(int32_t *voices)
 {
     const volatile int16_t *words = (const volatile int16_t *)probe_pending;
     uint32_t i;
+    int32_t minimum, maximum;
+    const struct dnm_voice voice = {60 << 16, 37, 1, 2, 1};
     (void)voices;
+    x0z_dn_frame_ready(&probe_frame);
+    probe_status = x0z_dn_frame_read(&probe_frame, 3, 124, &probe_model, &minimum, &maximum) &&
+        x0z_dn_render_frame(&probe_adapter, 3, probe_output, &voice, X0Z_808,
+                            &probe_frame, probe_mapping, 1, receive, 0);
     if (!words || probe_capture_block != probe_count[0]) {
+        x0z_dn_frame_end(&probe_frame);
         ++probe_count[3]; probe_pending = 0; return;
     }
     for (i = 0; i < 632; ++i) probe_copy[i] = words[i];
     ++probe_count[2];
     probe_pending = 0;
 }
+void probe_end(void) { x0z_dn_frame_end(&probe_frame); }
 void probe_out(void)
 {
+    x0z_dn_frame_end(&probe_frame);
     if (probe_pending) ++probe_count[5];
     probe_pending = 0; ++probe_count[4];
 }
@@ -83,27 +114,31 @@ def validate_trace(traces):
         previous, previous_block = pointer, block
 
 
-def build():
+def build(folder=FOLDER, adapter_source=None):
     entries, revision = firmware.baseline()
     stock = firmware.verify_entry(entries["digitone-mk1"], ROOT / "firmware", revision)
     if stock["version"] != "1.44":
         raise ValueError("DN transport sites require the reviewed latest OS 1.44")
-    mod = FOLDER / "observer"
+    mod = folder / "observer"
     mod.mkdir(parents=True, exist_ok=True)
     (mod / "probe.c").write_text(DRIVER)
     descriptor = dict(id="x0z-dn-transport-probe", version="0.0", title="DN test observer",
                       device="digitone-mk1", os="1.44", license="GPL-2.0-or-later",
-                      sources=["probe.c"], requires=["core"], subscribe=[
+                      sources=["probe.c", str(adapter_source or ROOT / "machines/digitone/adapter.c"),
+                               str(ROOT / "src/controls.c"), str(ROOT / "targets/coldfire/diagnostic.s")],
+                      cflags=["-I" + str(ROOT / "machines/digitone"), "-I" + str(ROOT / "include")],
+                      requires=["core", "machines"], subscribe=[
                           dict(event=event, fn=fn, order=order) for event, fn, order in (
                               ("ev_render_in", "probe_in", 10), ("ev_render_params", "probe_pre", 100),
-                              ("ev_render_voices", "probe_late", 40), ("ev_render_out", "probe_out", 90))])
+                              ("ev_render_voices", "probe_late", 40), ("ev_render_voices", "probe_end", 60),
+                              ("ev_render_out", "probe_out", 90))])
     (mod / "mod.json").write_text(json.dumps(descriptor, indent=2) + "\n")
     artifacts, logs = [], []
     # Build every dependency here: no prerequisite baseline/prototype artifacts.
     for source in (ROOT / "vendor/elekloader/mods/core-dn1",
                    ROOT / "vendor/elekloader/mods/machines-dn1", mod):
         metadata = json.loads((source / "mod.json").read_text())
-        output = FOLDER / "deps" / metadata["id"]
+        output = folder / "deps" / metadata["id"]
         logs.append(cpu.command([sys.executable, "-m", "elekloader.sdk.build", source,
                                  "--stock", stock["image"], "--out", output]))
         suffix = "-os1.44" if metadata["os"] != "1.44" else ""
@@ -111,12 +146,12 @@ def build():
         if not artifact.is_file():
             raise ValueError("SDK did not produce the expected DN dependency: " + str(artifact))
         artifacts.append(artifact)
-    image = FOLDER / "transport.syx"
+    image = folder / "transport.syx"
     command = [sys.executable, "-m", "elekloader.patch", "--stock", stock["image"]]
     for artifact in artifacts:
         command += ["--mod", artifact]
     logs.append(cpu.command([*command, "--out", image, "--version", "X0ZR"]))
-    (FOLDER / "build.log").write_text("\n".join(logs))
+    (folder / "build.log").write_text("\n".join(logs))
     names = {key: int(value, 0) for key, value in json.loads(
         image.with_suffix(".syx.map.json").read_text()).items()}
     return image, names, stock
@@ -131,7 +166,9 @@ def observe(machine, names, at):
     state = dict(active=None, current=None, traces=[], violations=[], reads=0)
     returns = set()
     objects = [("probe_count", 24), ("probe_pending", 4), ("probe_capture_block", 4),
-               ("probe_pre_value", 4), ("probe_copy", FRAME_BYTES)]
+               ("probe_pre_value", 4), ("probe_copy", FRAME_BYTES),
+               ("probe_frame", 8), ("probe_adapter", 96), ("probe_status", 4),
+               ("probe_model", 4), ("probe_output", 128), ("probe_seen", 28)]
     owned_state = [(names[name], names[name] + length) for name, length in objects]
     word = lambda address: int.from_bytes(uc.mem_read(address, 4), "big")
     raw = lambda pointer: int.from_bytes(uc.mem_read(pointer + 2 * (79 * 3 + 27), 2), "big")
@@ -154,10 +191,21 @@ def observe(machine, names, at):
                 raise AssertionError("DN observer wrote the parameter frame")
             if bytes(uc.mem_read(names["fw_voices"], 1024)) != active["audio"]:
                 raise AssertionError("DN observer wrote stock voice audio")
+            current = state["current"]
+            expected = [current["final"], 0, 32512, current["final"], 32512, 3, 2]
+            actual = list(struct.unpack(">7I", uc.mem_read(names["probe_seen"], 28)))
+            expected_model = int.from_bytes(active["frame"][2 * (79 * 3 + 32):2 * (79 * 3 + 33)], "big")
+            if word(names["probe_status"]) != 1 or actual != expected or word(names["probe_model"]) != expected_model:
+                raise AssertionError("DN production adapter did not receive final mapped controls/MODEL")
+            if bytes(uc.mem_read(names["probe_output"], 128)) != struct.pack(">i", current["final"]) * 32:
+                raise AssertionError("DN final control did not reach diagnostic ASM")
+            current.update(adapter_raw=actual[0], model=expected_model)
             if bytes(uc.mem_read(names["probe_copy"], FRAME_BYTES)) != active["frame"]:
                 raise AssertionError("DN observer copy differs from the current final frame")
         if active["name"] in ("probe_in", "probe_late", "probe_out") and word(names["probe_pending"]):
             raise AssertionError("DN observer did not invalidate its frame pointer")
+        if active["name"] in ("probe_end", "probe_out") and any(uc.mem_read(names["probe_frame"], 8)):
+            raise AssertionError("DN production reader retained its frame past render exit")
         state["active"] = None
 
     def entered(name):
@@ -177,7 +225,7 @@ def observe(machine, names, at):
             current = state["current"]
             if current is None:
                 raise AssertionError("DN callback preceded render entry")
-            current["order"].append({"probe_pre": "pre", "probe_late": "late", "probe_out": "out"}[name])
+            current["order"].append({"probe_pre": "pre", "probe_late": "late", "probe_end": "end", "probe_out": "out"}[name])
             if name == "probe_pre":
                 pointer = word(sp + 4)
                 if pointer not in POINTERS:
@@ -193,7 +241,7 @@ def observe(machine, names, at):
                                   audio=bytes(uc.mem_read(names["fw_voices"], 1024)))
         return callback
 
-    for name in ("probe_in", "probe_pre", "probe_late", "probe_out"):
+    for name in ("probe_in", "probe_pre", "probe_late", "probe_end", "probe_out"):
         at(names[name], checked(entered(name)))
 
     def stage(name):
@@ -222,7 +270,9 @@ def observe(machine, names, at):
             return
         current = state["current"]
         pointer = current.get("pointer") if current else None
-        owned = [*owned_state, (active["stack"] - 2048, active["stack"] + 8)]
+        owned = [*owned_state, (active["stack"] - 2048, active["stack"] + 8),
+                 (names["fw_params"], names["fw_params"] + 134 * 60),
+                 (names["probe_mapping"], names["probe_mapping"] + 8)]
         if pointer is not None and active["name"] in ("probe_pre", "probe_late"):
             owned.append((pointer, pointer + FRAME_BYTES))
             if pointer <= address and address + size <= pointer + FRAME_BYTES:
@@ -308,11 +358,18 @@ def bounded(image_path, names, stock):
             execute(0x4009DE1A, 0x4009DF52)  # remaining pitch/pan/gain and gain-vector helper
             final = word()
             previous_copy = bytes(uc.mem_read(names["probe_copy"], FRAME_BYTES))
+            previous_seen = bytes(uc.mem_read(names["probe_seen"], 28))
+            previous_output = bytes(uc.mem_read(names["probe_output"], 128))
             if block == 2:
-                uc.mem_write(names["probe_pending"], bytes(4))  # missing-capture fault
+                uc.mem_write(names["probe_pending"], bytes(4))
+                # Omit both observer token and production capture for this entered block.
+                uc.mem_write(names["probe_frame"], struct.pack(">2I", 0, 1))
             native(names["core_render_voices"], [frame, 0, 0])
-            if block == 2 and bytes(uc.mem_read(names["probe_copy"], FRAME_BYTES)) != previous_copy:
-                raise AssertionError("DN missing-capture callback changed its previous copy")
+            if block == 2 and (bytes(uc.mem_read(names["probe_copy"], FRAME_BYTES)) != previous_copy or
+                               bytes(uc.mem_read(names["probe_seen"], 28)) != previous_seen or
+                               bytes(uc.mem_read(names["probe_output"], 128)) != previous_output or
+                               any(uc.mem_read(names["probe_status"], 4))):
+                raise AssertionError("DN missing capture changed previous copy/receiver/ASM output or reported success")
             uc.reg_write(regs.UC_M68K_REG_A6, 0x470E0000)
             native(names["core_render_out"], [])
             results.append(dict(block=block, pre=pre, controller=controller, lfo=lfo, final=final,
@@ -324,11 +381,11 @@ def bounded(image_path, names, stock):
             if [row[key] for row in results] != expected:
                 raise AssertionError("native DN " + key + " trace diverged")
         counters = list(struct.unpack(">6I", uc.mem_read(names["probe_count"], 24)))
-        if counters != [6, 6, 5, 1, 6, 0] or state["reads"] != 6 + 5 * 632:
+        if counters != [6, 6, 5, 1, 6, 0] or state["reads"] != 6 + 5 * 634:
             raise AssertionError("DN missing-capture/read-extent guard did not match")
         return dict(mode="bounded native calls with injected state", results=results, traces=state["traces"],
                     counters=counters, guarded_frame_reads=state["reads"], frame_extent_bytes=FRAME_BYTES,
-                    injection="target; controller mapping/value; settled LFO settings; zeroed LFO/voice state; block 2 capture cleared",
+                    injection="target; controller mapping/value; settled LFO settings; zeroed LFO/voice state; block 2 observer and production capture omitted",
                     instructions_per_call_or_stage=LIMIT)
     finally:
         machine.close()
@@ -360,7 +417,7 @@ def full_os(image, names):
             validate_trace(state["traces"])
             counters = list(struct.unpack(">6I", session.m.uc.mem_read(names["probe_count"], 24)))
             n = len(state["traces"])
-            if n < 2 or counters != [n, n, n, 0, n, 0] or state["reads"] != n * 633:
+            if n < 2 or counters != [n, n, n, 0, n, 0] or state["reads"] != n * 635:
                 raise AssertionError("DN full-OS event/read/invalidation counters diverged")
             return dict(mode="full OS standard Session", configuration="hle=False, strict=None; no DDR override",
                         session_ms=40, bootstrap_wall_limit_seconds=90, traces=state["traces"], counters=counters,
@@ -375,13 +432,32 @@ def verify(use_full_os=False):
     cpu.require_module("emu.harness", "digiemu")
     image, names, stock = build()
     result = full_os(image, names) if use_full_os else bounded(image, names, stock)
-    result.update(kind="DN existing-event observer prototype", stock=stock,
+    mutations = []
+    if not use_full_os:
+        original = (ROOT / "machines/digitone/adapter.c").read_text()
+        old = "word = frame->words[CORE_PARAMS_VOICE * slot + native_slot];"
+        if original.count(old) != 1:
+            raise ValueError("DN target-substitution mutation marker is not unique")
+        folder = FOLDER / "target-substitution"
+        folder.mkdir(exist_ok=True)
+        altered = folder / "adapter.c"
+        altered.write_text(original.replace(old, "word = FW_VOICE_PARAM(slot, native_slot);"))
+        bad_image, bad_names, bad_stock = build(folder, altered)
+        try:
+            bounded(bad_image, bad_names, bad_stock)
+        except AssertionError as error:
+            mutations.append(dict(name="compiled target-buffer substitution", reason=str(error)))
+        else:
+            raise AssertionError("DN final-frame test accepted target substitution")
+    result.update(rejected_mutations=mutations, kind="DN existing-event final-frame adapter diagnostic", stock=stock,
                   elekloader_revision=stock["sdk_revision"], emulator_revision=cpu.revision(ROOT / "vendor/digiemu"),
                   project_revision=cpu.revision(ROOT), source_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                   observer_sha256=hashlib.sha256(DRIVER.encode()).hexdigest(),
                   firmware_sha256=hashlib.sha256(image.read_bytes()).hexdigest(),
-                  production_adapter_consumption=False, process_wall_limit_seconds=150,
-                  unqualified=["production adapter delivery", "locks and native allocation/lifecycle",
+                  production_adapter_consumption=True,
+                  adapter_scope="one semantic parameter plus raw MODEL; injected voice metadata; diagnostic output only",
+                  production_adapter_sha256=hashlib.sha256((ROOT / "machines/digitone/adapter.c").read_bytes()).hexdigest(), process_wall_limit_seconds=150,
+                  unqualified=["complete control mapping and selector/START integration", "locks and native allocation/lifecycle",
                                "UI/MIDI control sources", "DSP two-block audio timing", "physical deadlines/kick fidelity"])
     return result
 
