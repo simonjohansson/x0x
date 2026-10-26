@@ -10,6 +10,7 @@ int x0z_send_control(enum x0z_instrument instrument, uint32_t voice,
     if (!supported || !receiver || !maximum || raw > maximum)
         return 0;
     /* Position is unitless; the shared model supplies the pot/circuit mapping. */
-    receiver(context, voice, control, (double)raw / maximum);
+    struct x0z_position position = {raw, maximum};
+    receiver(context, voice, control, position);
     return 1;
 }

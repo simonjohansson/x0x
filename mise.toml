@@ -42,6 +42,10 @@ run = "python -m unittest discover -s tests/host -p 'test_*.py'"
 description = "Compile and run the C control boundary with fake native services"
 run = "python -m x0z.ui_test"
 
+[tasks."test:ui:coldfire"]
+description = "Check that C controls cross-compile without unsupported runtime helpers"
+run = "python -m x0z.ui_test --coldfire"
+
 [tasks."test:coldfire"]
 description = "Execute bounded assembled diagnostics in digiemu"
 run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0z.cpu coldfire'

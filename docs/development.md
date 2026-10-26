@@ -42,15 +42,17 @@ different emulator installation for the pinned submodule.
 mise run test              # host tests and compiled C control boundary
 mise run test:host         # no assembler, firmware, emulator or native pages
 mise run test:ui           # production C conversion with a fake receiver
+mise run test:ui:coldfire  # no unsupported runtime imports in the target object
 mise run test:coldfire     # assemble and execute in digiemu
 mise run test:sharc        # assemble and execute in Digikit
 mise run test:emulators    # both bounded CPU diagnostics
 ```
 
-The C boundary converts declared stock controls to normalized positions, keeps
-fractional values and rejects invalid ranges/undeclared controls before calling
-the receiver. It does not register native pages, reserve machine IDs or assign
-saved control slots. Its arithmetic is control plumbing, not sample rendering.
+The C boundary forwards declared stock controls as exact normalized fractions
+`raw/maximum`, retaining delivered fractional values and rejecting invalid
+ranges/undeclared controls before calling the receiver. The backend chooses its
+numeric representation; C requires no software floating-point runtime helpers.
+It does not register native pages, reserve machine IDs or assign saved slots.
 
 Both CPU diagnostics write a 32-sample block for silence and positive/negative
 quarter scale. They check buffer guards and selected preserved registers, and
