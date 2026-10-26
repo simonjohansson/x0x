@@ -57,11 +57,12 @@ Stock 808 note pitch must not introduce chromatic tuning; 909 Tune retains its
 circuit meaning. There is no strength knob; velocity/accent and downstream AMP
 remain separate integration work.
 
-Defaults remain a concrete SDK qualification concern: `mp_range` handles
-`CM_DEFAULT`, but `mp_reset_range` gates its override on `mp_ui32`, and
-`mp_sound_defaults` handles extended pages only. Prove actual selection/reset
-behavior for this legacy page; do not invent a switch callback that overwrites
-loaded sounds or add saved slots to conceal the gap.
+The user explicitly approved an ID80-only build-copy companion correction on
+26 October 2026. It makes legacy-page selection defaults work without altering
+the vendor checkout, other machines or saved storage. Native selection and
+pattern/kit save/reload now pass. Native knob/page resets still bypass the range
+helper and restore stock defaults; #39 retains that failing gate. No switch
+callback overwrites loaded sounds and no extra saved slots are introduced.
 
 ## Small test increments
 

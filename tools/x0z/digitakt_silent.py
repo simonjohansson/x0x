@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import struct
 import sys
 import time
@@ -121,11 +122,12 @@ def component():
 
 
 def full_os():
-    """Native panel/UART smoke; declared defaults remain a failing SDK gate."""
+    """Native panel/UART smoke using the approved x0z-only default correction."""
     cpu.require_module("emu.session", "digiemu")
     from emu import panel
     from emu.bootstrap import first_run
     from emu.fwcheck import prepare
+    from emu.harness import call
     from emu.longrun import never_fake_set_posts
     from emu.midi import MidiIn
     from emu.session import Session
@@ -134,8 +136,18 @@ def full_os():
     FOLDER.mkdir(parents=True, exist_ok=True)
     entries, revision = firmware.baseline()
     stock = firmware.verify_entry(entries["digitakt-mk1"], ROOT / "firmware", revision)
+    companion = FOLDER / "machine-pages"
+    original = ROOT / "vendor/elekloader/mods/machine-pages"
+    patch = SOURCE.parent / "legacy-defaults.patch"
+    shutil.copytree(original, companion, dirs_exist_ok=True)
+    digest = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
+    compatibility = dict(sdk_revision=revision, patch=str(patch.relative_to(ROOT)),
+                         patch_sha256=digest(patch),
+                         base_sources={name: digest(original / name) for name in ("pages.c", "params.c")})
+    cpu.command(["patch", "-p1", "--batch", "--forward", "--fuzz=0", "-i", patch], cwd=companion)
+    compatibility["patched_sources"] = {name: digest(companion / name) for name in ("pages.c", "params.c")}
     logs, artifacts = [], []
-    for source in (ROOT / "vendor/elekloader/mods/core", ROOT / "vendor/elekloader/mods/machine-pages", SOURCE.parent):
+    for source in (ROOT / "vendor/elekloader/mods/core", companion, SOURCE.parent):
         meta = json.loads((source / "mod.json").read_text())
         logs.append(cpu.command([sys.executable, "-m", "elekloader.sdk.build", source,
                                  "--stock", stock["image"], "--out", FOLDER / "deps"]))
@@ -151,6 +163,7 @@ def full_os():
     report = dict(status="failed", scope="standard full-OS digiemu Session; native panel and UART",
                   stock=stock, firmware_sha256=hashlib.sha256(image.read_bytes()).hexdigest(),
                   digiemu_revision=cpu.revision(ROOT / "vendor/digiemu"),
+                  companion_compatibility=compatibility,
                   unqualified=["p-lock/LFO delivery", "save/reload", "strict-model qualification", "kick audio"])
     session = None
     try:
@@ -163,7 +176,7 @@ def full_os():
             session = Session(snap, paths.syx, hle=False)
             never_fake_set_posts(session.m, session.ev, session.profile.set_post)
         uc, midi = session.m.uc, MidiIn()
-        state = dict(active=None, callbacks=0, selected_callbacks=0, violations=[])
+        state = dict(active=None, callbacks=0, selected_callbacks=0, violations=[], controls=[])
         returns = set()
         def checked(fn):
             def run(*args):
@@ -183,6 +196,8 @@ def full_os():
                 assert after[lo:hi] == (bytes(128) if machine == 80 else active["before"][lo:hi]), "callback changed an unowned block or failed to silence x0z"
             state["callbacks"] += 1
             state["selected_callbacks"] += int(80 in active["machines"])
+            if active["machines"][0] == 80:
+                state["controls"].append(active["controls"])
             state["active"] = None
         def entered(_uc, _at, _size, _data):
             assert state["active"] is None, "nested callback"
@@ -191,7 +206,8 @@ def full_os():
                 session.at(ret, checked(returned))
                 returns.add(ret)
             state["active"] = dict(before=bytes(uc.mem_read(names["fw_track_blocks"], 1024)),
-                                   machines=bytes(uc.mem_read(names["fw_render_machine"], 8)))
+                                   machines=bytes(uc.mem_read(names["fw_render_machine"], 8)),
+                                   controls=list(struct.unpack(">8h", uc.mem_read(names["fw_voice_params"], 16))))
             state["active"]["return"] = ret
         session.at(names["x0z_dt_render"], checked(entered))
         def wait(ms=80):
@@ -200,8 +216,15 @@ def full_os():
         def tap(key):
             session.tap(session.code(key), hold_ms=40, after_ms=80)
             assert not session.halted and not state["violations"], (session.halted, state["violations"])
-        def stored():
-            sound = int.from_bytes(uc.mem_read(names["fw_kit"], 4), "big") + 0x20
+        def chord(modifier, key):
+            session.press(session.code(modifier)); wait(40)
+            try:
+                tap(key)
+            finally:
+                session.release(session.code(modifier))
+            wait(40)
+        def stored(track=0):
+            sound = int.from_bytes(uc.mem_read(names["fw_kit"], 4), "big") + 0x20 + 162 * track
             return sound, list(struct.unpack(">53h", uc.mem_read(sound + 20, 106)))
         def screen(name):
             panel.write_png(session.frames[-1][1], str(FOLDER / (name + ".png")), scale=4)
@@ -216,8 +239,8 @@ def full_os():
             else:
                 raise AssertionError("native MIDI did not drain")
             wait()
-        def selected():
-            return list(struct.unpack(">3I", uc.mem_read(names["selection"], 12)))
+        def selected(track=0):
+            return list(struct.unpack(">3I", uc.mem_read(names["selection"] + 12 * track, 12)))
         wait()
         session.press(session.code("FUNC")); wait(40)
         tap("SRC"); session.release(session.code("FUNC")); wait(40)
@@ -230,6 +253,7 @@ def full_os():
         screen("default-controls")
         report["defaults"] = dict(actual=[values[i] for i in (17, 18, 19, 22)],
                                   expected=[16384, 16384, 16384, 0])
+        report["defaults"]["status"] = "passed" if report["defaults"]["actual"] == report["defaults"]["expected"] else "failed"
         # Exercise control delivery even when the independent defaults check fails.
         send([0xb0, 16, 64, 0xb0, 17, 64, 0xb0, 18, 64, 0xb0, 21, 0])
         send([0x90, 60, 100]); report["808"] = selected()
@@ -239,12 +263,122 @@ def full_os():
         assert report["808"] == [1, 0, 0] and report["pending"] == [1, 0, 0] and report["909"] == [1, 1, 0], report
         values = stored()[1]
         assert [values[i] for i in (17, 18, 19, 22)] == [16384, 16384, 16384, 32512]
+        # Use the native destination list and depth control, not injected LFO state.
+        tap("LFO")
+        for _ in range(150):
+            if stored()[1][4] >= 17 << 8:
+                break
+            session.turn(session.encoder("D"), 2, after_ms=80); tap("YES")
+        report["lfo_destination"] = stored()[1][4]
+        assert report["lfo_destination"] == 17 << 8, report
+        tap("SRC")
+        send([0xb0, 109, 127]); send([0x90, 60, 100])
+        start = len(state["controls"])
+        wait(1500)
+        tone = sorted({words[0] for words in state["controls"][start:]})
+        report["lfo"] = dict(destination=17, min=min(tone), max=max(tone), distinct=len(tone))
+        assert len(tone) > 2 and min(tone) < 16384 < max(tone), report
+        assert stored()[1][17] == 16384, "LFO changed the saved base control"
+        send([0x80, 60, 0, 0xb0, 109, 64])
+        tap("STOP"); tap("STOP"); tap("RECORD")
+        tap("1")
+        session.press(session.code("1")); wait(80)
+        try:
+            for _ in range(4):
+                session.turn(session.encoder("B"), 8, after_ms=150)
+        finally:
+            session.release(session.code("1"))
+        wait()
+        screen("parameter-lock")
+        report["lock_base"] = stored()[1][18]
+        tap("RECORD")
+        start = len(state["controls"])
+        tap("PLAY"); wait(1500); tap("STOP")
+        decay = sorted({words[1] for words in state["controls"][start:]})
+        report["parameter_lock"] = dict(base=report["lock_base"], expected=21504,
+                                        min=min(decay), max=max(decay), distinct=len(decay))
+        assert report["lock_base"] == 16384 and 21504 in decay, report
+        # The fresh factory project requires a native resave before quick reload.
+        tap("GLOBAL"); tap("YES"); tap("DOWN"); tap("YES")
+        tap("DOWN"); tap("YES"); tap("YES"); wait(2500)
+        screen("project-saved")
+        tap("NO"); tap("NO"); tap("NO")
+        send([0xb0, 17, 64, 0xb0, 21, 127])
+        chord("FUNC", "YES")
+        expected = [stored()[1][i] for i in (17, 18, 19, 22)]
+        send([0xb0, 17, 100, 0xb0, 21, 0])
+        assert stored()[1][18] == 25600 and stored()[1][22] == 0
+        chord("FUNC", "NO"); wait(500)
+        screen("after-reload")
+        actual = [stored()[1][i] for i in (17, 18, 19, 22)]
+        report["save_reload"] = dict(expected=expected, actual=actual, restored=actual == expected,
+                                    machine=int.from_bytes(uc.mem_read(stored()[0] + 126, 1), "big"))
+        assert report["save_reload"]["restored"] and report["save_reload"]["machine"] == 80, report
+        send([0xb0, 21, 127, 0x90, 60, 100])
+        first_sound = bytes(uc.mem_read(stored()[0], 162))
+        chord("TRK", "2"); chord("FUNC", "SRC")
+        for _ in range(4):
+            tap("DOWN")
+        tap("YES")
+        assert bytes(uc.mem_read(stored(1)[0] + 126, 1)) == bytes([80])
+        send([0xb1, 16, 64, 0xb1, 17, 64, 0xb1, 18, 64, 0xb1, 21, 0, 0x91, 60, 100])
+        report["mixed_tracks"] = [selected(0), selected(1)]
+        assert report["mixed_tracks"] == [[1, 1, 0], [1, 0, 0]], report
+        assert bytes(uc.mem_read(stored()[0], 162)) == first_sound, "second track changed the first sound"
+        # Check the approved ID80 exception against stock and unrelated legacy IDs.
+        context = uc.context_save()
+        scratch = 0x10010000
+        session.m.ensure(scratch)
+        scope = []
+        try:
+            for machine in (80, 3, 122):
+                original_sound = bytearray(first_sound)
+                original_sound[126] = machine
+                for parameter, value in zip((17, 18, 19, 22), (12345, 23456, 3456, 25600)):
+                    struct.pack_into(">h", original_sound, 20 + 2 * parameter, value)
+                uc.mem_write(scratch, bytes(original_sound))
+                session.m._fast_stepper_obj.left = 200000
+                call(session.m, names["mp_sound_defaults"], [scratch])
+                expected_sound = bytearray(original_sound)
+                if machine == 80:
+                    for parameter, value in zip((17, 18, 19, 22), (16384, 16384, 16384, 0)):
+                        struct.pack_into(">h", expected_sound, 20 + 2 * parameter, value)
+                assert bytes(uc.mem_read(scratch, 162)) == bytes(expected_sound), machine
+                uc.mem_write(scratch + 256, struct.pack(">3i", -7, 777, 999))
+                session.m._fast_stepper_obj.left = 200000
+                call(session.m, names["mp_reset_range"], [133, scratch + 256, machine])
+                expected_range = (0, 32512, 16384) if machine == 80 else (-7, 777, 999)
+                assert struct.unpack(">3i", uc.mem_read(scratch + 256, 12)) == expected_range, machine
+                scope.append(machine)
+        finally:
+            uc.context_restore(context)
+        report["defaults_scope"] = dict(machine_ids=scope, other_sound_bytes_preserved=True,
+                                        mode="bounded actual companion helpers on private buffers")
+        chord("TRK", "1")
+        send([0xb0, 17, 100])
+        chord("B", "NO")
+        reset = stored()[1][18]
+        report["parameter_reset"] = dict(actual=reset, expected=16384,
+                                          status="passed" if reset == 16384 else "failed")
+        send([0xb0, 16, 100, 0xb0, 17, 100, 0xb0, 18, 100, 0xb0, 21, 127])
+        chord("SRC", "PLAY")
+        reset = [stored()[1][i] for i in (17, 18, 19, 22)]
+        report["page_reset"] = dict(actual=reset, expected=[16384, 16384, 16384, 0],
+                                     status="passed" if reset == [16384, 16384, 16384, 0] else "failed")
         assert state["active"] is None and state["selected_callbacks"] > 0 and not state["violations"], state
         report.update(callbacks=state["callbacks"], selected_callbacks=state["selected_callbacks"],
                       checked=["native machine selection", "native UART control delivery", "next-START MODEL latch",
-                               "x0z blocks zero", "other track blocks preserved"])
-        report["defaults"]["status"] = "passed" if report["defaults"]["actual"] == report["defaults"]["expected"] else "failed"
-        report["status"] = report["defaults"]["status"]
+                               "x0z blocks zero", "other track blocks preserved",
+                               "native LFO destination and modulation", "native sequencer parameter lock",
+                               "x0z-only defaults helper scope"])
+        restored = report["save_reload"]["restored"]
+        if restored:
+            report["checked"].append("native project save and pattern reload")
+        report["checked"].append("native mixed 808/909 tracks")
+        report["unqualified"] = ["strict-model qualification", "kick audio"] + ([] if restored else ["save/reload"])
+        report["failed_checks"] = [name for name in ("defaults", "parameter_reset", "page_reset")
+                                   if report[name]["status"] == "failed"]
+        report["status"] = "passed" if not report["failed_checks"] and restored else "failed"
     finally:
         if session is not None:
             session.close()

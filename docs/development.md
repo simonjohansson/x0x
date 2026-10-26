@@ -164,18 +164,26 @@ mise run test:dt:silent:full-os  # build firmware, native panel/UART smoke
 ```
 
 Eight component scenarios pass, including mixed tracks, next-START switching,
-invalid delivery and leaving/re-entering x0z. The standard full-OS digiemu run
-boots the packaged latest-OS firmware, selects ID80 through the native menu
-and changes controls through native UART MIDI. It observes 2,103 real callbacks,
-520 with x0z selected: selected buffers are zero and other track buffers are
-unchanged. MODEL remains 808 during a held note and becomes 909 at the next START.
+invalid delivery and leaving/re-entering x0z. The standard full-OS run boots
+the latest-OS mod and selects ID80 through the native menu. Across 21,260 real
+callbacks, 19,745 with x0z selected, selected buffers are zero and other track
+buffers are unchanged. Native UART controls and next-START MODEL switching pass.
+The native LFO yields 1,101 distinct delivered values over 0..32512; a sequencer
+DECAY lock delivers 21504 while preserving base 16384. Native project save and
+pattern/kit reload retain all four controls and ID80. Two x0z tracks retain
+different models without changing each other's sound.
 
-**The full-OS task returns 1:** native selection supplies raw defaults
-`[16384, 768, 0, 0]` instead of `[16384, 16384, 16384, 0]` for A/B/C/F.
-The pinned companion restricts default overrides to extended pages; the host
-descriptor test does not conceal this legacy-page failure. No on-switch
-overwrite, extra storage or vendor modification was added. Installed p-lock/LFO
-and save/reload remain unchecked, so #39 stays open.
+The user explicitly approved `machines/digitakt/legacy-defaults.patch` on
+26 October 2026. It applies only to ID80 in a build copy of the pinned companion;
+vendor files/SHA and saved storage remain unchanged. Selection now loads the
+approved `[16384, 16384, 16384, 0]` defaults. Reports record the patch SHA and
+base/patched source hashes. Separate bounded actual-helper tests verify IDs80,
+3 and122 and preservation of every other sound byte; these are not UI tests.
+
+**The full-OS task still returns 1:** native knob+NO and SRC+PLAY reset actions
+bypass the corrected range helper and restore stock B=768/C=0. Parameter/page
+reset failures remain explicit in the report; #39 stays open. No additional SRC
+UI routing or on-switch overwrite was introduced to conceal that SDK gap.
 
 Reports, firmware and screenshots are regenerated under `out/dt/silent/`.
 This is silent integration evidence, not kick synthesis or physical qualification.

@@ -1,0 +1,39 @@
+--- a/params.c
++++ b/params.c
+@@ -51,10 +51,13 @@
+     if (!sound)
+         return;
+     const struct cm_ui32 *u = mp_src_for(sound[126]);
+-    if (!u)
++    const struct cm_ui *legacy = sound[126] == 80
++        ? (const struct cm_ui *)core_machine_ui(80) : 0;
++    if (!u && (!legacy || legacy->abi != cm_ui_v3))
+         return;
+-    for (int k = 0; k < 8 + CM_EXTRAS; ++k) {
+-        const struct cm_knob *p = k < 8 ? &u->base.knob[k] : &u->extra[k - 8];
++    for (int k = 0; k < (u ? 8 + CM_EXTRAS : 8); ++k) {
++        const struct cm_knob *p = k < 8
++            ? &(u ? &u->base : legacy)->knob[k] : &u->extra[k - 8];
+         if (p->flags & CM_DEFAULT) {
+             int slot = k < 8 ? 17 + k : MP_EXTRA_SLOT(k - 8);
+             sound[20 + 2 * slot] = (uint32_t)p->def >> 8;
+@@ -67,7 +70,7 @@
+ {
+     const uint32_t *vtable = *(const uint32_t **)object;
+     uint8_t *sound = (uint8_t *)((uint32_t (*)(void *))vtable[10])(object);
+-    if (!sound || !mp_src_for(sound[126]))
++    if (!sound || (!mp_src_for(sound[126]) && sound[126] != 80))
+         return;
+     mp_sound_defaults(sound);
+     /* A null event is the native sound reference's full-sound update. */
+--- a/pages.c
++++ b/pages.c
+@@ -282,7 +282,7 @@
+ 
+ void mp_reset_range(uint32_t id, int32_t *out, int32_t machine)
+ {
+-    if (mp_ui32(machine))
++    if (mp_ui32(machine) || machine == 80)
+         mp_range(id, out, machine);
+ }
+ 
