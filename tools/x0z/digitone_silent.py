@@ -61,8 +61,8 @@ def full_os():
     report = dict(status="failed", scope="standard full-OS digiemu Session; native panel/encoder",
                   stock=stock, firmware_sha256=hashlib.sha256(image.read_bytes()).hexdigest(),
                   digiemu_revision=cpu.revision(ROOT / "vendor/digiemu"),
-                  unqualified=["p-lock/LFO delivery", "save/reload", "strict-model qualification", "kick audio"])
-    state = dict(active=None, callbacks=0, starts=[], violations=[], observations=[])
+                  unqualified=["strict-model qualification", "kick audio"])
+    state = dict(active=None, callbacks=0, starts=[], violations=[], observations=[], phase="", samples=[], decay_text=[])
     session = None
     try:
         with (FOLDER / "native-boot.log").open("w") as log, contextlib.redirect_stdout(log):
@@ -108,6 +108,18 @@ def full_os():
                                    fresh=info[2], track=info[3])
             state["active"]["return"] = ret
         session.at(names["x0z_dn_machine_render"], checked(entered))
+        def receive(_uc, _at, _size, _data):
+            source = word(uc.reg_read(UC_M68K_REG_A7) + 8)
+            if word(source + 8) == 0 and state["phase"]:
+                values = [struct.unpack(">6I",uc.mem_read(source + 36 + 24 * i,24)) for i in range(word(source + 32))]
+                state["samples"].append((state["phase"],[(v[0],v[1],v[4],v[5]) for v in values]))
+        session.at(names["render_silence"],checked(receive))
+        def text(_uc, _at, _size, _data):
+            if state["phase"] != "lock-edit": return
+            sp = uc.reg_read(UC_M68K_REG_A7)
+            if word(sp + 12) == 58 and word(sp + 16) == 40:
+                state["decay_text"].append(bytes(uc.mem_read(word(sp + 36),8)).split(b"\0",1)[0].decode("ascii"))
+        session.at(names["fw_textbox"],checked(text))
         def wait(ms=80):
             session.run_ms(ms)
             assert not session.halted and not state["violations"], (session.halted, state["violations"])
@@ -122,8 +134,8 @@ def full_os():
             wait()
         def screen(name):
             panel.write_png(session.frames[-1][1], str(FOLDER / (name + ".png")), scale=4)
-        def stored():
-            kit = word(names["fw_kit"])
+        def stored(track=0):
+            kit = word(names["fw_kit"]) + 326 * track
             return [int.from_bytes(uc.mem_read(kit + 0x2c + 2 * slot, 2), "big", signed=True) for slot in (0,27,28,29,32)]
         def controls():
             # Re-select from another page: a second SYN2 press toggles to its blank second page.
@@ -157,11 +169,88 @@ def full_os():
         assert len(state["starts"]) > starts, "native key produced no new START"
         report["909"] = state["starts"][-1]
         assert report["808"]["model"] == 0 and report["pending"][1] == 0 and report["909"]["model"] == 1
+        # One ordinary sequencer lock, including the value painted while its step is held.
+        tap("STOP"); tap("STOP"); controls(); tap("RECORD"); tap("1")
+        session.press(session.code("1")); wait()
+        state["phase"] = "lock-edit"
+        for _ in range(4): turn("B",8)
+        pattern = word(names["fw_pattern"])
+        locked = int.from_bytes(uc.mem_read(pattern + 0x1e80 + 2 * 28,2),"big",signed=True)
+        screen("lock-edit")
+        report["lock_edit"] = dict(raw=locked, base=stored()[2], shown=state["decay_text"][-8:])
+        assert locked >= 0 and str(locked >> 8) in state["decay_text"], report["lock_edit"]
+        session.release(session.code("1")); wait(); tap("RECORD")
+        state["phase"] = "lock-play"; tap("PLAY"); wait(1500); tap("STOP")
+        observed = [v[1] for phase,values in state["samples"] if phase == "lock-play" for v in values if v[0] == 1]
+        report["lock_play"] = dict(expected=locked, observed=sorted(set(observed)))
+        assert locked in observed and stored()[2] == report["lock_edit"]["base"], report["lock_play"]
+        state["phase"] = ""
+        # One native LFO destination: the selected 808 Tone / 909 Tune control.
+        tap("AMP"); tap("LFO")
+        kit = word(names["fw_kit"])
+        read_slot = lambda slot: int.from_bytes(uc.mem_read(word(names["fw_kit"]) + 0x2c + 2 * slot,2),"big",signed=True)
+        choices = []
+        for _ in range(32):
+            destination = read_slot(4) >> 8
+            if destination == 27: break
+            turn("D",max(-8,min(8,27 - destination))); tap("YES")
+            choices.append(read_slot(4))
+        else: raise AssertionError("native LFO destination did not select Tone/Tune: " + str(choices))
+        report["lfo_destination"] = dict(raw=read_slot(4), choices=choices)
+        for _ in range(4): turn("H",8)
+        report["lfo_depth"] = read_slot(8)
+        tone_base = stored()[1]
+        session.press(session.code("9")); wait()
+        state["phase"] = "lfo"; wait(1500)
+        session.release(session.code("9")); wait()
+        tone = [values[0][1] for phase,values in state["samples"] if phase == "lfo"]
+        report["lfo"] = dict(base=tone_base, minimum=min(tone), maximum=max(tone), samples=len(tone))
+        assert len(set(tone)) > 2 and stored()[1] == tone_base, report["lfo"]
+        state["phase"] = ""
+        # Persist the project first; a fresh factory project rejects temporary saves.
+        tap("GLOBAL"); tap("YES"); tap("DOWN"); tap("YES"); tap("DOWN"); tap("YES"); tap("YES")
+        wait(2500)
+        for _ in range(3): tap("NO")
+        controls()
+        def chord(key):
+            session.press(session.code("FUNC")); wait(40); tap(key)
+            session.release(session.code("FUNC")); wait()
+        saved = stored()
+        chord("YES")
+        turn("B",16)
+        turn("F",-32)
+        report["persistence"] = dict(saved=saved, changed=stored())
+        assert stored() != saved, "native persistence edit changed no control"
+        chord("NO"); wait(500)
+        report["persistence"]["restored"] = stored()
+        screen("reloaded-controls")
+        assert stored() == saved, report["persistence"]
+        # Overlap notes on two native tracks choosing different models.
+        controls()
+        for _ in range(16):
+            if stored()[4] < 16384: break
+            turn("F",-8)
+        session.press(session.code("9")); wait()
+        old = state["starts"][-1]
+        assert old["track"] == 0 and old["model"] == 0, old
+        track0 = stored()
+        session.press(session.code("T2")); wait(600); session.release(session.code("T2")); wait()
+        tap("YES"); tap("RIGHT"); tap("YES"); controls()
+        assert stored(1) == [80 << 8,16384,16384,16384,0], stored(1)
+        for _ in range(16):
+            if stored(1)[4] >= 16384: break
+            turn("F",8)
+        mixed_begin = len(state["observations"])
+        session.press(session.code("11")); wait(150)
+        mixed = {(v["track"],v["model"]) for v in state["observations"][mixed_begin:]}
+        report["mixed_tracks"] = sorted(mixed)
+        assert {(0,0),(1,1)} <= mixed and stored() == track0, (mixed,stored(),track0)
+        session.release(session.code("11")); session.release(session.code("9")); wait()
         assert not state["active"] and state["callbacks"] > 0
         report.update(status="passed", callbacks=state["callbacks"], starts=state["starts"],
                       checked=["native menu/defaults", "native first-page controls", "native encoder MODEL delivery",
                                "next-START MODEL latch", "real companion fresh/settled frame",
-                               "zero owned voice output", "other voices preserved"])
+                               "zero owned voice output", "other voices preserved", "native p-lock and held-lock display", "native LFO delivery", "native save/reload", "mixed 808/909 tracks"])
     except (AssertionError, ValueError) as error:
         report["reason"] = str(error)
     finally:

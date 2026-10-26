@@ -209,9 +209,17 @@ the x0z SYN2 first page and leaves native input delivery intact. The smoke enter
 SYN1 then SYN2: pressing SYN2 again would toggle to the deliberately unused
 second page. No SDK/vendor or saved-layout change is involved.
 
-Reports and screenshots regenerate under `out/dn/silent/`. Native p-lock/LFO,
-mixed-track and save/reload acceptance remain open in #40; this first smoke
-does not qualify UART input or strict-emulator behavior.
+The completed smoke observes 12,305 callbacks. A held step shows DECAY94 and
+delivers raw24064 while preserving base74/raw18944. One native LFO produces
+2,371 samples over17911..23026 without changing the saved base. Native project
+save-as and temporary pattern save/change/reload restore ID80 and all A/B/C/F
+words. Overlapping tracks0/1 select808/909 in the same build. All owned outputs
+remain zero and other voice buffers remain unchanged per callback.
+
+Reports and screenshots regenerate under `out/dn/silent/`. This completes #40's
+silent milestone. Cross-boot persistence, strict timing, broader recording/copy/
+PAGE modifier flows and actual kick synthesis remain later qualification; UART
+input is not claimed by this panel/encoder smoke.
 
 ## Silent Digitone II mod
 

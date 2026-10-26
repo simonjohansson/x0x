@@ -8,6 +8,9 @@
 #endif
 
 static void *x0z_dn_brain;
+static uint32_t trigs;
+/* shortcut: ordinary grid input is covered; qualify modifier flows in #20. */
+static int32_t grid_record, func_down, rec_down;
 static const int32_t slots[] = {27, 28, 29, 32};
 static const int32_t places[] = {0, 1, 2, 5};
 static const char *const labels[] = {"TNTUN", "DECAY", "ATTK", "MODEL"};
@@ -33,10 +36,43 @@ static int32_t shown(void)
 
 int x0z_dn_key(void *owner, void *event)
 {
-    (void)event;
     if (owner)
         x0z_dn_brain = owner;
+    if (event) {
+        int32_t key = *(int32_t *)((uint8_t *)event + 12);
+        int32_t flags = *(int32_t *)((uint8_t *)event + 16);
+        if (key == 1)
+            func_down = !(flags & 0x10);
+        if (key == 10) {
+            rec_down = !(flags & 0x10);
+            if (flags == 1 && !func_down)
+                grid_record ^= 1;
+        }
+        if (key == 11 && flags == 1 && rec_down)
+            grid_record = 0;
+        if (key == 12 && flags == 1 && rec_down)
+            grid_record = 1;
+        if (key >= 26 && key <= 41) {
+            if (flags & 0x10) trigs &= ~(1u << (key - 26));
+            else trigs |= 1u << (key - 26);
+        } else if (flags & 1 && ((key >= 20 && key <= 25) || (key >= 42 && key <= 45)))
+            trigs = 0;
+    }
     return 0;
+}
+
+/* OB-1's slot-indexed native lock row; read only while editing a held step. */
+static int32_t shown_value(int32_t slot)
+{
+    int32_t value = FW_SOUND_SLOT(fw_kit, fw_active_track, slot);
+    if (grid_record && trigs && fw_pattern) {
+        uint32_t step = 0;
+        while (!(trigs & (1u << step))) ++step;
+        uint8_t *row = fw_pattern + 0x1e80 + fw_active_track * 10319 + step * 160;
+        int32_t locked = *(volatile int16_t *)(row + 2 * slot);
+        if (locked != -1) value = locked;
+    }
+    return value;
 }
 
 static void number(int32_t raw, char text[4])
@@ -57,7 +93,7 @@ void x0z_dn_draw(void *bitmap, void *control)
     fw_fillrect(bitmap, 15, 0, 127, 52, 0);
     for (uint32_t knob = 0; knob < 4; ++knob) {
         int32_t x = 18 + 27 * (places[knob] % 4), y = 12 + 26 * (places[knob] / 4);
-        int32_t raw = FW_SOUND_SLOT(fw_kit, fw_active_track, slots[knob]);
+        int32_t raw = shown_value(slots[knob]);
         char text[4];
         number(raw, text);
         fw_framerect(bitmap, x + 4, 63 - y - 17, x + 21, 63 - y, 1);
@@ -74,7 +110,7 @@ void x0z_dn_tick(void *control)
     if (!control || !shown()) { valid = 0; return; }
     dirty = !valid || track != fw_active_track;
     for (uint32_t knob = 0; knob < 4; ++knob) {
-        int32_t value = FW_SOUND_SLOT(fw_kit, fw_active_track, slots[knob]);
+        int32_t value = shown_value(slots[knob]);
         dirty |= values[knob] != value;
         values[knob] = value;
     }

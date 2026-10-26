@@ -14,7 +14,7 @@ the behavior and circuit details.
 
 ## The working backlog
 
-Eight open issues replace the previous 66. Small increments are commits and
+Eight working issues replace the previous 66. Small increments are commits and
 checklist steps inside these issues, rather than a ticket for every control,
 model stage, CPU implementation and matrix cell.
 
@@ -22,7 +22,7 @@ model stage, CPU implementation and matrix cell.
 | --- | --- | --- |
 | Track | [#1](https://github.com/simonjohansson/x0z/issues/1) | Roadmap and milestone status |
 | Now | [#39](https://github.com/simonjohansson/x0z/issues/39) | Digitakt: select and exercise the silent combined mod in digiemu |
-| Now | [#40](https://github.com/simonjohansson/x0z/issues/40) | Digitone: select and exercise the silent combined mod in digiemu |
+| Done | [#40](https://github.com/simonjohansson/x0z/issues/40) | Digitone: select and exercise the silent combined mod in digiemu |
 | Now | [#7](https://github.com/simonjohansson/x0z/issues/7) | Digitone II: select and exercise the silent combined mod in Digikit |
 | Next | [#9](https://github.com/simonjohansson/x0z/issues/9) | Implement the 808 on both CPUs and integrate each increment into working mods |
 | Then | [#25](https://github.com/simonjohansson/x0z/issues/25) | Implement the 909 on both CPUs alongside the 808 in those same mods |
@@ -64,7 +64,7 @@ Existing tests stay, but adding more edge-case coverage is not the priority.
 | Device | Useful evidence already available | Work still needed for this milestone |
 | --- | --- | --- |
 | DT, OS 1.54 | Real ID80 mod boots; selection defaults, native controls, p-lock/LFO, save/reload, mixed models and silent owned output pass | Native knob/page reset still restores stock defaults; #39 remains open |
-| DN, OS 1.44 | Real ID80 mod boots; native compact defaults/controls, screen, START-latched MODEL and silent owned output pass | Finish native p-lock/LFO, mixed tracks and save/reload |
+| DN, OS 1.44 | Silent milestone passes: native controls/screen, p-lock/LFO, save/reload, mixed tracks and owned output | Actual kick models and broader qualification follow in #9/#25/#20 |
 | DN2, OS 1.12 | ID20 boots in coupled Digikit; native defaults, MIDI notes, pending MODEL and concurrent 808/909 voices pass | Ordinary A/B/C edits, native p-lock/LFO, mixed tracks and save/reload |
 
 The user explicitly approved the combined DT/DN saved layouts on 26 October:
