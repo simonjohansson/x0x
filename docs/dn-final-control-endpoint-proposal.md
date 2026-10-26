@@ -1,7 +1,7 @@
 # DN final-control endpoint policy
 
 **Approved by the user on 26 October 2026:** “Approve the DN-only endpoint policy.”
-The implementation is being verified against the acceptance checks below. Scope is the private
+Implemented and verified by the checks below. Scope is the private
 Digitone OS 1.44 final-frame adapter at Elekloader PR 200 commit
 `2ab5f424c4721e4277d2112a5ae755d9938f50d6`. This adopts no saved layout or ID.
 
@@ -17,11 +17,12 @@ CC1=127, its producer, controller stage and final stage then give:
 | 0 | 32512 | 32512 | 0 | 32512 | 32512 |
 | 1 | 32512 | 32512 | 983 | 32634 | 32634 |
 
-The real `x0z_dn_frame_read(frame, 0, 119, ...)` returns **0** with a valid
+Before the approved change, `x0z_dn_frame_read(frame, 0, 119, ...)` returned **0** with a valid
 current-bank pointer and ready phase 3; it returns normally to `0xdeadbee0`.
 The stock parameter record has UI minimum 0 and maximum 32512. The final word
-is positive and representable, but the current reader rejects it as above UI
-maximum. This blocks final-range qualification; it is not a passing gate.
+is positive and representable; the old reader rejected it as above UI maximum.
+The implemented policy now accepts this word while preserving both raw and UI
+metadata, and bounds only the normalized position.
 
 The ignored source/log are `out/dn/probe_saturation.py` and
 `out/dn/saturation-probe.log`. Reconstruct from the pinned harness by settling
@@ -71,3 +72,24 @@ The user's supplied AGENTS.md requires review before API changes. The explicit
 approval above authorizes this DN-only raw-reader/receiver rejection behavior
 and metadata meaning. Native-source, ownership, selector
 integration, full-OS timing and fidelity gates in #75/#40 remain separate.
+
+## Verification
+
+`mise run test:ui:dn` independently tests the production C policy without firmware
+or ASM: all eight slots, exact fractional/end-point positions, raw/UI metadata,
+MODEL canonicalization, negative/malformed/missing/expired rejection and strict
+target-accessor behavior. AddressSanitizer/UndefinedBehaviorSanitizer also pass.
+
+`mise run test:dn:endpoints` builds an ignored ID-127 diagnostic. Two actual
+native control-stage/registered-callback cases retain raw 32512 then 32634,
+with UI bounds 0..32512 and position 32512/32512 in both. Fifty-two separately
+labelled synthetic/missing/invalid MODEL cases exercise all eight lanes through
+production DN canonicalization and the unchanged actual ColdFire selector ASM.
+These include raw 32513/32634/32767 selecting 909 at START, first CONT waiting,
+same-model retrigger, changed-model tail clearing and unrelated-lane isolation.
+The output is a C diagnostic marker, not kick audio.
+
+Five recompiled adapters are rejected: removed normalized clamp, clipped raw
+observation, denominators rescaled to 32634/32767, and bypassed MODEL
+canonicalization. Native MODEL-source delivery, real START ownership and full-OS
+audio timing remain separate; this result does not qualify complete #75/#40.

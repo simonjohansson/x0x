@@ -109,8 +109,10 @@ and full-OS latency remain separate. Its note/state injection does not
 qualify native START/frame ownership; the full-OS observer still uses an
 order-40 diagnostic receiver. Complete mappings, selector integration and native
 source/ownership/timing gates remain open. The measured final-word/UI-range
-mismatch has a [concrete endpoint proposal](dn-final-control-endpoint-proposal.md)
-pending review; do not adopt its changed rejection policy yet.
+mismatch now has an explicitly [approved DN-only endpoint policy](dn-final-control-endpoint-proposal.md):
+retain raw/UI bounds, clamp normalized positions, and canonicalize only the
+DN-side MODEL word passed to the existing selector. Other native integration
+gates and DT/DN saved-layout reviews remain separate.
 
 ## Small sound slices
 

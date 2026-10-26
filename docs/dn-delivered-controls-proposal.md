@@ -233,11 +233,17 @@ intended breath-table check. Router/cache/source isolation and the existing
 55/47/94 callback/delivery/read totals remain intact.
 
 A separate final-frame boundary probe is recorded in the
-[pending endpoint proposal](dn-final-control-endpoint-proposal.md): with the
+[approved DN-only endpoint policy](dn-final-control-endpoint-proposal.md): with the
 LFO mapped away from LEVEL, native CC1 produces final 32634 against its stock
-UI maximum 32512, and the ready C frame reader returns failure. Native
+UI maximum 32512. The old ready reader rejected that legitimate final word. Native
 intermediate controller saturation alone was not used to infer this result.
-The proposed normalization/raw-reader change requires review before adoption.
+The user explicitly approved the DN-only normalization/raw-reader change on
+26 October 2026. `test:dn:endpoints` now replays the actual final word through
+registered callbacks and verifies raw/UI metadata plus the clamped position.
+Fifty-two labelled synthetic/missing/invalid MODEL cases exercise production
+canonicalization and existing ASM over eight lanes, with five rejected compiled
+adapters. This does not adopt a saved layout or alter shared ASM/SHARC inputs;
+native MODEL source/START ownership and full-OS timing remain open.
 
 Channel pressure now has an independent prepared-message route. The actual
 handler prefix `0x400ea1ee..0x400ea294` reads `D0 20`, resolves configured

@@ -161,6 +161,7 @@ mise run firmware:dn
 mise run test:dn:native
 mise run test:dn:frame      # actual native stages, explicitly injected control state
 mise run test:dn:machine    # generated test machine, actual companion callbacks, injected native state
+mise run test:dn:endpoints  # approved final overshoot + canonical MODEL through existing ASM
 mise run test:dn:transport  # 40 ms of standard non-strict full-OS Core event observation
 ```
 
@@ -468,13 +469,27 @@ VST selection, plugin captures and calibrated kick-fidelity gates remain deferre
 All runs in this phase use host test equipment or the required emulators; no
 real device is operated.
 
-## Pending DN final-control endpoint review
+## Approved DN final-control endpoint policy
 
 A separate bounded probe found a legitimate final control outside the stock UI
 range: target 32512 plus native CC1 modulation yields final word 32634 when the
 LFO targets another parameter. The ready production frame reader rejects it.
-This is a concrete saturation-qualification gap, not a completed gate. The
-[endpoint proposal](dn-final-control-endpoint-proposal.md) preserves observed raw
-words/UI bounds and proposes clamping only normalized positions and the DN-side
-MODEL argument passed to the existing selector. It remains unadopted pending
-review; no rejection policy or shared ASM/SHARC contract has changed.
+The user approved the
+[DN-only endpoint policy](dn-final-control-endpoint-proposal.md) on 26 October
+2026. The final reader now preserves observed raw/UI bounds while normalization
+clamps only the position to its UI endpoint. `x0z_dn_frame_model` retains raw
+MODEL and bounds only its canonical argument to the existing selector. The
+target-accessor diagnostic stays strict, and shared ASM/SHARC contracts, DT,
+DN2 and saved layouts are unchanged. Native acceptance is recorded separately
+from complete model/ownership/timing qualification.
+
+The independent `test:dn:endpoints` diagnostic replays two actual native cases
+(raw 32512 and 32634) through registered callbacks, production C and the
+unchanged actual selector ASM. It also runs 52 labelled synthetic/missing/invalid
+MODEL cases over all eight lanes, preserving raw words above UI maximum while
+passing canonical 32512 to the selector. Five recompiled defects reject clipped
+raw observations, missing normalization, rescaled denominators and unbounded
+MODEL. Memory/register/stack guards retain frame, voice and lane isolation.
+This uses C markers, not kick audio; synthetic MODEL/START cases do not establish
+native source or allocator timing. Existing target/component/control/selector
+regressions and the separate standard non-strict OS observer remain independent.

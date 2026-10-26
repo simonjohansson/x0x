@@ -114,7 +114,7 @@ def validate_trace(traces):
         previous, previous_block = pointer, block
 
 
-def build(folder=FOLDER, adapter_source=None, machine_driver=None):
+def build(folder=FOLDER, adapter_source=None, machine_driver=None, assembly_source=None):
     entries, revision = firmware.baseline()
     stock = firmware.verify_entry(entries["digitone-mk1"], ROOT / "firmware", revision)
     if stock["version"] != "1.44":
@@ -125,7 +125,7 @@ def build(folder=FOLDER, adapter_source=None, machine_driver=None):
     descriptor = dict(id="x0z-dn-transport-probe", version="0.0", title="DN test observer",
                       device="digitone-mk1", os="1.44", license="GPL-2.0-or-later",
                       sources=["probe.c", str(adapter_source or ROOT / "machines/digitone/adapter.c"),
-                               str(ROOT / "src/controls.c"), str(ROOT / "targets/coldfire/diagnostic.s")],
+                               str(ROOT / "src/controls.c"), str(assembly_source or ROOT / "targets/coldfire/diagnostic.s")],
                       cflags=["-I" + str(ROOT / "machines/digitone"), "-I" + str(ROOT / "include")],
                       requires=["core", "machines"], subscribe=[
                           dict(event=event, fn=fn, order=order) for event, fn, order in (
