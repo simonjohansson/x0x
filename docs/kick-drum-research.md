@@ -3,11 +3,17 @@
 Research snapshot: 26 October 2026. This document prepares future implementation;
 it does not report an implemented or qualified engine.
 
-The intended product uses **C for native controls and other plumbing, and
-handwritten SHARC assembly for audio rendering**. Start with the **808**. Its
-published circuit models make it the better bounded first project, even though
-faithful transient and retrigger behavior are not simple. Develop the 909 after
-an audible, independently tested 808 slice exists. Stock behavior comes first;
+The intended product targets **Digitakt, Digitone and Digitone II**, using **C
+for native controls and other plumbing, ColdFire assembly for Digitakt/Digitone
+audio, and SHARC+ assembly for Digitone II audio**. Digitakt II is outside the
+active scope. Each drum has one shared behavioral model and independent offline
+reference, implemented separately for the two CPU architectures.
+
+Prioritize the **808**. Its published circuit models make it the better bounded
+first project, even though faithful transient and retrigger behavior are not
+simple. Aim for an audible, independently tested 808 slice before the more
+complex 909 work; this priority does not block an independent ready cell.
+Stock behavior comes first;
 tunable 808 basslines, distortion, extended decay and circuit bending are later
 product decisions.
 
@@ -22,12 +28,13 @@ different claims and must have separate results.
 | --- | --- |
 | First engine | 808: strongest directly applicable published analysis and a useful small resonator milestone. This is a project recommendation, not a measured effort estimate. |
 | Modeling approach | Circuit-informed models, starting with independently verifiable subcircuits; simplify only against measured errors. Retain a higher-accuracy offline reference. |
-| Production languages | C for registration/UI/control integration; SHARC ASM for the render path, including conversion of delivered controls into audio coefficients. |
+| Production languages | C for registration/UI/device integration; ColdFire ASM and SHARC+ ASM for their respective render paths, including conversion of delivered controls into audio coefficients. |
 | Offline reference | A readable, double-precision mathematical model is permitted as test equipment; Python managed through mise is a suitable initial choice. It is not a second production DSP implementation. |
 | Reference sound | Versioned, dry VST captures first. Original hardware evidence remains desirable but is not required to begin. |
-| Platform assumption | Assume Elekloader PRs [197][U197] and [200][U200] merge. Revalidate the merged headers, adapter and behavior before implementation. |
+| Platform assumption | Use the existing Digitakt/Digitone custom-engine paths. For Digitone II, assume Elekloader PRs [197][U197] and [200][U200] merge. Pin and revalidate each target's headers, adapter and behavior before implementation. |
+| Sharing boundary | One model per drum, two CPU backends, three C device adapters; Digitakt and Digitone reuse each ColdFire engine kernel. Select targets at build time. |
 | Memory | Record current code/data usage. The user explicitly allows upstream memory expansion if needed; current limits must not silently dictate fidelity compromises. |
-| Progress | Small audible slices with integration checks throughout, plus independent C UI and ASM DSP suites. No final all-at-once integration milestone. |
+| Progress | Establish shared interfaces/tests and each target's harness/adapter first. Then advance six device/engine cells independently through small audible slices, with independent C UI and ASM DSP suites. No final all-at-once integration milestone. |
 
 Evidence terms used below:
 
@@ -242,8 +249,10 @@ the output to an arbitrary peak does not reproduce a shaped trigger.
 
 **Proposed use:** a first 808 body oracle and ASM exercise. This is not the full
 bridged-T circuit. For very low frequencies and long decay, float32 coefficients
-approach cancellation-sensitive values. Compare direct-form recurrence with a
-state-space or quadrature realization before selecting the ASM form. Test zero
+approach cancellation-sensitive values. Fixed-point coefficients also need
+explicit scaling: the coefficient 2 r cos(θ) approaches 2 and cannot simply be
+stored in Q1.31. Compare direct-form recurrence with a state-space or quadrature
+realization before selecting each CPU's ASM form. Test zero
 input, long tails and modulation explicitly. Require monotonic decay of the
 appropriate state energy only for the unforced, fixed-parameter linear baseline;
 driven, modulated and nonlinear stages can legitimately exchange energy.
@@ -269,7 +278,7 @@ states and event times are part of the input, not hidden tuning variables.
 | Sample playback / opaque learned model | Optional comparison baseline only | Does not meet the intended circuit-informed synth progression by itself. |
 
 The WDF literature supports modeling arbitrary topologies and multiple
-nonlinearities, but the RT-WDF paper is not a SHARC performance result. Its
+nonlinearities, but the RT-WDF paper is not a target-CPU performance result. Its
 framework is a methodological reference, not a proposed new dependency. [S13]
 Non-iterative circuit solvers offer another research option when iterative cost
 is problematic; whether their assumptions apply to these active circuits must
@@ -418,7 +427,8 @@ Choose a sparse interaction set before a full cross-product. For history tests,
 proposed inter-onset spacings are 1, 2, 5, 10, 20, 50, 100 and 250 ms, plus a
 normal musical sequence. Some extremely short spacings may be unsupported by
 the target event path; record that result instead of silently rounding them.
-Keep offline sample-accurate event tests separate from what the DN2 can deliver.
+Keep offline sample-accurate event tests separate from what each device's event
+path can deliver.
 
 Freeze fit/evaluation membership and metric limits after reference repeatability
 is known, before optimizing against the held-out set. Later threshold changes
@@ -459,9 +469,50 @@ Do not invent a universal “inaudible” dB/cents threshold before obtaining da
 The ticket that establishes the corpus must deliver numeric tolerances and
 measurement uncertainty before timbre-fitting tickets can close.
 
-## 6. C UI and SHARC DSP boundaries
+## 6. Shared models, CPU backends and device boundaries
 
-### 6.1 Conditional Elekloader baseline
+### 6.1 Modular CPU targets
+
+The shared definition owns circuit equations, physical parameter meanings,
+trigger/retrigger policy, normalization and fidelity criteria. An independent
+high-precision host renderer supplies expected behavior. The two assembly
+backends own numeric formats, state representations, coefficient encodings,
+rounding/saturation, approximations and instruction scheduling. They may use
+different stable realizations of the same model; they must not become separately
+fitted instruments.
+
+The MCF5441x has an EMAC and no hardware FPU, making fixed point the natural
+ColdFire path. Its accumulators are 48 bits; the fractional product is reduced
+to 40 bits before accumulation. SHARC+ supports fixed and floating point;
+float32 is a starting implementation choice, not an accuracy guarantee.
+[UCF, Table 3-9 and §5.3][UCF], [S20]
+
+Use two build-selected backend implementations per engine, with three thin C
+device adapters. Share the ColdFire kernel between Digitakt and Digitone rather
+than copying it into each device directory. Adapters translate firmware events,
+controls and voice identity, and handle output integration. Common settings mean
+the same physical values and event times, not necessarily identical raw knob
+words or binary state layouts. No portable assembly translator, per-operation
+dispatch layer or mandatory cross-CPU bit identity is proposed.
+
+| Device | DSP path | Verified integration boundary |
+| --- | --- | --- |
+| Digitakt | ColdFire ASM | Eight track buffers, 32 Q1.31 samples each at 48 kHz; custom rendering follows sample playback and precedes overdrive. [UDT], [UDTRENDER] |
+| Digitone | Shared ColdFire ASM backend | Eight voice buffers, 32 Q1.31 samples each at 48 kHz; custom rendering runs on the main ColdFire and replaces audio produced by the second FM processor. [UDN] |
+| Digitone II | SHARC+ ASM | Assuming PRs 197/200, a per-voice callback supplies 32 mono float samples at 48 kHz, followed by stock processing. [UVOICE] |
+
+Digitone's raw replacement hook overwrites audio that already contained the
+stock AMP envelope. Its machine companion reapplies AMP/velocity unless
+`DNM_OWN_ENV` is selected. Digitone II applies stock AMP processing downstream.
+Keep the kick's intrinsic decay separate from host AMP shaping, and test each
+adapter's routing explicitly. Digitone's second processor does not automatically
+provide CPU time for this main-CPU custom-engine path. [UDNAMP], [UVOICE]
+
+Code/data expansion can remove an allocation constraint but cannot establish
+audio-deadline compliance. Measure CPU use, stack, state capacity and sustainable
+voices on each device. No such workload measurements exist yet.
+
+### 6.2 Conditional Digitone II baseline
 
 The PRs were inspected while open. This research follows the user's assumption
 that they will merge. Snapshots are [197 at 65cfa950][U197] and [200 at
@@ -471,7 +522,7 @@ not merely a matching textual ABI name.
 
 | Proposed upstream behavior | Consequence for the plan |
 | --- | --- |
-| Digitone II OS 1.12 | Initial target inferred from the referenced PRs. Other devices are separate work. |
+| Digitone II OS 1.12 | DN2-specific baseline from the referenced PRs; Digitakt and Digitone use their own pinned adapters. |
 | One custom SHARC synth registration/program per build | Decide one machine with a model selector, separate firmware variants, or a future upstream registration expansion. Start 808 without settling every 909 packaging detail. |
 | 32 mono float samples at 48 kHz | Persist audio and trigger states across calls. Block duration is 0.6667 ms, not the available execution budget. |
 | Allocated slots 0–15 | State belongs to slots; never use slot as a track number. |
@@ -494,23 +545,33 @@ shift encoding defect. Verify generated instruction encodings independently
 and follow the validated upstream workaround; emulator success alone does not
 rule out an illegal instruction on silicon. [UVOICE]
 
-### 6.2 Independently runnable tests
+### 6.3 Independently runnable tests
 
 | Layer | Inputs | Test result it owns | Does not require |
 | --- | --- | --- | --- |
-| C page/control tests | Fake native services and a fake DSP-facing receiver | Labels, defaults, declared/empty slots, stock-control semantics and value mapping | A working sound engine or physical DN2 |
+| C page/control tests | Each device's native-service fakes and a fake DSP-facing receiver | Labels, defaults, declared/empty slots, stock-control semantics and value mapping | A working sound engine or physical device |
 | Mathematical oracle tests | Explicit event/parameter fixtures and initial states | Analytic checks, circuit behavior and discretization comparisons | UI or firmware |
-| ASM kernel tests | Callback-shaped input, buffers and slot state in an instruction harness | Actual assembled output, ABI preservation, state bounds and oracle residuals | Native pages or knob input |
-| Parameter transport integration | Real native controls into a diagnostic ASM kernel | Correct per-voice values after locks/modulation | Completed kick timbre |
-| Firmware/audio integration | Selected machine, known stock downstream configuration | Real routing, onset, controls, persistence and coexistence | Every feature of both engines |
+| ASM kernel tests | Shared logical fixtures adapted to each CPU's actual instruction harness | Actual assembled output, ABI preservation, state bounds, numeric failures and oracle residuals | Native pages or knob input |
+| Cross-CPU comparison | Raw ColdFire/SHARC output for identical physical settings, state and timed events | Pitch, decay, onset, gain and deterministic waveform agreement within established tolerances | Device UI or matching binary arithmetic |
+| Parameter transport integration | Each device's real native controls into its diagnostic ASM kernel | Correct per-voice values after locks/modulation and correct event translation | Completed kick timbre or another device adapter |
+| Firmware/audio integration | One device/engine cell, known stock downstream configuration | Real routing, onset, controls, persistence and coexistence | Completion of the other five cells |
 | Physical qualification | Exact firmware on target hardware with timing/audio capture | Device operation and measured worst-case deadlines | A claim of original Roland hardware fidelity |
 
-These are separate test entry points, not six new frameworks. Reuse existing
+These are separate test entry points, not separate new frameworks. Reuse existing
 upstream fixtures and emulator facilities where they fit. Tests must consume
 the production C declarations and assembled instructions, not duplicate their
 behavior in a mock and call that tested.
 
-### 6.3 Parameter semantics to decide before persistence
+Each CPU backend must pass against the independent oracle before pairwise
+agreement is accepted; two implementations can share an error. Exercise long
+tails, parameter extremes, rapid retriggers, state reset, interleaved voices,
+fixed-point overflow/limit cycles and floating-point non-finite values. Use
+fixed-seed noise for repeatable kernel tests and statistical comparisons for
+independently phased reference noise. Compare raw kernels separately from
+device AMP/filter/mixer output. Instruction execution evidence does not establish
+physical worst-case timing.
+
+### 6.4 Parameter semantics to decide before persistence
 
 The research intentionally does not assign permanent machine IDs or a saved
 parameter layout. Those choices affect persisted sounds and need a concrete
@@ -532,14 +593,16 @@ The eventual contract review should distinguish reset, fresh trigger, same-voice
 retrigger, voice reassignment, silence and model change. Do not introduce a
 public API, generated schema or persisted format in this research phase.
 
-### 6.4 Retrigger and shared-state constraints
+### 6.5 Retrigger and shared-state constraints
 
 The original instruments each have one bass-drum circuit with residual analog
-state. The current callback provides a slot and START but no track identity or
-distinct retrigger event. Preserving old state blindly can import another
+state. The inspected DN2 callback provides a slot and START but no track identity
+or distinct retrigger event. Preserving old state blindly can import another
 track's history; resetting everything blindly can erase the behavior being
-modeled. Verify allocator and monophonic behavior early. A faithful repeated-hit
-mode may need an upstream signal or a documented voice-allocation policy.
+modeled. Verify each device's allocator and monophonic behavior early; do not
+assume Digitakt tracks, Digitone voices and DN2 slots are interchangeable.
+A faithful repeated-hit mode may need an upstream signal or a documented
+voice-allocation policy.
 
 Fresh-hit fidelity can progress independently. Keep repeated-hit fidelity an
 explicit later gate with a real dependency if needed, not an undocumented
@@ -550,41 +613,60 @@ at every hit.
 ## 7. Proposed incremental delivery sequence
 
 This is the research-to-backlog ordering, not a set of completed experiments.
-Each implementation ticket should have one inspectable output, explicit
-prerequisites, independent tests and a small integration observation when it
-changes the working sound.
+The [implementation plan](implementation-plan.md) links the concrete issues and
+their dependencies. Each implementation ticket has one inspectable output,
+explicit prerequisites, independent tests and a small integration observation
+when it changes the working sound.
 
-1. **Reference access and a proven baseline:** select the 808 VST, document stock
-   settings, demonstrate repeated dry captures. Select a 909 candidate alongside
-   it without blocking the first 808 body.
-2. **Measurement and contract foundations:** validate the analyzer; establish
-   808 reference variability/thresholds; inspect merged upstream behavior and
-   decide the initial trigger/control mapping.
-3. **Independent plumbing proofs:** native C control tests with a fake DSP
-   receiver; an assembled silent/diagnostic callback with direct input fixtures.
-   Integrate those two immediately to observe one control reaching the DSP.
-4. **808 body:** an analytic offline resonator, then the corresponding ASM
-   body. Play that explicitly incomplete kick through the real firmware path.
-5. **808 controls and attack in small slices:** add decay, pulse shaping,
-   internal attack/sigh behavior, then tone/output. Alternate oracle, ASM and
-   small integration checkpoints; do not wait for the full 808 to reconnect UI.
-6. **808 history and qualification:** verify accent mapping, retriggers/slot
-   reuse, held-out captures, save/reload, stock-track coexistence, code/data use,
-   aliasing and measured physical timing. Raise concrete upstream needs as found.
-7. **909 references and body:** reuse the capture/analyzer/harness; implement and
-   compare triangle oscillator, trigger reset and shaper before the rest of the voice.
-8. **909 pitch and decay:** add the pitch/CV branch and tonal envelope/VCA with
-   Tune/Decay controls, each independently tested and audibly integrated.
-9. **909 attack:** add a separately tested noise/pulse branch, then Attack and
-   its amplitude envelope. Validate statistics and continuous-noise scheduling.
-10. **909 history and qualification:** use the same evidence layers as the 808,
-    then test any combined selection/persistence behavior. This is accumulated
-    regression coverage, not first integration.
+1. **Reference and measurement foundations:** select reproducible stock-oriented
+   VSTs, prove the analyzer with known defects, and establish each instrument's
+   capture corpus and tolerances before timbre fitting. These can run alongside
+   infrastructure work.
+2. **Shared contract and fixture design:** define physical controls, event times,
+   reset/retrigger semantics, state ownership and expected output. Pin each
+   device's upstream interface in its own adapter work. Review numeric and ABI boundaries before
+   committing production interfaces or persisted layouts.
+3. **CPU harnesses and device proofs:** establish reproducible builds and actual
+   instruction tests for ColdFire and SHARC+ independently. Give each device its
+   C adapter tests and silent/diagnostic transport integration. Verify one control
+   and one trigger through that device before adding its kick engine.
+4. **First 808 body on both CPUs:** derive one analytically checked body oracle;
+   implement the ColdFire and SHARC+ forms against it and compare raw outputs.
+   Integrate early on at least one ColdFire device and DN2, then connect the other
+   ColdFire adapter to the same kernel. Expose numeric and CPU-cost problems
+   while this slice is small, before committing to expensive full models. This
+   is a scheduling priority, not a gate on another device's progress.
+5. **Advance each ready cell in small slices:** for the 808, add decay, excitation,
+   attack/sigh behavior and tone/output separately. For the 909, add the triangle
+   oscillator/shaper, pitch/CV, tonal envelope/VCA and noise/pulse attack branch
+   separately. Reuse the shared oracle work and CPU/engine kernels, while testing
+   each device's control mapping and audible integration for every relevant slice.
+6. **Qualify each cell independently:** accumulate reference fidelity, accent,
+   retrigger/history, save/reload, coexistence, aliasing, code/data/stack use and
+   physical timing evidence. Cross-CPU comparison supplies additional evidence
+   when both matching slices exist; an unavailable peer does not block an otherwise
+   passing cell. It replaces neither oracle tests nor device qualification.
 
-No production C, ASM, build system or firmware is delivered by this research.
-The issue backlog should use engine labels **808** and **909**, with explicit
-blocking relationships. Shared work may carry both labels. UI, DSP, reference,
-test and integration work should be identifiable independently.
+The active delivery matrix is:
+
+| Device | 808 cell | 909 cell | Shared DSP implementation |
+| --- | --- | --- | --- |
+| Digitakt | DT + 808 | DT + 909 | ColdFire 808 and ColdFire 909 |
+| Digitone | DN + 808 | DN + 909 | The same ColdFire 808 and ColdFire 909 |
+| Digitone II | DN2 + 808 | DN2 + 909 | SHARC+ 808 and SHARC+ 909 |
+
+A cell starts when its shared contract/tests, CPU harness and device adapter
+are ready, plus the prerequisites of its next engine slice. It does not wait for
+unrelated device adapters or another cell's complete engine. Likewise, a shared
+kernel change needs regression checks in both ColdFire consumers without making
+their device-specific work a single inseparable ticket. Start with 808 feasibility;
+909 work does not require full qualification of all three 808 cells.
+
+No production C, ASM, build system or firmware is delivered by this research
+and planning update. The issue backlog uses engine labels **808** and **909**,
+device/CPU labels and explicit blocking relationships. Shared work may carry
+both engine labels. UI, DSP, reference, test and integration work remain
+identifiable independently. Digitakt II has no active cell or delivery dependency.
 
 ## 8. Open questions and research limits
 
@@ -594,13 +676,14 @@ test and integration work should be identifiable independently.
   measured? A visually similar waveform is not a sufficient acceptance rule.
 - Which original 909 circuit revision and pot curves should define the nominal
   model? The schematic is stronger evidence than generalized sound descriptions.
-- Can the current native voice policy express original monophonic retrigger
+- Can each device's native voice policy express original monophonic retrigger
   history without state leakage between tracks? This needs an early experiment.
-- Will two models share one registered program, use separate builds, or depend
-  on expanded upstream registration? Do not treat memory expansion as proof
-  that this separate registration constraint has disappeared.
+- On DN2, will two models share one registered program, use separate builds, or
+  depend on expanded upstream registration? Do not treat memory expansion as
+  proof that this separate registration constraint has disappeared.
 - Which nonlinear blocks need oversampling or a different discretization? There
-  is no measured x0z CPU, aliasing, memory or stack result yet.
+  is no measured x0z CPU, aliasing, memory or stack result yet. What fidelity and
+  voice count can each device sustain, especially the main-CPU ColdFire paths?
 - What exact original-component substitutions matter audibly? Neither modern
   datasheets nor matching a published SPICE model settle that question.
 
@@ -663,6 +746,9 @@ PDF was successfully saved.
 | [S41] | D16 Drumazon 2 manual; capture setup and processing controls | d16-drumazon2-manual.pdf |
 | [U197] | Elekloader PR 197, inspected head 65cfa95089fae9daf8ac57dc2d04e051ad8da067 | upstream/pr-197.json |
 | [U200] | Elekloader PR 200, inspected head 2ab5f424c4721e4277d2112a5ae755d9938f50d6 | upstream/pr-200.json; matching voice docs/headers |
+| [UCF] | NXP MCF5441x Reference Manual Rev.5, May 2018; Table 3-9 FPU/EMAC configuration, §5.3 EMAC precision | Web-read for CPU comparison; not archived |
+| [UDT], [UDTRENDER] | Elekloader at c150ac583a4b7e6d64680d5592f4a40f409193f7; Digitakt buffer and render-event contracts | Inspected source links; not archived |
+| [UDN], [UDNAMP] | Elekloader at c150ac583a4b7e6d64680d5592f4a40f409193f7; Digitone main-CPU custom rendering and AMP ownership | Inspected source links; not archived |
 | [L01] | Fortuna, University of Padua, 2024/25, Studio, simulazione e progettazione di una drum machine | Abstract lead only; full thesis not obtained |
 
 Original-source links:
@@ -707,6 +793,11 @@ Original-source links:
 [U200]: https://github.com/irpina/elekloader/pull/200
 [UVOICE]: https://github.com/simonjohansson/elekloader/blob/2ab5f424c4721e4277d2112a5ae755d9938f50d6/docs/MACHINES-DN2-VOICE.md
 [UHEADER]: https://github.com/simonjohansson/elekloader/blob/2ab5f424c4721e4277d2112a5ae755d9938f50d6/elekloader/sdk/include/digitone-mk2/voice.h
+[UCF]: https://www.nxp.com/docs/en/reference-manual/MCF54418RM.pdf
+[UDT]: https://github.com/irpina/elekloader/blob/c150ac583a4b7e6d64680d5592f4a40f409193f7/elekloader/sdk/include/digitakt-mk1/core3.h#L17-L24
+[UDTRENDER]: https://github.com/irpina/elekloader/blob/c150ac583a4b7e6d64680d5592f4a40f409193f7/docs/ADAPTING.md#L1115-L1120
+[UDN]: https://github.com/irpina/elekloader/blob/c150ac583a4b7e6d64680d5592f4a40f409193f7/docs/ADAPTING.md#L1747-L1770
+[UDNAMP]: https://github.com/irpina/elekloader/blob/c150ac583a4b7e6d64680d5592f4a40f409193f7/docs/ADAPTING.md#L1824-L1839
 [V808]: https://www.roland.com/global/products/rc_tr-808/
 [V909]: https://www.roland.com/global/products/rc_tr-909/
 [VD16]: https://d16.pl/manuals
