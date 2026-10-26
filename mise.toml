@@ -54,6 +54,22 @@ run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0z.cpu
 description = "Run both bounded instruction diagnostics"
 run = ["mise run test:coldfire", "mise run test:sharc"]
 
+[tasks."firmware:verify"]
+description = "Verify the latest-only local stock images and pinned SDK identities"
+run = "python -m x0z.firmware verify"
+
+[tasks."build:deps:dt"]
+description = "Build Core and machine-pages for the latest Digitakt OS"
+run = "python -m x0z.firmware build-deps dt"
+
+[tasks."build:deps:dn"]
+description = "Build Core and machines for the latest Digitone OS"
+run = "python -m x0z.firmware build-deps dn"
+
+[tasks."build:deps:dn2"]
+description = "Build Core for the latest Digitone II OS"
+run = "python -m x0z.firmware build-deps dn2"
+
 [tasks."test:dt"]
 description = "Digitakt firmware integration availability"
 run = "python -m x0z.cli unavailable dt"
