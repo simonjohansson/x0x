@@ -244,9 +244,18 @@ after a native MODEL edit; the next note starts a 909 voice while the old 808
 counter continues. Both active voice outputs are zero; final CF ready/error and
 DSP halt/missing-block checks pass.
 
-Reports and screenshots regenerate under `out/dn2/silent/`. Ordinary A/B/C edits,
-native p-lock/LFO, mixed-track and save/reload acceptance remain open in #7.
-Packaging, synthetic callback tests and coupled native evidence are separate.
+Ordinary A/B/C MIDI edits now reach both the packed native frame and actual
+callback as `[25599,2562,20480]` after300frames. These are observed native-smoothed
+values for requested targets `[25600,2560,20480]`; the test preserves fractions
+and compares the two real delivery points rather than assuming instant settling.
+T1 909 and T2 808 run concurrently. A stock T3 note uses machine0, has nonzero
+finite output and leaves its x0z state clear; all selected x0z buffers remain zero.
+Native temporary pattern/kit save-edit-restore retains the controls/model on a
+new note. This is not persistent disk or cross-boot save/load evidence.
+
+Reports and screenshots regenerate under `out/dn2/silent/`. Native p-lock/LFO
+and persistent save/reload remain open in #7. Packaging, synthetic callback tests
+and coupled native evidence are separate.
 Prepared upstream inputs are documented in the [setup record](#coupled-dn2-setup-blocker).
 
 ## Device adapter slices

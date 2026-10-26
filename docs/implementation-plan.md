@@ -65,7 +65,7 @@ Existing tests stay, but adding more edge-case coverage is not the priority.
 | --- | --- | --- |
 | DT, OS 1.54 | Real ID80 mod boots; selection defaults, native controls, p-lock/LFO, save/reload, mixed models and silent owned output pass | Native knob/page reset still restores stock defaults; #39 remains open |
 | DN, OS 1.44 | Silent milestone passes: native controls/screen, p-lock/LFO, save/reload, mixed tracks and owned output | Actual kick models and broader qualification follow in #9/#25/#20 |
-| DN2, OS 1.12 | ID20 boots in coupled Digikit; native defaults, MIDI notes, pending MODEL and concurrent 808/909 voices pass | Ordinary A/B/C edits, native p-lock/LFO, mixed tracks and save/reload |
+| DN2, OS 1.12 | ID20 boots; native A/B/C edits, mixed tracks, silent custom voices and active stock FM pass | Native p-lock/LFO and persistent save/reload; temporary restore already passes |
 
 The user explicitly approved the combined DT/DN saved layouts on 26 October:
 ID 80 `X0Z KICKS`. The subsequently approved compact layout on all three

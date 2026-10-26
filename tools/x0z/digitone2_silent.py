@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
 import struct
 import sys
@@ -213,6 +214,24 @@ def full_os() -> dict:
             }
             report["native_cc"] = cc
             assert all(v < 128 for v in cc.values()), cc
+            edits = {0: 100, 1: 10, 2: 80}
+            emu.midi_in(bytes(v for k, value in edits.items()
+                              for v in (0xB0, cc[str(k)], value)))
+            emu.run_until(frames=emu.status()["dsp_frames"] + 300, timeout_wall_s=120)
+            edited = struct.unpack(
+                "<40I", bytes.fromhex(emu.dsp_peek(0x20093D14, 160)["hex"])
+            )
+            report["ordinary_abc_edits"] = {
+                "cc_targets": {str(k): v << 8 for k, v in edits.items()},
+                "delivered": {str(k): edited[k] for k in edits},
+            }
+            packed = struct.unpack("<40H", bytes.fromhex(
+                emu.dsp_peek(0x25C48C + 2*0x6D, 80)["hex"]))
+            report["ordinary_abc_edits"]["native_frame"] = [packed[k] for k in edits]
+            assert [packed[k] for k in edits] == [edited[k] for k in edits], packed
+            # The native smoother retains fractions; test distinct routing, not instantaneous settling.
+            assert edited[0] > edited[2] > 16384 > edited[1], report["ordinary_abc_edits"]
+            assert edited[5] == 0, edited
             emu.midi_in(bytes([0xB0, cc["5"], 127]))
             emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
             pending = struct.unpack(
@@ -241,6 +260,102 @@ def full_os() -> dict:
             assert all(bytes.fromhex(v["hex"]) == bytes(128)
                        for v in report["switched_voice_outputs"].values()), report["switched_voice_outputs"]
             (out / "native-model-909.png").write_bytes(emu.frame_png())
+
+            def chord(*buttons):
+                for name in buttons:
+                    emu.button(H.button(name), True)
+                emu.step(3_000_000)
+                for name in reversed(buttons):
+                    emu.button(H.button(name), False)
+                emu.step(1_000_000)
+
+            def tap(name):
+                emu.tap(H.button(name), hold=3_000_000)
+                emu.step(4_000_000)
+
+            chord("TRK", "TRIG 2")
+            chord("FUNC", "SYN")
+            for _ in range(4):
+                tap("DOWN")
+            tap("YES")
+            tap("NO")
+            (out / "native-track2-x0z.png").write_bytes(emu.frame_png())
+            emu.midi_in(bytes([0x91, 62, 100]))
+            emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
+            mixed = struct.unpack(
+                "<32I", bytes.fromhex(emu.dsp_peek(0x20092000, 128)["hex"])
+            )
+            report["mixed_track_state"] = list(mixed)
+            assert any(mixed[2*i] > 0 and mixed[2*i+1] == 1 and changed[2*i] == 0
+                       for i in range(16)), mixed
+            assert all(mixed[2*i] > changed[2*i] and mixed[2*i+1] == 2
+                       for i in range(16) if changed[2*i+1] == 2), mixed
+            report["mixed_voice_outputs"] = {
+                str(i): emu.dsp_peek(output_base + 128*i, 128)
+                for i in range(16) if mixed[2*i] > 0
+            }
+            assert all(bytes.fromhex(v["hex"]) == bytes(128)
+                       for v in report["mixed_voice_outputs"].values()), report["mixed_voice_outputs"]
+            new_lanes = [i for i in range(16) if mixed[2*i] and not changed[2*i]]
+            report["track2_voice_params"] = {
+                str(i): list(struct.unpack("<40H", bytes.fromhex(
+                    emu.dsp_peek(0x25C48C + 2*(0x6D + 0x49*i), 80)["hex"])))
+                for i in new_lanes
+            }
+            assert all([p[k] for k in (0, 1, 2, 5)] == [16384, 16384, 16384, 0]
+                       for p in report["track2_voice_params"].values()), report["track2_voice_params"]
+            chord("TRK", "TRIG 3")
+            (out / "native-track3-stock.png").write_bytes(emu.frame_png())
+            emu.midi_in(bytes([0x92, 65, 100]))
+            emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
+            ids = struct.unpack("<16H", bytes.fromhex(
+                emu.dsp_peek(0x25C48C + 2*74, 32)["hex"]))
+            pitches = struct.unpack("<16H", bytes.fromhex(
+                emu.dsp_peek(0x25C48C + 2, 32)["hex"]))
+            stock_lanes = [i for i in range(16) if ids[i] == 0 and pitches[i] == 65 << 8]
+            assert stock_lanes, (ids, pitches)
+            report["stock_track_voice_outputs"] = {
+                str(i): emu.dsp_peek(output_base + 128*i, 128) for i in stock_lanes
+            }
+            stock_samples = [sample for v in report["stock_track_voice_outputs"].values()
+                             for sample in struct.unpack("<32f", bytes.fromhex(v["hex"]))]
+            assert all(math.isfinite(sample) for sample in stock_samples), report["stock_track_voice_outputs"]
+            assert any(stock_samples), report["stock_track_voice_outputs"]
+            stock_state = struct.unpack("<32I", bytes.fromhex(
+                emu.dsp_peek(0x20092000, 128)["hex"]))
+            assert all(stock_state[2*i:2*i+2] == (0, 0) for i in stock_lanes), stock_state
+            chord("TRK", "TRIG 2")
+            chord("FUNC", "YES")
+            emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
+            emu.midi_in(bytes([0xB1, cc["0"], 10, 0xB1, cc["5"], 127]))
+            emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
+            report["temporary_pattern_edited"] = {
+                str(i): list(struct.unpack("<40H", bytes.fromhex(
+                    emu.dsp_peek(0x25C48C + 2*(0x6D + 0x49*i), 80)["hex"])))
+                for i in new_lanes
+            }
+            assert all(p[0] < 16384 and p[5] > 16384
+                       for p in report["temporary_pattern_edited"].values()), report["temporary_pattern_edited"]
+            (out / "native-temp-edited.png").write_bytes(emu.frame_png())
+            chord("FUNC", "NO")
+            emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
+            (out / "native-temp-reloaded.png").write_bytes(emu.frame_png())
+            emu.midi_in(bytes([0x81, 62, 0, 0x91, 62, 100]))
+            emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
+            restored = struct.unpack("<32I", bytes.fromhex(
+                emu.dsp_peek(0x20092000, 128)["hex"]))
+            restored_lanes = [i for i in range(16) if restored[2*i] and not stock_state[2*i]]
+            report["temporary_pattern_reload"] = {
+                "state": list(restored),
+                "params": {
+                    str(i): list(struct.unpack("<40H", bytes.fromhex(
+                        emu.dsp_peek(0x25C48C + 2*(0x6D + 0x49*i), 80)["hex"])))
+                    for i in restored_lanes
+                },
+            }
+            assert restored_lanes and all(restored[2*i+1] == 1 for i in restored_lanes), restored
+            assert all([p[k] for k in (0, 1, 2, 5)] == [16384, 16384, 16384, 0]
+                       for p in report["temporary_pattern_reload"]["params"].values()), report["temporary_pattern_reload"]
             report["final_status"] = emu.status()
             final = report["final_status"]
             assert final["cf"]["ready"] and final["cf"]["error"] is None, final
@@ -251,10 +366,8 @@ def full_os() -> dict:
         report["error"] = str(error)
         report["traceback"] = traceback.format_exc()
     report["unqualified"] = [
-        "ordinary A/B/C edits (defaults only were checked)",
         "native sequencer p-lock/LFO",
-        "save/reload",
-        "mixed tracks",
+        "persistent save/reload",
         "kick sound and real-device timing",
     ]
     (out / "native-boot-report.json").write_text(json.dumps(report, indent=2) + "\n")
