@@ -1,9 +1,12 @@
 # DN2 packaging and persistence proposal
 
-**Nonbinding review draft for [#23](https://github.com/simonjohansson/x0z/issues/23),
-26 October 2026.** No ID, native layout, selector policy, schema or production
-registration is adopted by this document. Approval is required before making
-these persisted choices. The [private contract](render-contract.md) still applies.
+**Approved packaging and saved-control contract for
+[#23](https://github.com/simonjohansson/x0z/issues/23), 26 October 2026.**
+The user selected one synth with a selector and explicitly approved ID 20,
+the layout/defaults below and switching at START with old-model tail clearing.
+Production declarations and tests are implemented separately in #6/#24; this
+decision is not native persistence, lifecycle or audio qualification.
+The [private contract](render-contract.md) still applies.
 
 ## Selected packaging direction
 
@@ -13,11 +16,9 @@ on different allocated voices in one firmware image. This uses the pinned
 single-registration path and puts both kernels in one SHARC payload. Start
 with the 808 implementation, retaining this packaging direction for the 909.
 
-The exact candidate **ID 20**, name, clone, slots/defaults and switching policy
-below still require user review before production registration or a persisted
-layout is implemented. Choosing the packaging direction does not approve those
-details. IDs 18/19 were earlier review candidates only and were never adopted;
-there is no existing production format to migrate.
+The approved contract uses **ID 20**, the name, clone, slots/defaults and switching
+policy below. IDs 18/19 were earlier review candidates only and were never
+adopted; there is no existing production format to migrate.
 
 ## What the pinned implementation actually permits
 
@@ -62,9 +63,9 @@ FM TONE. These are inspected implementation paths, not a completed x0z
 project/sound round-trip qualification. Do not overwrite the only saved copy
 while checking missing registrations.
 
-## Concrete layout candidate for review
+## Approved layout
 
-Review candidate **ID 20**, name **`X0Z KICKS`**, short label **`KICKS`**,
+Approved **ID 20**, name **`X0Z KICKS`**, short label **`KICKS`**,
 clone/default type **0 (FM TONE)** and one SYN page. Clone 0 selects stock
 defaults, permissions and positional MIDI mapping; it does not make the kick
 use FM DSP. Its AMP/filter defaults and track assignment behavior still need
@@ -92,7 +93,7 @@ Check ID conflicts against every selected mod before approval; no global
 allocator establishes that ID 20 is universally free. MIDI numbers must be
 verified from the chosen clone's actual slot mappings, not invented here.
 
-Proposed combined-selector policy for review:
+Approved combined-selector policy:
 
 - Quantize the **delivered** MODEL word to 808 for raw `0..16383` and 909 for
   `16384..32512` (threshold 64.0). Default 0 selects 808. No interpolation or
@@ -114,8 +115,7 @@ note locks, model changes during release and slot reuse require explicit tests.
 ## Preserving the first 808 sounds
 
 There are no adopted x0z DN2 production IDs/layouts to migrate; IDs 18/19 remain
-unadopted candidates from the alternatives. Approve the combined layout before
-publishing the first 808 sounds, then preserve that ID, selector encoding,
+unadopted candidates from the alternatives. Preserve the approved ID, selector encoding,
 slots, ranges and meanings when adding the 909. In particular, keep MODEL 0
 meaning 808. Do not reinterpret empty slots or assume their saved contents
 equal a newly added default. Defaults run on synth selection, which does not
@@ -160,9 +160,9 @@ capacity and render deadlines are three separate checks.
 
 ## Acceptance and unresolved decisions
 
-The single-synth packaging direction is selected. Before persisted implementation,
-review the exact candidate ID/name/clone, slots/defaults, selector encoding and
-tail policy. Strength research remains open; no strength control is proposed.
+The single-synth direction, exact ID/name/clone, slots/defaults, selector encoding
+and tail-switch policy are approved. Strength research remains open; no strength
+control is declared.
 Then test incrementally: C declarations and exact raw conversions; SHARC dispatch,
 per-slot state and guards; coupled-emulator selection/locks/modulation; sound
 save/reload/copy and missing-mod round trips; active tails and model/slot changes;

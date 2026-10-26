@@ -132,30 +132,31 @@ exclude those stages; device tests record their settings and behavior. See the
 [pinned Digitone adapter explanation](https://github.com/irpina/elekloader/blob/c150ac583a4b7e6d64680d5592f4a40f409193f7/docs/ADAPTING.md#L1747-L1839)
 and [inspected DN2 callback](https://github.com/irpina/elekloader/blob/2ab5f424c4721e4277d2112a5ae755d9938f50d6/docs/MACHINES-DN2-VOICE.md#L71-L98).
 
-Permanent machine IDs, native control slots/defaults, saved control layouts,
-model selection and active-tail switching remain proposals for their respective
-device tickets. No IDs or positions are reserved here. A combined selector
-requires reviewed quantization, switch timing and state-clearing behavior before
-it can become persistent. Until then, fixtures select one model explicitly.
+DT/DN permanent IDs and saved control layouts remain proposals for their
+respective device tickets. DN2's combined selector, positions/defaults and
+active-tail policy have explicit user approval in the linked contract below.
+Fixtures continue to select one model explicitly; native persistence and
+lifecycle qualification remain separate from that approval.
 
-The following are concrete **review candidates**, not registrations or saved
-layout commitments:
+The following are concrete **review candidates** for DT/DN and the approved
+DN2 saved contract:
 
-| Device | 808 candidate ID | 909 candidate ID | Proposed control order |
+| Device | 808 ID | 909 ID | Control order and status |
 | --- | --- | --- | --- |
 | Digitakt | 80 | 90 | Level, Tone/Tune, Decay, 909 Attack, trigger strength |
 | Digitone | 80 | 90 | Same semantic order; choose native slots after checking their unequal stock ranges |
-| Digitone II | 20 (shared) | 20 (shared) | One native SYN page with a MODEL selector; see the selected packaging direction and exact review candidate below |
+| Digitone II | 20 (shared) | 20 (shared) | Approved one-page layout with a MODEL selector; see the saved contract below |
 
 These values fall inside the pinned SDK's namespaces (DT 4–127, DN 1–127,
 DN2 5–31). Check resource conflicts with every selected mod before approval.
-The UI tickets must present actual slots, labels, defaults and raw ranges for
+The DT/DN UI tickets must present actual slots, labels, defaults and raw ranges for
 review; in particular, DN's existing ratio/algorithm slots cannot be assumed to
 behave like a full-range continuous knob. The trigger-strength path remains
 subject to the adapter's accent/velocity trace. No candidate appears in a
-firmware descriptor, and the private C enums are unrelated to these IDs.
-The [DN2 packaging proposal](dn2-packaging-proposal.md) expands its candidates
-and coexistence limits for review; it does not approve them.
+DT/DN firmware descriptor, and the private C enums are unrelated to these IDs.
+The [approved DN2 contract](dn2-packaging-proposal.md) records ID 20, saved
+positions/defaults and the selector/tail policy. Its user approval authorizes
+production C declarations; native persistence and lifecycle tests remain separate.
 
 ## Independent acceptance
 
