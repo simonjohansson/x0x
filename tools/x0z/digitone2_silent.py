@@ -273,6 +273,34 @@ def full_os() -> dict:
                 emu.tap(H.button(name), hold=3_000_000)
                 emu.step(4_000_000)
 
+            tap("MOD")
+            emu.turn(H.encoder("ENC D"), 1)
+            emu.step(4_000_000)
+            tap("DOWN")
+            tap("YES")
+            for _ in range(30):
+                emu.turn(H.encoder("ENC H"), 4)
+                emu.step(264_000)
+            emu.step(13_200_000)
+            (out / "native-lfo-tntun.png").write_bytes(emu.frame_png())
+            report["lfo_tntun"] = []
+            for _ in range(4):
+                emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
+                ids = struct.unpack("<16H", bytes.fromhex(
+                    emu.dsp_peek(0x25C48C + 2*74, 32)["hex"]))
+                last = max(i for i in range(16) if ids[i] == 20)
+                native = struct.unpack("<40H", bytes.fromhex(
+                    emu.dsp_peek(0x25C48C + 2*(0x6D + 0x49*last), 80)["hex"]))
+                delivered = struct.unpack("<40I", bytes.fromhex(
+                    emu.dsp_peek(0x20093D14, 160)["hex"]))
+                report["lfo_tntun"].append({"slot": last, "native": list(native),
+                                            "delivered": list(delivered)})
+                assert native == delivered, (native, delivered)
+                assert [delivered[k] for k in (1, 2, 5)] == [2560, 20480, 32512], delivered
+            assert len({row["delivered"][0] for row in report["lfo_tntun"]}) > 1, report["lfo_tntun"]
+            emu.midi_in(bytes([0xB0, 109, 64]))
+            emu.run_until(frames=emu.status()["dsp_frames"] + 300, timeout_wall_s=120)
+            tap("SYN")
             chord("TRK", "TRIG 2")
             chord("FUNC", "SYN")
             for _ in range(4):
@@ -356,6 +384,111 @@ def full_os() -> dict:
             assert restored_lanes and all(restored[2*i+1] == 1 for i in restored_lanes), restored
             assert all([p[k] for k in (0, 1, 2, 5)] == [16384, 16384, 16384, 0]
                        for p in report["temporary_pattern_reload"]["params"].values()), report["temporary_pattern_reload"]
+            chord("FUNC", "SETTINGS")
+            tap("YES")
+            tap("YES")
+            emu.run_until(frames=emu.status()["dsp_frames"] + 2000, timeout_wall_s=120)
+            (out / "native-project-save.png").write_bytes(emu.frame_png())
+            tap("NO")
+            chord("TRK", "TRIG 1")
+            tap("SYN")
+            chord("FUNC", "SYN")
+            for _ in range(4):
+                tap("UP")
+            tap("YES")
+            tap("NO")
+            emu.midi_in(bytes([0xB0, 40, 10, 0x80, 60, 0, 0x90, 69, 100]))
+            emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
+            ids = struct.unpack("<16H", bytes.fromhex(
+                emu.dsp_peek(0x25C48C + 2*74, 32)["hex"]))
+            pitches = struct.unpack("<16H", bytes.fromhex(
+                emu.dsp_peek(0x25C48C + 2, 32)["hex"]))
+            report["before_persistent_reload"] = {"ids": list(ids), "pitches": list(pitches)}
+            assert any(ids[i] == 0 and pitches[i] == 69 << 8 for i in range(16)), (ids, pitches)
+            (out / "native-project-edited.png").write_bytes(emu.frame_png())
+            tap("SETTINGS")
+            emu.step(26_400_000)
+            tap("YES")
+            emu.step(26_400_000)
+            tap("YES")
+            emu.step(66_000_000)
+            (out / "native-project-list.png").write_bytes(emu.frame_png())
+            tap("YES")
+            emu.step(132_000_000, timeout_wall_s=120)
+            (out / "native-project-confirm.png").write_bytes(emu.frame_png())
+            tap("YES")
+            emu.step(396_000_000, timeout_wall_s=120)
+            (out / "native-project-reloaded.png").write_bytes(emu.frame_png())
+            emu.midi_in(bytes([0x80, 69, 0, 0x90, 67, 100]))
+            emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
+            ids = struct.unpack("<16H", bytes.fromhex(
+                emu.dsp_peek(0x25C48C + 2*74, 32)["hex"]))
+            pitches = struct.unpack("<16H", bytes.fromhex(
+                emu.dsp_peek(0x25C48C + 2, 32)["hex"]))
+            state = struct.unpack("<32I", bytes.fromhex(
+                emu.dsp_peek(0x20092000, 128)["hex"]))
+            reloaded_lanes = [i for i in range(16) if ids[i] == 20 and pitches[i] == 67 << 8]
+            report["persistent_project_reload"] = {
+                "scope": "native project save/reload in this emulator session; no power cycle",
+                "state": list(state),
+                "params": {
+                    str(i): list(struct.unpack("<40H", bytes.fromhex(
+                        emu.dsp_peek(0x25C48C + 2*(0x6D + 0x49*i), 80)["hex"])))
+                    for i in reloaded_lanes
+                },
+            }
+            assert reloaded_lanes and all(state[2*i] and state[2*i+1] == 2
+                                          for i in reloaded_lanes), (ids, pitches, state)
+            assert all([p[k] for k in (0, 1, 2, 5)] == [25600, 2560, 20480, 32512]
+                       for p in report["persistent_project_reload"]["params"].values()), report["persistent_project_reload"]
+            tap("NO")
+            tap("NO")
+            chord("TRK", "TRIG 2")
+            tap("SYN")
+            emu.midi_in(bytes([0x80, 60, 0, 0x80, 67, 0, 0x81, 62, 0, 0x82, 65, 0]))
+            emu.run_until(frames=emu.status()["dsp_frames"] + 300, timeout_wall_s=120)
+            tap("RECORD")
+            tap("TRIG 1")
+            emu.button(H.button("TRIG 1"), True)
+            emu.step(3_000_000)
+            for _ in range(30):
+                emu.turn(H.encoder("ENC A"), 4)
+                emu.step(264_000)
+            emu.step(13_200_000)
+            (out / "native-plock-held.png").write_bytes(emu.frame_png())
+            emu.button(H.button("TRIG 1"), False)
+            emu.step(4_000_000)
+            tap("RECORD")
+            tap("PLAY")
+            emu.run_until(frames=emu.status()["dsp_frames"] + 50, timeout_wall_s=120)
+            ids = struct.unpack("<16H", bytes.fromhex(
+                emu.dsp_peek(0x25C48C + 2*74, 32)["hex"]))
+            pitches = struct.unpack("<16H", bytes.fromhex(
+                emu.dsp_peek(0x25C48C + 2, 32)["hex"]))
+            state = struct.unpack("<32I", bytes.fromhex(
+                emu.dsp_peek(0x20092000, 128)["hex"]))
+            locked = {
+                str(i): list(struct.unpack("<40H", bytes.fromhex(
+                    emu.dsp_peek(0x25C48C + 2*(0x6D + 0x49*i), 80)["hex"])))
+                for i in range(16) if ids[i] == 20 and pitches[i] == 60 << 8
+            }
+            report["sequencer_plock"] = {"state": list(state), "params": locked}
+            assert any(p[0] > 16384 and [p[k] for k in (1, 2, 5)] == [16384, 16384, 0]
+                       and state[2*int(i)] and state[2*int(i)+1] == 1
+                       for i, p in locked.items()), report["sequencer_plock"]
+            tap("STOP")
+            emu.midi_in(bytes([0x91, 70, 100]))
+            emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
+            pitches = struct.unpack("<16H", bytes.fromhex(
+                emu.dsp_peek(0x25C48C + 2, 32)["hex"]))
+            base = {
+                str(i): list(struct.unpack("<40H", bytes.fromhex(
+                    emu.dsp_peek(0x25C48C + 2*(0x6D + 0x49*i), 80)["hex"])))
+                for i in range(16) if pitches[i] == 70 << 8
+            }
+            report["unlocked_base_after_plock"] = base
+            assert base and all([p[k] for k in (0, 1, 2, 5)] == [16384, 16384, 16384, 0]
+                                for p in base.values()), base
             report["final_status"] = emu.status()
             final = report["final_status"]
             assert final["cf"]["ready"] and final["cf"]["error"] is None, final
@@ -366,8 +499,7 @@ def full_os() -> dict:
         report["error"] = str(error)
         report["traceback"] = traceback.format_exc()
     report["unqualified"] = [
-        "native sequencer p-lock/LFO",
-        "persistent save/reload",
+        "persistence across emulator/device restart",
         "kick sound and real-device timing",
     ]
     (out / "native-boot-report.json").write_text(json.dumps(report, indent=2) + "\n")

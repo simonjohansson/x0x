@@ -37,7 +37,7 @@ def main(argv=None):
     try:
         if args.command == "unavailable":
             print(json.dumps(dict(status="unavailable", device=args.device,
-                  reason="Native firmware adapter integration is not implemented; use the independent host/CPU suites")))
+                  reason="This explicit placeholder does not run native tests; use mise run test:" + args.device)))
             return 77
         if args.command == "render":
             fixture = validate_fixture(load_json(args.fixture))

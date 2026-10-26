@@ -200,16 +200,16 @@ description = "Package a latest-OS Core baseline for Digitone II emulator work"
 run = "python -m x0z.firmware baseline dn2"
 
 [tasks."test:dt"]
-description = "Digitakt firmware integration availability"
-run = "python -m x0z.cli unavailable dt"
+description = "Run native Digitakt silent-mod acceptance (reset failures remain explicit)"
+run = "mise run test:dt:silent:full-os"
 
 [tasks."test:dn"]
-description = "Digitone firmware integration availability"
-run = "python -m x0z.cli unavailable dn"
+description = "Run native Digitone silent-mod acceptance"
+run = "mise run test:dn:silent"
 
 [tasks."test:dn2"]
-description = "Digitone II firmware integration availability"
-run = "python -m x0z.cli unavailable dn2"
+description = "Run coupled Digitone II silent-mod acceptance"
+run = "mise run test:dn2:silent:full-os"
 
 [tasks.render]
 description = "Render a synthetic diagnostic fixture as test equipment"

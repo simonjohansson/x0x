@@ -138,11 +138,12 @@ selector into firmware, establish logical ownership, or qualify native control
 transport, persistence, upstream bridge integration or render deadlines. Neither
 kick engine is implemented by these diagnostics.
 
-The three `test:dt`, `test:dn` and `test:dn2` tasks currently return JSON status
-`unavailable` and exit **77**. They must not look successful until their native
-firmware adapters have actual integration coverage. CPU tests also use 77 for
-missing tooling; validation failures use 1 and passing checks use 0. Host tests
-remain runnable when unrelated target tooling or firmware is absent.
+The three `test:dt`, `test:dn` and `test:dn2` tasks now run each device's native
+silent-mod acceptance scenario. DN and DN2 pass; DT returns1 for its recorded
+native reset failures. These tests cover plumbing, not implemented kick engines
+or release qualification. Missing supported prerequisites use unavailable/77;
+validation failures use1 and passing checks use0. Host/CPU checks remain
+independent of native firmware setup.
 
 digiemu's native JIT needs executable-memory permission. In the Codex sandbox
 used during setup, the ColdFire process terminated with SIGILL; the same bounded
@@ -253,9 +254,17 @@ finite output and leaves its x0z state clear; all selected x0z buffers remain ze
 Native temporary pattern/kit save-edit-restore retains the controls/model on a
 new note. This is not persistent disk or cross-boot save/load evidence.
 
-Reports and screenshots regenerate under `out/dn2/silent/`. Native p-lock/LFO
-and persistent save/reload remain open in #7. Packaging, synthetic callback tests
-and coupled native evidence are separate.
+The completed native scenario runs14,981 DSP frames without CF error, DSP halt
+or missing blocks. Native LFO changes A to25824/25733/25641/25547, matching the
+actual callback exactly and preserving B/C/F. A real project save, change to
+stock FM and project reload restore ID20 plus `[25600,2560,20480,32512]` and a
+909 callback. T2's held lock displays74 and delivers18944 to an actual808
+sequencer voice; a fresh unlocked note returns the exact64/base16384 values.
+
+Reports and screenshots regenerate under `out/dn2/silent/`. This completes #7's
+silent milestone. Persistence across emulator/device restart, actual kick audio
+and physical timing remain unqualified. Packaging, synthetic callback tests and
+coupled native evidence remain distinct.
 Prepared upstream inputs are documented in the [setup record](#coupled-dn2-setup-blocker).
 
 ## Device adapter slices
@@ -289,11 +298,14 @@ Each command emits a JSON report on stdout; use `> out/<name>.json` to retain it
 Failures return 1 and unavailable prerequisites return 77. These commands cover
 different layers and do not replace the full firmware gates:
 
-| Device | Implemented evidence | Still required for its adapter foundation |
+| Device | Current native silent-mod evidence | Remaining scope |
 | --- | --- | --- |
-| DT, OS 1.54 | C-to-ASM component; 105 bounded stock/SDK routine calls with 53 edit/smoothing/lock/LFO observations; full OS PLAY-to-START-to-C/ASM observer | Machine selection/replacement routing, native lifecycle/onset and downstream audio |
-| DN, OS 1.44 | C-to-ASM component and pinned companion; bounded native edits; final-frame C adapter to diagnostic ASM through existing Core events; bounded registered-machine callbacks and separate standard full-OS observer | Complete mappings and selector/START integration, native UI/MIDI/lock sources, allocator/lifecycle and audio timing; strict-model qualification |
-| DN2, OS 1.12 | Host C trace fed to the actual SHARC diagnostic; 82 executions of the pinned upstream bridge with synthetic stock DSP frames across sixteen slots | Coupled OS encoder/MIDI/lock/smoothing transport, native identity and downstream processing |
+| DT, OS 1.54 | Real ID80 mod: native controls, p-lock/LFO, save/reload, mixed tracks and zero owned output | Native knob/page reset gate in #39; actual audio and broader qualification later |
+| DN, OS 1.44 | Real ID80 mod: complete native silent milestone in standard full-OS digiemu | Actual audio and broader qualification in #9/#25/#20 |
+| DN2, OS 1.12 | Real ID20 mod: complete coupled native silent milestone, including persistent project reload and stock FM coexistence | Actual audio and broader qualification in #9/#25/#20 |
+
+The detailed bounded/component results below are retained provenance. They do
+not replace or overstate the separate full-OS results above.
 
 The DT native test executes real routines from the verified Core/companion
 baseline but supplies bounded initial state itself. DN's companion test compiles
