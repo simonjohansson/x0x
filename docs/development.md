@@ -261,9 +261,28 @@ fails the intended validator even though the lock bit/smoother still update.
 This is direct helper execution with a prepared SDK-format list, not native
 sequencer/p-lock event dispatch or editor qualification.
 
+The bounded fixture also routes decoded CC1 value 127 for track 0 through the
+stock MIDI CC router and Core dispatcher. Stock code writes raw controller 32767
+and its MSB cache; it does not write the render control table or voice targets.
+The stock controller producer then runs after controllers/LFOs, preserving
+its native ordering. Its Q31 states start at the stock image's `0x40000000`,
+without an injected settled value. The test checks the exact recurrence,
+rounding, table ownership and all 32 producer writes per pass. Produced values
+start `983, 1936, 2861, 3758`; the current controller pass consumes the previous
+pass's value, starting at zero. Registered callbacks receive the resulting
+fractional contribution only on voices currently owned by track 0, including
+isolation when a voice changes tracks. Omitting the producer fails the intended
+next-block table check even though decoded CC input still updated raw state.
+
+This is decoded-router/native-stage evidence with injected receive and mapping
+configuration. It does not exercise raw MIDI byte parsing, USB/DIN input,
+other controllers, or full-OS MIDI-to-audio latency. The producer's control-table
+delay and the separate stock DSP/audio delay remain distinct.
+
 This fixture uses `DNM_OWN_ENV` to isolate transport from companion gain; it
-adopts no production envelope flag, machine ID or saved layout. Initial targets, native
-controller/LFO state, pitch/track/gate and companion note events are injected.
+adopts no production envelope flag, machine ID or saved layout. Initial targets, the
+legacy per-voice controller/LFO state, pitch/track/gate and companion note
+events are injected.
 In the real OS, `core_voice_on` follows `core_render_voices`; calling
 `dnm_voice_on` before the diagnostic dispatch therefore does not qualify native
 START/frame alignment. The standard full-OS observer above still uses its

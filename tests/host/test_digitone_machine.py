@@ -89,6 +89,21 @@ class DigitoneMachineTests(unittest.TestCase):
             with self.subTest(apply=apply, kit_write=True), self.assertRaises(AssertionError):
                 machine.validate_lock_transition(*args)
 
+    def test_stock_controller_q31_recurrence_and_rounding(self):
+        state = 0x40000000
+        expected = [(0x41eb7c29, 983), (0x43c839de, 1936), (0x4596aa5a, 2861),
+                    (0x47573b72, 3758), (0x490a57b0, 4629), (0x4ab0666b, 5473), (0x4c49cbe1, 6292)]
+        for want in expected:
+            actual = machine.controller_step(state, 32767)
+            self.assertEqual(actual, want)
+            state = actual[0]
+        self.assertEqual(machine.controller_step(0x40000000, 0), (0x40000000, 0))
+
+    def test_controller_fixture_rejects_invalid_state_and_raw_values(self):
+        for state, raw in ((-1, 0), (1 << 31, 0), (True, 0), (0, -1), (0, 32768), (0, True)):
+            with self.subTest(state=state, raw=raw), self.assertRaises(ValueError):
+                machine.controller_step(state, raw)
+
     def test_host_import_requires_no_firmware_or_emulator(self):
         with patch.dict(sys.modules, {"elekloader": None, "emu": None, "unicorn": None}):
             importlib.reload(machine)

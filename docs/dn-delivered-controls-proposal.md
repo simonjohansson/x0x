@@ -203,6 +203,26 @@ only to the reviewed OS-1.44 test fixture. This is direct native helper evidence
 with a prepared list, not sequencer/event dispatch, lock-editor or sound-lock
 qualification. It does not establish START ownership or audible timing.
 
+The same bounded test now routes decoded track-0 CC1=127 through stock
+`0x400edbc2`, including Core's existing MIDI observer dispatch. Only the raw
+controller word and its MSB cache change. The real producer
+`0x4009dd92..0x4009de1a` runs after the current controller/LFO pass. Its four
+normal-DN records, source/destination/Q-state extents and stock-centered
+`0x40000000` initial states are checked before execution; settled controller
+values are never injected. Exact Q31 recurrence/rounding produces
+`983, 1936, 2861, 3758` in the first four passes, with 32 declared writes per
+pass. Current frame controls use the previous producer output, starting at
+zero, and registered callbacks receive its fractional contribution only for
+voices currently owned by track 0.
+
+A skipped-producer mutation still receives decoded CC input but fails the
+expected next-block settled-table check. Router and producer read/write bounds,
+raw/target/ownership snapshots and callback guards retain isolation. This is
+not raw MIDI parsing, physical transport or full-OS MIDI-to-audio timing.
+Receive/initialized flags and mappings are configured by the fixture; other
+controllers, sequencer sources and native START/frame alignment remain open.
+The measured control-table ordering is separate from the stock DSP/audio lag.
+
 The test-only machine uses `DNM_OWN_ENV` to isolate this transport test. Separate
 companion tests cover AMP/velocity. No production envelope flag, permanent ID or
 saved layout is adopted. Native stages/settings, initial target words, companion note

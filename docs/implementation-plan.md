@@ -99,7 +99,10 @@ updates only the edited track's two lanes and retains fractional smoothing
 through those callbacks; an omitted stock live-target store is rejected.
 Prepared-list native lock apply/restore now reaches the same callbacks with
 voice isolation and the stock immediate smoother reset, independently of the
-remaining sequencer/editor lock-source gate. Its note/state injection does not
+remaining sequencer/editor lock-source gate. Decoded native CC1 now runs through
+the stock router and Q31 producer into subsequent controller passes and
+registered callbacks, with exact table/track isolation checks. Raw MIDI parsing,
+other controllers and full-OS latency remain separate. Its note/state injection does not
 qualify native START/frame ownership; the full-OS observer still uses an
 order-40 diagnostic receiver. Complete mappings, selector integration and native
 source/ownership/timing gates remain open.
