@@ -83,9 +83,17 @@ run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen -
 description = "Check the actual PR 200 voice ABI and slot state in Digikit"
 run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0z.sharc_callback'
 
+[tasks."test:coldfire:selector"]
+description = "Execute per-voice 808/909 selection and state guards in digiemu"
+run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0z.coldfire_selector'
+
+[tasks."test:sharc:selector"]
+description = "Execute the DN2 selector diagnostic against the host C policy in Digikit"
+run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0z.sharc_selector'
+
 [tasks."test:emulators"]
-description = "Run both bounded instruction diagnostics"
-run = ["mise run test:coldfire", "mise run test:sharc", "mise run test:coldfire:arithmetic", "mise run test:sharc:callback"]
+description = "Run bounded instruction, arithmetic, callback and selector diagnostics"
+run = ["mise run test:coldfire", "mise run test:sharc", "mise run test:coldfire:arithmetic", "mise run test:sharc:callback", "mise run test:coldfire:selector", "mise run test:sharc:selector"]
 
 [tasks."test:dt:component"]
 description = "Execute the compiled Digitakt C adapter and ASM with native-service fakes"

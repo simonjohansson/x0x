@@ -42,8 +42,10 @@ The shared interface is a private development contract. Concrete permanent IDs a
 Selector infrastructure is explicit for both CPU backends:
 [ColdFire #77](https://github.com/simonjohansson/x0z/issues/77) serves DT/DN,
 and [SHARC #76](https://github.com/simonjohansson/x0z/issues/76) serves DN2.
-These test per-voice model selection and state isolation before sound models;
-they do not depend on VST captures or complete engines.
+Their actual ASM diagnostics pass 160 ColdFire and 193 SHARC cases, with eight
+and six rejected reassembled defects respectively. They test per-voice selection
+and state isolation before sound models, independently of VST captures or complete
+engines. Native installation, ownership and transport gates remain separate.
 
 The adapter foundations #39, #40 and #7 remain open. Their C boundaries and
 diagnostic assembly components are now independently executable; each issue

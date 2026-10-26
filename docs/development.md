@@ -56,7 +56,9 @@ mise run test:coldfire     # assemble and execute in digiemu
 mise run test:sharc        # assemble and execute in Digikit
 mise run test:coldfire:arithmetic  # fixed point, full EMAC context and event fixtures
 mise run test:sharc:callback       # pinned callback input, context and slot state
-mise run test:emulators    # all four bounded instruction suites
+mise run test:coldfire:selector   # shared DT/DN per-lane model selection, no audio
+mise run test:sharc:selector      # actual DN2 selector callback against host C policy
+mise run test:emulators    # all six bounded instruction suites
 ```
 
 The C boundary forwards declared stock controls as exact normalized fractions
@@ -93,6 +95,37 @@ These suites establish the private kernel boundary under the pinned emulators.
 The native allocator, UI-to-DSP transport and downstream firmware processing
 remain device-adapter work. Digikit does not model every 40-bit register
 extension behavior; physical instruction behavior and timing remain unqualified.
+
+### Combined-model selector diagnostics
+
+The ColdFire selector is a shared private C-stack-callable ASM primitive for
+DT/DN. Its eight lanes hold initialized/model/diagnostic-tail words. It emits
+model/initialize/change/clear metadata, renders no audio and never infers native
+freshness: fresh/missing/stale is supplied by the caller. The 160-case suite
+checks threshold 16384, trigger-only latching, pending tail edits, same-model
+retention, per-lane clearing, invalid inputs, every write, callee registers and
+all eight EMAC snapshot words. Eight reassembled defective variants fail.
+The test image is 472 bytes including its context wrapper, the state bank is
+96 bytes, and combined wrapper/nested stack extent is 32 bytes. Worst case is
+116 emulated instructions including the wrapper, under a 1,000-instruction bound.
+Valid, aligned, disjoint caller-owned pointer extents are private ABI preconditions.
+
+The SHARC selector callback executes directly on 193 synthetic SDK frames,
+compared with the compiled host C policy. It covers all sixteen slots, 148
+initialized callbacks and 29 invalid frames. Invalid or inactive deliveries
+permit no selector-state writes, even transient writes later restored; a
+reassembled write-before-validation defect verifies this guard. Six defective
+variants fail. For a supplied input/output frame the diagnostic writes 32 floats;
+its checksum/tail signal is test equipment, not either kick model. The callback
+uses 438 code bytes, 128 state bytes and no additional kernel stack beyond the
+existing eight-byte bridge call frame. Worst case is 347 instructions under a
+1,000-instruction bound. Required modeled context and all writes are checked.
+
+These diagnostics implement the common selection behavior in actual ASM;
+their private state/status encodings differ by CPU. They do not install the
+selector into firmware, establish logical ownership, or qualify native control
+transport, persistence, upstream bridge integration or render deadlines. Neither
+kick engine is implemented by these diagnostics.
 
 The three `test:dt`, `test:dn` and `test:dn2` tasks currently return JSON status
 `unavailable` and exit **77**. They must not look successful until their native
@@ -210,8 +243,9 @@ same-model START preserves residual state. Controls precede the notice. The
 fake DSP tests this metadata and per-slot isolation; no DSP reset or excitation
 is implemented in C. Blank E/G/H have no strength meaning. Native ownership,
 save/load and downstream processing remain integration work. Settled frames
-reach SHARC directly through the SDK bridge; actual ASM selector execution is
-tracked in #76, not established by these C reference tests.
+reach SHARC directly through the SDK bridge. The separate #76 ASM diagnostic
+now conforms to this C reference; installed bridge/selector integration remains
+part of the device work.
 
 ### Coupled DN2 setup blocker
 
