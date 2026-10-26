@@ -111,6 +111,14 @@ run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen -
 description = "Test bounded Digitone OS live edits through the linked SDK and C-to-ASM path"
 run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0z.digitone_adapter --native'
 
+[tasks."test:dn:frame"]
+description = "Probe final DN control frames through Core events with injected native state"
+run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0z.digitone_transport'
+
+[tasks."test:dn:transport"]
+description = "Observe DN event/frame order in a standard non-strict full-OS Session"
+run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0z.digitone_transport --full-os'
+
 [tasks."test:dn2:component"]
 description = "Test Digitone II C snapshots and the pinned SHARC bridge in Digikit"
 run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0z.digitone2_adapter'

@@ -87,7 +87,9 @@ DN's corresponding [control proposal](dn-controls-proposal.md) is also pending
 review; it uses verified full-range SYN2 positions without extra saved slots.
 The [DN delivered-control investigation](dn-delivered-controls-proposal.md)
 prioritizes existing Core events and a tested same-interrupt bank lifetime over
-a new public hook.
+a new public hook. Its self-contained `test:dn:frame` and `test:dn:transport`
+observer modes pass within their explicit injected-state/non-strict scopes;
+production adapter consumption and native source/timing gates remain open.
 
 ## Small sound slices
 

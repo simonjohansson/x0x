@@ -126,6 +126,8 @@ mise run test:dt:transport  # boot OS, native PLAY -> START -> C -> ASM observer
 mise run test:dn:companion
 mise run firmware:dn
 mise run test:dn:native
+mise run test:dn:frame      # actual native stages, explicitly injected control state
+mise run test:dn:transport  # 40 ms of standard non-strict full-OS Core event observation
 ```
 
 Each command emits a JSON report on stdout; use `> out/<name>.json` to retain it.
@@ -135,7 +137,7 @@ different layers and do not replace the full firmware gates:
 | Device | Implemented evidence | Still required for its adapter foundation |
 | --- | --- | --- |
 | DT, OS 1.54 | C-to-ASM component; 105 bounded stock/SDK routine calls with 53 edit/smoothing/lock/LFO observations; full OS PLAY-to-START-to-C/ASM observer | Machine selection/replacement routing, native lifecycle/onset and downstream audio |
-| DN, OS 1.44 | C-to-ASM component across eight slots; actual pinned companion with stock parameter records; bounded native live edit through linked `core_sound_set`, `dnm_knob`, C adapter and ASM | Post-smoothing/lock/LFO render-frame delivery, native allocation and full event/render path |
+| DN, OS 1.44 | C-to-ASM component and pinned companion; bounded native edits; final-frame observer through existing Core events, tested in bounded native stages and a standard full-OS Session | Production adapter consumption of final controls, native UI/MIDI/lock sources, allocator/lifecycle and audio timing; strict-model qualification |
 | DN2, OS 1.12 | Host C trace fed to the actual SHARC diagnostic; 82 executions of the pinned upstream bridge with synthetic stock DSP frames across sixteen slots | Coupled OS encoder/MIDI/lock/smoothing transport, native identity and downstream processing |
 
 The DT native test executes real routines from the verified Core/companion
@@ -149,6 +151,25 @@ render frame. The native smoother/Core event probe observes
 `render_frame_delivered: false`; [#75](https://github.com/simonjohansson/x0z/issues/75)
 tracks the missing delivered-control route. Neither bounded routine test boots
 the full OS.
+
+The DN final-frame harness builds its own verified Core/companion and generated
+observer under `out/dn/transport`; earlier prototype artifacts are not required.
+`test:dn:frame` runs six native sequences with explicit target, controller and
+LFO-state injection. The observer consumes the captured bank only inside the
+same render interrupt, then invalidates it; entry and exit also invalidate it.
+Five final-frame copies pass, while one deliberately missing capture leaves the
+previous snapshot untouched. The run checks 3,166 frame reads inside the 1264-byte
+view and observer writes inside its own state/stack. Real native final values
+are `2402, 2761, 3109, 3447, 3775, 4093`, distinct from target 12345.
+
+The separate `test:dn:transport` boots OS 1.44 and observes 59 complete standard
+`Session(hle=False)` cycles over 40 ms, with 37,347 guarded reads, alternating
+banks and exact in/pre/controller/LFO/final/late/out order. It uses non-strict
+emulator settings. The earlier strict baseline and observer both flag a stock
+read at `0x4009de90` of `0x12a` with A0=0; that model/setup limitation remains
+explicitly unavailable in the report. Neither mode feeds the production adapter
+yet or proves native lock/allocator behavior. The reports retain
+`production_adapter_consumption: false`; #75 remains open.
 
 The separate DT transport test follows ModelDigi's full-OS test pattern:
 `Session(hle=False)` with `never_fake_set_posts`, native panel PLAY/STOP and a

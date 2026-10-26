@@ -84,7 +84,11 @@ copied bytes matched the final same-bank view. Six separately labelled native
 stage calls with injected state produced fractional final values distinct from
 target 12345; a deliberately missing capture failed closed and recovered in
 the next block. These are observer experiments, not production adapter or
-native lock/lifecycle acceptance. A tracked reusable harness is the next step.
+native lock/lifecycle acceptance. The tracked reusable harness is now
+[digitone_transport.py](../tools/x0z/digitone_transport.py), with
+`mise run test:dn:frame` for bounded stages and `mise run test:dn:transport`
+for the separate standard full-OS observer. Its generated subscriber, firmware
+and reports stay in ignored `out/dn/transport`.
 
 Strict diagnostics are separate: stock code at `0x4009de90` reads `0x12a`
 with A0=0 under that fixture's model settings, both with and without the observer.
@@ -93,6 +97,11 @@ Standard-mode sequences must not be called strict-qualified, and their success
 does not resolve that model/setup limitation.
 
 ## Preferred next step: prove the existing-event route
+
+The observer harness establishes the current-pin bank route under the stated
+emulator settings. The next increment is production adapter consumption and
+the remaining native source/lifecycle/timing checks below; the prototype alone
+does not close #75.
 
 Prove that the `ev_render_params` argument remains readable through the machine
 callback of the **same** render interrupt, with its contents modified by the
