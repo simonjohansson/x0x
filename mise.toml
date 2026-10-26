@@ -91,6 +91,10 @@ run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen -
 description = "Test bounded Digitakt OS routines, linked SDK values and the C-to-ASM path"
 run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0z.digitakt_adapter --native'
 
+[tasks."test:dt:transport"]
+description = "Boot Digitakt and trace native panel PLAY through C and ASM observers"
+run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0z.digitakt_transport'
+
 [tasks."test:dn:component"]
 description = "Execute the compiled Digitone C adapter and ASM with native-service fakes"
 run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0z.digitone_adapter'

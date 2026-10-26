@@ -116,6 +116,7 @@ mise run test:dn2:component  # host-compiled C snapshots + SHARC ASM and bridge
 # Require the latest local stock firmware; native calls also require the baseline:
 mise run firmware:dt
 mise run test:dt:native
+mise run test:dt:transport  # boot OS, native PLAY -> START -> C -> ASM observer
 mise run test:dn:companion
 mise run firmware:dn
 mise run test:dn:native
@@ -127,7 +128,7 @@ different layers and do not replace the full firmware gates:
 
 | Device | Implemented evidence | Still required for its adapter foundation |
 | --- | --- | --- |
-| DT, OS 1.54 | C-to-ASM component; 105 bounded calls into real stock routines and linked SDK, with 53 observations of edits, smoothing, lock apply/restore and LFO values across eight tracks | Full OS event/render-hook dispatch, native lifecycle/onset and downstream audio |
+| DT, OS 1.54 | C-to-ASM component; 105 bounded stock/SDK routine calls with 53 edit/smoothing/lock/LFO observations; full OS PLAY-to-START-to-C/ASM observer | Machine selection/replacement routing, native lifecycle/onset and downstream audio |
 | DN, OS 1.44 | C-to-ASM component across eight slots; actual pinned companion with stock parameter records; bounded native live edit through linked `core_sound_set`, `dnm_knob`, C adapter and ASM | Post-smoothing/lock/LFO render-frame delivery, native allocation and full event/render path |
 | DN2, OS 1.12 | Host C trace fed to the actual SHARC diagnostic; 82 executions of the pinned upstream bridge with synthetic stock DSP frames across sixteen slots | Coupled OS encoder/MIDI/lock/smoothing transport, native identity and downstream processing |
 
@@ -142,6 +143,19 @@ render frame. The native smoother/Core event probe observes
 `render_frame_delivered: false`; [#75](https://github.com/simonjohansson/x0z/issues/75)
 tracks the missing delivered-control route. Neither bounded routine test boots
 the full OS.
+
+The separate DT transport test follows ModelDigi's full-OS test pattern:
+`Session(hle=False)` with `never_fake_set_posts`, native panel PLAY/STOP and a
+generated `ev_render_voices` subscriber. It boots the latest firmware and calls
+the production C adapter and assembled diagnostic from the real render event.
+The initial run checked 1,020 callbacks, nine START snapshots and 10,026 guest
+writes; guards passed and every observer left stock track audio unchanged.
+The first START was render block 153 after PLAY was requested at block 149.
+Session chunk timestamps are not sample-accurate onset measurements. This is an
+observer test, not replacement-audio integration. Generated descriptors, firmware,
+snapshots and `out/dt/transport/report.json` stay ignored; no machine ID or saved
+layout is introduced. Missing machine selection, MIDI, live edits and lifecycle
+tests remain explicit in that report.
 
 DN's raw encodings must come from `dnm_knob_range`: for example, the stock HARM
 record has raw bounds 9472..22784 even though its display uses -26..26. The adapter
