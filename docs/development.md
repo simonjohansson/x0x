@@ -1,5 +1,11 @@
 # Development and verification
 
+Current priority is the [silent three-device milestone](implementation-plan.md).
+The detailed checks below record evidence already collected; they are not a
+queue of prerequisites to exhaust before installing the silent mod. #39, #40
+and #7 own that work. Historical #75 and matrix links are superseded provenance.
+
+
 The scaffold has independent host, C adapter and assembled CPU tests.
 The synthetic probe is test equipment, not an 808/909 implementation or a VST
 reference. Production audio will use assembly; native pages and full firmware

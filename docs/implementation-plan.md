@@ -1,167 +1,133 @@
-# Implementation plan: two CPU backends, six device cells
+# Implementation plan: one combined mod, silent first
 
-Planning baseline: 26 October 2026. The shared contract, host fixtures, analyzer/comparisons and isolated C adapter tests are implemented. Bounded ColdFire arithmetic/EMAC, DN2 callback/state and all three C-to-ASM adapter components pass in the required emulators. DT additionally executes native edit/smoothing/lock/LFO routines and a full-OS PLAY-to-START-to-C/ASM observer; DN executes its companion and bounded native live edits. DN2 executes the upstream bridge with synthetic stock frames. Complete device transport/replacement acceptance and both kick engines remain unimplemented. The [research](kick-drum-research.md) defines the circuit basis; [development and verification](development.md) records commands and emulator limitations, and [roadmap #1](https://github.com/simonjohansson/x0z/issues/1) tracks execution.
+Priority reset: 26 October 2026. First get **one selectable x0z mod running in
+all three emulators**, with controls, p-locks and LFO targets connected to silent
+ASM callbacks. Sound synthesis is the next milestone. Existing component tests
+are useful groundwork, but none of the three installed-mod milestones is complete.
 
-Completed foundation scope: [shared semantics #4](https://github.com/simonjohansson/x0z/issues/4), [fixtures/test entry points #36](https://github.com/simonjohansson/x0z/issues/36), [known-signal analyzer #3](https://github.com/simonjohansson/x0z/issues/3), [oracle/CPU comparisons #38](https://github.com/simonjohansson/x0z/issues/38), [ColdFire harness #37](https://github.com/simonjohansson/x0z/issues/37) and [SHARC callback harness #5](https://github.com/simonjohansson/x0z/issues/5). These are emulator/test-equipment results, not device or kick-fidelity qualification. VST captures and calibrated timbre gates remain deferred. Firmware support is restricted to the [latest official baseline](../firmware/README.md); builds use the pinned Elekloader PR #200 revision.
+The product remains one mod per device containing 808 and 909 behind a saved
+per-sound/track MODEL selector. Different tracks/voices can select different
+models in the same build. Digitakt II is outside scope. C owns UI/plumbing;
+ColdFire ASM serves DT/DN and SHARC+ ASM serves DN2. The
+[render contract](render-contract.md) and [research](kick-drum-research.md) retain
+the behavior and circuit details.
 
-## Architecture and scope
+## The working backlog
 
-**One x0z mod on every supported device contains both 808 and 909 engines.**
-Each device has one native x0z machine identity and a saved MODEL selector per
-sound/track. Different tracks/voices can play both models concurrently in the
-same installed build. Target-specific firmware builds package this same product.
-Separate engine registrations and single-engine delivery variants are superseded.
-The [common product contract](render-contract.md#one-combined-mod-on-every-device)
-is authoritative. The earlier approval of two Digitakt machines is withdrawn by
-the user's correction; revised DT/DN combined positions/IDs remain proposals.
+Eight open issues replace the previous 66. Small increments are commits and
+checklist steps inside these issues, rather than a ticket for every control,
+model stage, CPU implementation and matrix cell.
 
-Support Digitakt (DT), Digitone (DN) and Digitone II (DN2). Digitakt II is outside the active scope. Each instrument has one behavioral/mathematical definition and independent high-precision host oracle. Production audio has two handwritten assembly implementations: ColdFire shared by DT/DN, and SHARC+ for DN2. Three thin C adapters own firmware callbacks, native controls, voice identity and output integration.
-
-Share physical units, event semantics, reference fixtures and fidelity criteria. Keep arithmetic formats, state layouts, coefficient encoding and scheduling inside each CPU backend. Select the target at build time. Do not create a portable assembly language, per-operation dispatch or independently fitted copies of the instrument.
-
-## Foundations first
-
-Start the shared behavior/interface review, measurement checks and VST selection now. Then implement the necessary test infrastructure and per-target diagnostics before developing that cell's engine. The shared foundation does not wait for every device adapter or for DN2 upstream merges.
-
-| Foundation | Deliverable | Prerequisites |
+| Order | Issue | Deliverable |
 | --- | --- | --- |
-| [#4](https://github.com/simonjohansson/x0z/issues/4) Foundation: Define shared instrument and render semantics | Define one instrument behavior per drum, independent of CPU arithmetic and device callbacks. | Ready |
-| [#36](https://github.com/simonjohansson/x0z/issues/36) Foundation: Add shared render fixtures and independent test entry points | Make the agreed interface executable as minimal private test infrastructure before implementing kicks. | [#4](https://github.com/simonjohansson/x0z/issues/4) |
-| [#3](https://github.com/simonjohansson/x0z/issues/3) Test: Validate kick measurements with known signals | Build the smallest trustworthy analyzer before it judges any synth. | Ready |
-| [#38](https://github.com/simonjohansson/x0z/issues/38) Foundation: Validate oracle and cross-CPU audio comparisons | Use one independent oracle and trustworthy tolerances for both CPU implementations. | [#36](https://github.com/simonjohansson/x0z/issues/36), [#3](https://github.com/simonjohansson/x0z/issues/3) |
-| [#37](https://github.com/simonjohansson/x0z/issues/37) ColdFire foundation: Test actual assembled instructions without UI | Provide one ColdFire kernel runner reused by Digitakt and Digitone. | [#36](https://github.com/simonjohansson/x0z/issues/36) |
-| [#5](https://github.com/simonjohansson/x0z/issues/5) SHARC foundation: Test actual assembled instructions without UI | Provide the SHARC backend test runner independently of native controls and kick models. | [#36](https://github.com/simonjohansson/x0z/issues/36) |
-| [#39](https://github.com/simonjohansson/x0z/issues/39) Digitakt foundation: Pin and test the C adapter with diagnostic ASM | Prove the Digitakt device boundary before any complete kick engine. | [#36](https://github.com/simonjohansson/x0z/issues/36), [#37](https://github.com/simonjohansson/x0z/issues/37) |
-| [#40](https://github.com/simonjohansson/x0z/issues/40) Digitone foundation: Pin and test the C adapter with diagnostic ASM | Prove the Digitone device boundary before any complete kick engine. | [#36](https://github.com/simonjohansson/x0z/issues/36), [#37](https://github.com/simonjohansson/x0z/issues/37) |
-| [#7](https://github.com/simonjohansson/x0z/issues/7) Digitone II foundation: Pin and test the C adapter with diagnostic ASM | Prove the Digitone II device boundary before any complete kick engine. | [#36](https://github.com/simonjohansson/x0z/issues/36), [#5](https://github.com/simonjohansson/x0z/issues/5) |
+| Track | [#1](https://github.com/simonjohansson/x0z/issues/1) | Roadmap and milestone status |
+| Now | [#39](https://github.com/simonjohansson/x0z/issues/39) | Digitakt: select and exercise the silent combined mod in digiemu |
+| Now | [#40](https://github.com/simonjohansson/x0z/issues/40) | Digitone: select and exercise the silent combined mod in digiemu |
+| Now | [#7](https://github.com/simonjohansson/x0z/issues/7) | Digitone II: select and exercise the silent combined mod in Digikit |
+| Next | [#9](https://github.com/simonjohansson/x0z/issues/9) | Implement the 808 on both CPUs and integrate each increment into working mods |
+| Then | [#25](https://github.com/simonjohansson/x0z/issues/25) | Implement the 909 on both CPUs alongside the 808 in those same mods |
+| Deferred by user | [#2](https://github.com/simonjohansson/x0z/issues/2) | Reference VST captures and fidelity comparisons for both models |
+| After sound | [#20](https://github.com/simonjohansson/x0z/issues/20) | Combined-mod emulator regression and readiness review |
 
-808 reference selection [#2](https://github.com/simonjohansson/x0z/issues/2) and 909 reference selection [#21](https://github.com/simonjohansson/x0z/issues/21) can run in parallel. Their capture/tolerance work is [#8](https://github.com/simonjohansson/x0z/issues/8) and [#22](https://github.com/simonjohansson/x0z/issues/22). DN2 packaging review [#23](https://github.com/simonjohansson/x0z/issues/23) is local to DN2 and does not block ColdFire. The user approved one synth with an 808/909 selector, ID 20 and its [saved-control contract](dn2-packaging-proposal.md). Implement its production C declarations and independent selector tests in #6/#24; native save/load and lifecycle qualification remain separate.
+The three device issues are independent. Start with DT, whose existing full-OS
+observer already reaches the render hook. Use subagents for non-overlapping
+work. A blocked device does not stop useful work on another device. Once all
+currently actionable silent bring-up work is done, sound work can proceed on
+working devices while the blocked device retains its open gate.
 
-The shared interface is a private development contract. Concrete permanent IDs and saved control layouts need review before becoming stable. Pin each device's actual firmware/core/headers in its adapter work. DN2 development uses the exact Elekloader PR #200 head rather than waiting for a merge; changing that revision requires matched header/adapter checks.
+## First milestone: silent mods in all three emulators
 
-Selector infrastructure is explicit for both CPU backends:
-[ColdFire #77](https://github.com/simonjohansson/x0z/issues/77) serves DT/DN,
-and [SHARC #76](https://github.com/simonjohansson/x0z/issues/76) serves DN2.
-Their actual ASM diagnostics pass 160 ColdFire and 193 SHARC cases, with eight
-and six rejected reassembled defects respectively. They test per-voice selection
-and state isolation before sound models, independently of VST captures or complete
-engines. Native installation, ownership and transport gates remain separate.
+Each device issue owns the same short, end-to-end acceptance scenario:
 
-The adapter foundations #39, #40 and #7 remain open. Their C boundaries and
-diagnostic assembly components are now independently executable; each issue
-retains its missing native transport/lifecycle gates. Next, establish complete
-event-to-render traces per device without reserving permanent IDs. DT's bounded
-routine/observer results and DN's target-buffer results do not close their complete integration gates.
-The measured DN target-versus-smoothed-frame gap has a bounded follow-up,
-[#75](https://github.com/simonjohansson/x0z/issues/75), before delivered controls
-can satisfy #40.
-DN2 coupled setup currently stops on the missing complete hardware-manual reset
-table input; its bridge component can continue independently. See the
-[adapter evidence and setup blocker](development.md#device-adapter-slices).
+- Build the latest supported firmware with one registered `X0Z KICKS` machine;
+  boot it in the required emulator and select it using the native machine UI.
+- Show LEVEL, TNTUN, DECAY, ATTK and MODEL with their approved defaults. Verify
+  each control reaches the actual render callback. ATTK is ignored in 808 mode.
+- Exercise a native sequencer p-lock and one ordinary LFO assignment, including
+  MODEL selection at the next delivered START. Check two tracks selecting
+  different models and that changing one track leaves the other alone.
+- Execute the real ASM callback and write zero to every owned output sample.
+  Trace callback entry, delivered values and selected model: silence alone is
+  not evidence that the callback ran. Preserve unrelated stock-track audio.
+- Save/reload a sound or kit and retain MODEL and control values. Keep C control
+  tests and direct ASM tests independently runnable.
 
-## Independent delivery matrix
+There is no oscillator, reference capture or timbre target in this milestone.
+Use the existing SDK registration, native controls and test runners. Do not add
+another generic harness or invent a public transport API. Fix concrete failures
+encountered by this scenario; do not exhaust every combination of controller,
+LFO, MIDI source, tail history or allocation before trying the installed mod.
+Existing tests stay, but adding more edge-case coverage is not the priority.
 
-Each row is a model-specific test/development slice within the combined mod,
-not a separate package. Start a slice once its fixtures/comparator, CPU harness,
-adapter and next prerequisites are ready; do not wait for the other complete
-engine or another device. DT and DN share the ColdFire kernels and selector.
+### Current starting points and blockers
 
-| Cell tracker | C controls | First audible body and continuing integration | Device qualification |
-| --- | --- | --- | --- |
-| [#58](https://github.com/simonjohansson/x0z/issues/58) Digitakt + 808 | [#55](https://github.com/simonjohansson/x0z/issues/55) | [#56](https://github.com/simonjohansson/x0z/issues/56) | [#57](https://github.com/simonjohansson/x0z/issues/57) |
-| [#62](https://github.com/simonjohansson/x0z/issues/62) Digitakt + 909 | [#59](https://github.com/simonjohansson/x0z/issues/59) | [#60](https://github.com/simonjohansson/x0z/issues/60) | [#61](https://github.com/simonjohansson/x0z/issues/61) |
-| [#66](https://github.com/simonjohansson/x0z/issues/66) Digitone + 808 | [#63](https://github.com/simonjohansson/x0z/issues/63) | [#64](https://github.com/simonjohansson/x0z/issues/64) | [#65](https://github.com/simonjohansson/x0z/issues/65) |
-| [#70](https://github.com/simonjohansson/x0z/issues/70) Digitone + 909 | [#67](https://github.com/simonjohansson/x0z/issues/67) | [#68](https://github.com/simonjohansson/x0z/issues/68) | [#69](https://github.com/simonjohansson/x0z/issues/69) |
-| [#72](https://github.com/simonjohansson/x0z/issues/72) Digitone II + 808 | [#6](https://github.com/simonjohansson/x0z/issues/6) | [#71](https://github.com/simonjohansson/x0z/issues/71) | [#20](https://github.com/simonjohansson/x0z/issues/20) |
-| [#74](https://github.com/simonjohansson/x0z/issues/74) Digitone II + 909 | [#24](https://github.com/simonjohansson/x0z/issues/24) | [#73](https://github.com/simonjohansson/x0z/issues/73) | [#35](https://github.com/simonjohansson/x0z/issues/35) |
-
-The six cell issues are progress trackers, not large implementation tickets. Their native children cover controls, early integration and qualification. Shared CPU/model tasks remain under the main roadmap and are linked by dependencies. Labels `808`/`909`, `cpu:coldfire`/`cpu:sharc`, `device:dt`/`device:dn`/`device:dn2` and `type:*` make the ownership explicit.
-
-Completed DN2 #6/#24 C control work implements the approved shared ID-20 descriptor and
-page, with per-slot START-latched selection and explicit tail-clear metadata.
-It requires neither kick renderer; fake DSP tests cover both models' exact
-control mappings and the host reference selector policy. Production C owns the
-page declarations; the SHARC bridge calls ASM directly, so these C helpers do
-not establish an installed C-to-SHARC selector path. This does not qualify native
-registration/save/load, ownership or audible model switching. DT's
-[control proposal](dt-controls-proposal.md) remains unadopted pending review.
-DN's corresponding [control proposal](dn-controls-proposal.md) is also pending
-review; it uses verified full-range SYN2 positions without extra saved slots.
-The [DN delivered-control investigation](dn-delivered-controls-proposal.md)
-prioritizes existing Core events and a tested same-interrupt bank lifetime over
-a new public hook. Its self-contained `test:dn:frame` and `test:dn:transport`
-modes now feed one final semantic control plus raw MODEL through the private
-production reader/adapter to diagnostic ASM. Host tests cover all slots and
-capture lifetime; a recompiled target-buffer substitution fails. The separate
-`test:dn:machine` now exercises registered callbacks through the actual Core and
-companion dispatch across all eight slots. A bounded native SDK live edit now
-updates only the edited track's two lanes and retains fractional smoothing
-through those callbacks; an omitted stock live-target store is rejected.
-Prepared-list native lock apply/restore now reaches the same callbacks with
-voice isolation and the stock immediate smoother reset, independently of the
-remaining sequencer/editor lock-source gate. Decoded native CC1 and CC2 now run
-through the stock router and independent Q31 producers into subsequent
-controller passes and registered callbacks, including summed contribution and
-source/track isolation checks. A prepared channel-pressure message now reaches
-the same callbacks through a bounded native handler prefix and its separate
-producer state. Full handler completion, other input paths, raw MIDI parsing
-and full-OS latency remain separate. Its note/state injection does not
-qualify native START/frame ownership; the full-OS observer still uses an
-order-40 diagnostic receiver. Complete mappings, selector integration and native
-source/ownership/timing gates remain open. The measured final-word/UI-range
-mismatch now has an explicitly [approved DN-only endpoint policy](dn-final-control-endpoint-proposal.md):
-retain raw/UI bounds, clamp normalized positions, and canonicalize only the
-DN-side MODEL word passed to the existing selector. Other native integration
-gates and DT/DN saved-layout reviews remain separate.
-
-## Small sound slices
-
-Prioritize a tiny 808 body on both CPUs and audible integration on at least one ColdFire device and DN2 before investing in expensive complete models. This is a scheduling priority, not a dependency on DN2 completion: ready ColdFire work and independent 909 work can continue. Bring up the other ColdFire device using the same kernel.
-
-| Shared model slice | Oracle | ColdFire | SHARC+ |
-| --- | --- | --- | --- |
-| 808 body | [#9](https://github.com/simonjohansson/x0z/issues/9) | [#42](https://github.com/simonjohansson/x0z/issues/42) | [#10](https://github.com/simonjohansson/x0z/issues/10) |
-| 808 Decay | [#41](https://github.com/simonjohansson/x0z/issues/41) | [#43](https://github.com/simonjohansson/x0z/issues/43) | [#11](https://github.com/simonjohansson/x0z/issues/11) |
-| 808 excitation/attack | [#12](https://github.com/simonjohansson/x0z/issues/12) | [#44](https://github.com/simonjohansson/x0z/issues/44) | [#13](https://github.com/simonjohansson/x0z/issues/13) |
-| 808 feedback/pitch sigh | [#14](https://github.com/simonjohansson/x0z/issues/14) | [#45](https://github.com/simonjohansson/x0z/issues/45) | [#15](https://github.com/simonjohansson/x0z/issues/15) |
-| 808 Tone/Level/output | [#16](https://github.com/simonjohansson/x0z/issues/16) | [#46](https://github.com/simonjohansson/x0z/issues/46) | [#17](https://github.com/simonjohansson/x0z/issues/17) |
-| 909 triangle/reset/shaper | [#25](https://github.com/simonjohansson/x0z/issues/25) | [#47](https://github.com/simonjohansson/x0z/issues/47) | [#26](https://github.com/simonjohansson/x0z/issues/26) |
-| 909 Tune/pitch | [#27](https://github.com/simonjohansson/x0z/issues/27) | [#48](https://github.com/simonjohansson/x0z/issues/48) | [#28](https://github.com/simonjohansson/x0z/issues/28) |
-| 909 tonal amplitude/Decay/Level | [#29](https://github.com/simonjohansson/x0z/issues/29) | [#49](https://github.com/simonjohansson/x0z/issues/49) | [#30](https://github.com/simonjohansson/x0z/issues/30) |
-| 909 pulse/noise attack | [#31](https://github.com/simonjohansson/x0z/issues/31) | [#50](https://github.com/simonjohansson/x0z/issues/50) | [#32](https://github.com/simonjohansson/x0z/issues/32) |
-
-| Backend acceptance | ColdFire | SHARC+ |
+| Device | Useful evidence already available | Work still needed for this milestone |
 | --- | --- | --- |
-| 808 history | [#51](https://github.com/simonjohansson/x0z/issues/51) | [#18](https://github.com/simonjohansson/x0z/issues/18) |
-| 808 fidelity | [#52](https://github.com/simonjohansson/x0z/issues/52) | [#19](https://github.com/simonjohansson/x0z/issues/19) |
-| 909 history | [#53](https://github.com/simonjohansson/x0z/issues/53) | [#33](https://github.com/simonjohansson/x0z/issues/33) |
-| 909 fidelity | [#54](https://github.com/simonjohansson/x0z/issues/54) | [#34](https://github.com/simonjohansson/x0z/issues/34) |
+| DT, OS 1.54 | Full-OS PLAY reaches a C/ASM observer; bounded native edit/lock/LFO routines pass | Real combined registration/page, replacement output and the native smoke scenario |
+| DN, OS 1.44 | Standard full OS boots; final-frame C reader and registered callbacks pass bounded tests | Real combined registration; connect final controls/START to its render callback; native smoke scenario |
+| DN2, OS 1.12 | Approved production C page declarations, actual bridge and selector component tests | Package silent voice payload and registration; complete coupled-emulator setup; native smoke scenario |
 
-Every kernel slice exports direct fixture results immediately. Each ready cell consumes it through the continuing adapter regression command established by its first-body issue; retain a small audible observation for relevant control/attack changes. A blocked device does not prevent kernel acceptance or another device's progress. Its missing integration evidence remains visible in its own tracker. Final qualification checks the accumulated per-slice evidence rather than introducing the complete pipeline.
+The user explicitly approved the combined DT/DN saved layouts on 26 October:
+ID 80 `X0Z KICKS`, A LEVEL=100, B TNTUN=64, C DECAY=64, D ATTK=64,
+E blank, F MODEL=0, G/H blank. DT uses SRC and DN uses SYN2. See the
+[DT contract](dt-controls-proposal.md) and [DN contract](dn-controls-proposal.md)
+for exact native slots. [DN2 ID 20 and its layout](dn2-packaging-proposal.md)
+remain approved. MODEL changes latch at the next START and clear only that
+voice's old model state. The DN-only endpoint policy is also already approved.
+Approval is not a claim that native defaults or save/reload have passed.
 
-Bring up both models incrementally in this same mod. As soon as both first
-bodies are available on a device, test mixed 808/909 tracks, saved MODEL values,
-voice isolation and switching during tails. Keep those tests through every
-later slice. A partial cell can progress independently; a releasable device
-artifact must contain and qualify both engines. Per-device qualification waits
-for the other model's first integration, not its complete fidelity work, so
-coexistence is exercised early rather than as a final integration project.
+DN2's coupled emulator is still blocked on the complete ADSP-2156x hardware
+manual text needed for cold reset state. The [setup blocker](development.md#coupled-dn2-setup-blocker)
+retains the required path and research source; do not repeat failed downloads
+without new evidence. Packaging can proceed independently. DN's known strict
+emulator failure remains recorded; the first milestone may use the working
+standard non-strict configuration, labelled accurately.
 
-## What each test proves
+## Add sound without another integration project
 
-| Test | Owns | Remains separate |
-| --- | --- | --- |
-| C UI tests with native-service fakes | Production declarations, defaults and control mapping | Sound synthesis and physical controls |
-| Independent high-precision oracle | Circuit/model behavior and discretization | Production instruction behavior |
-| Actual assembled CPU runner | Numeric accuracy, ABI preservation, state and buffer bounds | Hardware instruction qualification and deadlines |
-| Cross-CPU report | Matched raw outputs against the oracle and each other | Native routing, AMP and device timing |
-| Per-device integration | Delivered events/values, raw-to-native conversion, routing | Full timbre or hardware qualification |
-| Physical cell qualification | Exact firmware, workload, persistence, coexistence and measured timing margin | Original Roland hardware fidelity |
+In #9, start with an analytically checked 808 body and level/decay, then add the
+excitation, pitch/feedback and tone/output behavior as small tested commits.
+Each ready increment runs through the already-installed mod. #25 follows with
+909 body/tune, envelope and pulse/noise attack. Keep the same registration and
+saved controls throughout; both models must coexist, not become separate mods.
 
-Compare physical settings and event times, not identical native knob words. Preserve raw onset and gain; report any alignment separately. Use fixed-seed noise for deterministic kernel checks and statistical comparisons for uncontrolled reference noise. Each backend passes against the independent oracle even when its peer is missing. Cross-CPU results are required when both matching slices are available, but an unavailable peer is not a blocker to an independently passing cell.
+Each instrument has one independent high-precision model and two actual ASM
+implementations. Reuse the existing analyzers, fixtures and CPU runners. Compare
+each backend to that model and compare matching outputs across CPUs. Record
+bounds, fixed-point overflow/limit cycles, floating-point stability and state
+isolation as part of the engine issue. Initial research-based sound is explicitly
+uncalibrated until deferred #2 reference comparisons pass.
 
-Digitone's custom path runs on the main ColdFire and overwrites stock FM audio; explicitly handle the machine companion's AMP/velocity reapplication. DN2 has stock AMP/filter processing downstream and its documented trigger-edge latency. Keep intrinsic kick decay and shared semantic events separate from these device behaviors.
+The six device/model combinations remain rows in the integration results, not
+six issue trees. #20 checks the accumulated mixed-model, persistence, routing,
+retrigger/lifecycle and declared workload results. It must not become the first
+time the engines are integrated. Hardware timing and real-device qualification
+are outside this emulator-only phase and are never inferred from emulator passes.
 
-Current DN2 code/data allocation can be expanded if it obstructs fidelity. Record usage and concrete upstream needs, while measuring CPU time separately. Neither a host pass, emulator pass nor a larger allocation establishes sustainable polyphony. Required failing checks stay open; fixes are bounded follow-up issues, not silent tolerance widening.
+## Consolidation and evidence
 
-The backlog retains native GitHub blocked-by links and parent/sub-issue relationships. Current implementation uses private test interfaces, with firmware integration still separately gated. No release or real-device operation has occurred.
+The following unfinished issues are closed as **superseded / not planned**, not
+completed. Their historical bodies and evidence remain available; their work is
+owned by the surviving issue's checklist.
+
+| Surviving issue | Superseded issues |
+| --- | --- |
+| #1 | #58, #62, #66, #70, #72, #74 |
+| #39 | #55, #59 |
+| #40 | #63, #67, #75 |
+| #9 | #10–18, #41–46, #51, #56, #64, #71 |
+| #25 | #26–33, #47–50, #53, #60, #68, #73 |
+| #2 | #8, #19, #21, #22, #34, #52, #54 |
+| #20 | #35, #57, #61, #65, #69 |
+
+Previously completed foundation issues remain completed: #3–6, #23–24,
+#36–38 and #76–77. The [development guide](development.md) retains their
+commands and the distinctions between host, component, native-routine and
+full-OS evidence. Historical issue links there are provenance, not the current
+work queue.
+
+Use mise, pinned Elekloader PR #200, digiemu for DT/DN and Digikit for DN2.
+Only the [latest supported firmware](../firmware/README.md) is in scope.
+Commit small increments directly to main and push, with evidence on the owning
+issue. Do not close a milestone on partial proof or widen tolerances to conceal
+failures. Other stable API or saved-layout changes still require review.

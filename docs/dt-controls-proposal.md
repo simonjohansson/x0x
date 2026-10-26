@@ -1,4 +1,4 @@
-# Digitakt combined x0z controls: review proposal
+# Digitakt combined x0z controls: approved saved layout
 
 The product direction is **one x0z mod containing both 808 and 909**, with a
 saved MODEL selector per sound/track. Different tracks can play both models
@@ -6,15 +6,15 @@ concurrently. This supersedes the earlier two-machine proposal and its approval;
 IDs 80/90 must not become separate engine registrations. See the
 [common product contract](render-contract.md#one-combined-mod-on-every-device).
 
-This is the revised proposal for [#55](https://github.com/simonjohansson/x0z/issues/55)
-and [#59](https://github.com/simonjohansson/x0z/issues/59), 26 October 2026.
-The combined ID/layout below remains a review candidate, not a persisted
-implementation. Scope: DT OS 1.54, Elekloader PR #200 pin
+**The user explicitly approved this combined ID/layout on 26 October 2026.**
+Implementation and emulator acceptance belong to
+[#39](https://github.com/simonjohansson/x0z/issues/39). Approval does not establish
+working native defaults or persistence. Scope: DT OS 1.54, Elekloader PR #200 pin
 `2ab5f424c4721e4277d2112a5ae755d9938f50d6`.
 
 ## One native registration and page
 
-Propose one shared candidate ID **80**, name `X0Z KICKS`, short name `KICKS`.
+Use the approved shared ID **80**, name `X0Z KICKS`, short name `KICKS`.
 Both models use that identity; ID 90 is unassigned. Check conflicts with every
 selected mod before adoption. Device-specific builds still contain both engines.
 
@@ -32,7 +32,7 @@ ModelDigi. No `cm_ui32` extras or new saved storage are proposed.
 | F / 5 | 22 / 137 | `MODEL`, 808/909 selector | 0 (808) |
 | G–H / 6–7 | 23–24 / 138–139 | hidden | none |
 
-Declared words propose `CM_RANGE | CM_DEFAULT`, raw 0..32512, with defaults
+Declared words use `CM_RANGE | CM_DEFAULT`, raw 0..32512, with defaults
 `display << 8`: LEVEL 25600, Tone/Tune/Decay/Attack 16384 and MODEL 0.
 Use the generic knob look `0x86`. D requires `CM_NOT_SAMPLE` to keep SRC
 cycling out of the waveform view. E/G/H use `CM_HIDDEN` with no semantic
@@ -74,7 +74,7 @@ loaded sounds or add saved slots to conceal the gap.
    through later slices. Full qualification requires both engines.
 
 The existing native observer has no machine registration and does not qualify
-this proposed layout, persistence, defaults or replacement audio path.
+the approved layout, persistence, defaults or replacement audio path.
 
 ## Inspected sources
 
@@ -83,4 +83,4 @@ this proposed layout, persistence, defaults or replacement audio path.
 - [Actual accessor and extended-page validation](../vendor/elekloader/mods/machine-pages/src.c): `cm_src_value`, `valid`, native/extended save paths; [extended defaults](../vendor/elekloader/mods/machine-pages/params.c): `mp_sound_defaults`.
 - [Core machine registration/render mapping](../vendor/elekloader/mods/core/machines.s): descriptor fields, `core_mparams`, `core_mrender`.
 - [ModelDigi pattern](https://github.com/simonjohansson/ModelDigi/blob/c412bdf2ab3b0b5b62484e8195c2f880d1964c67/machines/digitakt/modeldigi.c): SLICE bank, explicit ranges/defaults, `CM_NOT_SAMPLE`, hidden/blank positions and native render event. Its extra-value layout is not copied into this smaller proposal.
-- [Shared semantics and unadopted ID candidates](render-contract.md), [research on original controls](kick-drum-research.md), [current emulator evidence](development.md).
+- [Shared semantics and approved IDs](render-contract.md), [research on original controls](kick-drum-research.md), [current emulator evidence](development.md).

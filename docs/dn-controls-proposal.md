@@ -1,18 +1,19 @@
-# Digitone combined x0z controls: review proposal
+# Digitone combined x0z controls: approved saved layout
 
 **One x0z mod contains both engines**, selected per sound/track with MODEL.
 Mixed 808/909 voices must coexist in the same installed build. The earlier
 separate ID-80/ID-90 engine proposal is superseded. See the
 [common product contract](render-contract.md#one-combined-mod-on-every-device).
 
-Revised proposal for [#63](https://github.com/simonjohansson/x0z/issues/63)
-and [#67](https://github.com/simonjohansson/x0z/issues/67), 26 October 2026.
-Exact combined ID/positions remain review candidates. Scope: DN OS 1.44,
+**The user explicitly approved this combined ID/layout on 26 October 2026.**
+Implementation and emulator acceptance belong to
+[#40](https://github.com/simonjohansson/x0z/issues/40). Approval does not establish
+working native defaults or persistence. Scope: DN OS 1.44,
 Elekloader PR #200 pin `2ab5f424c4721e4277d2112a5ae755d9938f50d6`.
 
 ## One registration and shared controls
 
-Propose one shared candidate ID **80**, name `X0Z KICKS`; ID 90 is unassigned.
+Use the approved shared ID **80**, name `X0Z KICKS`; ID 90 is unassigned.
 Check the selected mods' `dnmachine:<id>` resources before adoption. Native
 sound slot 0 stores the one identity as `id << 8`; MODEL stores the chosen drum.
 
@@ -60,10 +61,11 @@ same-machine reselection. Switching 808/909 uses MODEL inside x0z, so it must
 not invoke machine-selection defaults or overwrite saved controls. Native
 selection, reset, FM/x0z switching and save/load still need emulator coverage.
 
-[#75](https://github.com/simonjohansson/x0z/issues/75) blocks delivered-control
-acceptance, including MODEL: `dnm_knob` currently supplies target words rather
+The delivery work formerly tracked in [#75](https://github.com/simonjohansson/x0z/issues/75)
+now belongs to #40, including MODEL: `dnm_knob` currently supplies target words rather
 than the observed final smoothed/controller/LFO frame. C-only declaration tests
-can proceed after combined-layout review; they do not resolve that transport gap.
+do not resolve that transport gap. Connect the existing tested private
+final-frame reader to the installed mod as part of #40.
 
 ## Small test increments
 

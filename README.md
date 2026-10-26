@@ -15,10 +15,10 @@ The [development guide](docs/development.md) covers mise setup, pinned emulator
 dependencies, independent test commands and the latest-only firmware baseline.
 
 Start with the [kick-drum research](docs/kick-drum-research.md) and
-[implementation plan](docs/implementation-plan.md). Establish the necessary
-interfaces, harnesses and device adapters first, then develop the six
-device/engine test combinations inside the combined mod in small slices. Digitakt II
-is outside the active scope.
+[implementation plan](docs/implementation-plan.md). The first milestone is one selectable, silent x0z mod in each emulator,
+with the MODEL selector, controls, p-locks and LFO targets working. Then add the
+808 and 909 in small integrated commits. The plan has eight working issues;
+Digitakt II is outside the active scope.
 
 Downloaded source material is kept locally in `research/`. Its two tracked
 manifests record how to reconstruct the archive; downloaded files remain

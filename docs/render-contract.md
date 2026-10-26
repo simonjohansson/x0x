@@ -153,31 +153,24 @@ exclude those stages; device tests record their settings and behavior. See the
 [pinned Digitone adapter explanation](https://github.com/irpina/elekloader/blob/c150ac583a4b7e6d64680d5592f4a40f409193f7/docs/ADAPTING.md#L1747-L1839)
 and [inspected DN2 callback](https://github.com/irpina/elekloader/blob/2ab5f424c4721e4277d2112a5ae755d9938f50d6/docs/MACHINES-DN2-VOICE.md#L71-L98).
 
-DT/DN permanent IDs and saved control layouts remain proposals for their
-respective device tickets. DN2's combined selector, positions/defaults and
-active-tail policy have explicit user approval in the linked contract below.
-Fixtures continue to select one model explicitly; native persistence and
-lifecycle qualification remain separate from that approval.
+The user explicitly approved all three combined saved layouts on 26 October
+2026. Each uses one native identity for both engines and the shared START-latched
+MODEL policy. Approval authorizes implementation; native defaults, persistence
+and lifecycle still require emulator tests.
 
-The following are concrete **review candidates** for DT/DN and the approved
-DN2 saved contract:
+| Device | Shared ID | Approved layout |
+| --- | --- | --- |
+| Digitakt | 80 | One SRC page; [exact slots and defaults](dt-controls-proposal.md) |
+| Digitone | 80 | One SYN2 page; [exact slots and defaults](dn-controls-proposal.md) |
+| Digitone II | 20 | One SYN page; [exact slots and defaults](dn2-packaging-proposal.md) |
 
-| Device | 808 ID | 909 ID | Control order and status |
-| --- | --- | --- | --- |
-| Digitakt | 80 (shared candidate) | 80 (shared candidate) | One combined SRC page with MODEL; exact combined layout remains a review proposal |
-| Digitone | 80 (shared candidate) | 80 (shared candidate) | One combined SYN page with MODEL; exact combined layout remains a review proposal |
-| Digitone II | 20 (shared) | 20 (shared) | Approved one-page layout with a MODEL selector; see the saved contract below |
-
-These values fall inside the pinned SDK's namespaces (DT 4–127, DN 1–127,
-DN2 5–31). Check resource conflicts with every selected mod before approval.
-The DT/DN UI tickets must present actual slots, labels, defaults and raw ranges for
-review; in particular, DN's existing ratio/algorithm slots cannot be assumed to
-behave like a full-range continuous knob. The trigger-strength path remains
-subject to the adapter's accent/velocity trace. No candidate appears in a
-DT/DN firmware descriptor, and the private C enums are unrelated to these IDs.
-The [approved DN2 contract](dn2-packaging-proposal.md) records ID 20, saved
-positions/defaults and the selector/tail policy. Its user approval authorizes
-production C declarations; native persistence and lifecycle tests remain separate.
+The common positions are A LEVEL=100, B TNTUN=64, C DECAY=64, D ATTK=64,
+E blank, F MODEL=0, G/H blank. These values fall inside the pinned SDK namespaces
+(DT 4–127, DN 1–127, DN2 5–31); builds still check resource conflicts against
+selected mods. Private C enums are unrelated to these native IDs. Trigger
+strength remains subject to the adapter's accent/velocity trace; no extra saved
+strength control is approved. Other stable API or persistence changes require
+review.
 
 ## Independent acceptance
 
