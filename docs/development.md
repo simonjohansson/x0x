@@ -8,8 +8,8 @@ and #7 own that work. Historical #75 and matrix links are superseded provenance.
 
 The scaffold has independent host, C adapter and assembled CPU tests.
 The synthetic probe is test equipment, not an 808/909 implementation or a VST
-reference. Production audio will use assembly; native pages and full firmware
-adapter tests remain separate work.
+reference. The silent mod callbacks use assembly. Native pages, packaging and
+full-OS coverage are recorded per device below; neither kick model is implemented.
 
 The product is one combined x0z mod per device, containing both engines behind
 a saved MODEL selector. Different tracks can run 808 and 909 concurrently.
@@ -179,6 +179,25 @@ and save/reload remain unchecked, so #39 stays open.
 
 Reports, firmware and screenshots are regenerated under `out/dt/silent/`.
 This is silent integration evidence, not kick synthesis or physical qualification.
+
+## Silent Digitone II mod
+
+```sh
+mise run test:dn2:silent      # actual SHARC callback, synthetic SDK frames
+mise run firmware:dn2:silent  # build and verify latest-OS firmware, no OS boot
+```
+
+The approved ID20 page declarations live in `machines/digitone2/page.c`,
+separately from the host-reference delivery helper. The mod contributes one
+synth/page registration and packages `targets/sharc/silence.s` through the pinned
+voice artifact format. The silent callback passes 189 synthetic SDK-frame cases
+across sixteen slots, with next-START selection, zero output and state/buffer
+guards. It uses 390 code bytes, 128 state bytes and at most 335 instructions in
+the modeled runner. SDK link validation and the installed ID20/PC16 binding pass.
+
+Reports and firmware are regenerated under `out/dn2/silent/`. Packaging is not a
+coupled-emulator boot. The [missing reset-table input](#coupled-dn2-setup-blocker)
+still blocks native selection, controls, p-lock/LFO and save/reload; #7 stays open.
 
 ## Device adapter slices
 

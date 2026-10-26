@@ -95,7 +95,7 @@ def c_reference(folder: Path, inputs: list[dict]) -> tuple[list[dict], dict]:
     compiler = shlex.split(os.environ.get("CC", "clang"))
     executable = folder / "selector-reference"
     sources = [ROOT / "src/controls.c", ROOT / "machines/digitone2/adapter.c",
-               ROOT / "machines/digitone2/controls.c", REFERENCE]
+               ROOT / "machines/digitone2/controls.c", ROOT / "machines/digitone2/page.c", REFERENCE]
     cpu.command([*compiler, "-std=c99", "-O2", "-Wall", "-Wextra", "-Werror",
                  "-I", ROOT / "include", "-I", ROOT / "machines/digitone2",
                  "-I", ROOT / "vendor/elekloader/elekloader/sdk/include",

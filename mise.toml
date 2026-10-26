@@ -147,6 +147,14 @@ run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen -
 description = "Test Digitone II C snapshots and the pinned SHARC bridge in Digikit"
 run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0z.digitone2_adapter'
 
+[tasks."test:dn2:silent"]
+description = "Execute the silent DN2 SHARC payload with the approved controls in Digikit"
+run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0z.digitone2_silent'
+
+[tasks."firmware:dn2:silent"]
+description = "Build and verify the latest-OS silent DN2 mod without claiming coupled boot"
+run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0z.digitone2_silent --build'
+
 [tasks."test:adapters"]
 description = "Run firmware-independent C-to-ASM adapter component checks"
 run = ["mise run test:dt:component", "mise run test:dn:component", "mise run test:dn2:component"]

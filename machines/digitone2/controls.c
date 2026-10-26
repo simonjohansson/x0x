@@ -1,16 +1,12 @@
 #include "controls.h"
 
-static const struct mk2_param tone_tune = {"TNTUN", 64},
-    decay = {"DECAY", 64}, attack = {"ATTK", 64}, model = {"MODEL", 0};
-static const struct mk2_page pages[] = {{{&tone_tune, &decay, &attack, 0, 0, &model, 0, 0}}};
-const struct mk2_synth x0z_dn2_synth = {20, 0, "X0Z KICKS", "KICKS"};
-const struct mk2_voice_pages x0z_dn2_voice_pages = {20, 1, pages};
+extern const struct mk2_param x0z_dn2_tone_tune, x0z_dn2_decay, x0z_dn2_attack;
 
 static const struct x0z_dn2_binding controls_808[] = {
-    {0, X0Z_TONE, &tone_tune}, {1, X0Z_DECAY, &decay}
+    {0, X0Z_TONE, &x0z_dn2_tone_tune}, {1, X0Z_DECAY, &x0z_dn2_decay}
 };
 static const struct x0z_dn2_binding controls_909[] = {
-    {0, X0Z_TUNE, &tone_tune}, {1, X0Z_DECAY, &decay}, {2, X0Z_ATTACK, &attack}
+    {0, X0Z_TUNE, &x0z_dn2_tone_tune}, {1, X0Z_DECAY, &x0z_dn2_decay}, {2, X0Z_ATTACK, &x0z_dn2_attack}
 };
 
 void x0z_dn2_controls_init(struct x0z_dn2_controls *state)

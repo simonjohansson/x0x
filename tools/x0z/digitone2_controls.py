@@ -20,7 +20,7 @@ def diagnose() -> dict:
                      "-I", root / "machines/digitone2",
                      "-I", root / "vendor/elekloader/elekloader/sdk/include",
                      root / "src/controls.c", root / "machines/digitone2/adapter.c",
-                     root / "machines/digitone2/controls.c",
+                     root / "machines/digitone2/controls.c", root / "machines/digitone2/page.c",
                      root / "tests/ui/test_digitone2_controls.c", "-o", executable])
         cpu.command([executable])
     return dict(status="passed", kind="isolated-C-DN2-controls-and-selector",
