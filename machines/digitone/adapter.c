@@ -135,9 +135,23 @@ int x0z_dn_frame_read(const struct x0z_dn_frame *frame, int32_t slot,
     if ((uint32_t)native_slot >= CORE_PARAMS_VOICE || lo >= hi)
         return 0;
     word = frame->words[CORE_PARAMS_VOICE * slot + native_slot];
-    if (word < lo || word > hi)
+    if (word < lo || (word > hi &&
+        !(parameter >= 119 && parameter <= 126 && lo == 0 && hi == 32512)))
         return 0;
     *raw = word; *minimum = lo; *maximum = hi;
+    return 1;
+}
+
+int x0z_dn_frame_model(const struct x0z_dn_frame *frame, int32_t slot,
+                       uint32_t parameter, int32_t *raw, uint32_t *canonical)
+{
+    int32_t observed, minimum, maximum;
+    if (!raw || !canonical || (void *)raw == (void *)canonical || parameter < 119 || parameter > 126 ||
+        !x0z_dn_frame_read(frame, slot, parameter, &observed, &minimum, &maximum) ||
+        minimum != 0 || maximum != 32512)
+        return 0;
+    *raw = observed;
+    *canonical = (uint32_t)(observed > maximum ? maximum : observed);
     return 1;
 }
 
@@ -157,8 +171,10 @@ int x0z_dn_render_frame(struct x0z_dn_adapter *adapter, int32_t slot, int32_t ou
             if (mapping[j].parameter == mapping[i].parameter || mapping[j].control == mapping[i].control)
                 return 0;
         if (!x0z_dn_frame_read(frame, slot, mapping[i].parameter, &raw, &minimum, &maximum) ||
-            !value(&input, i, instrument, mapping[i].control, raw, minimum, maximum))
+            !value(&input, i, instrument, mapping[i].control,
+                   raw > maximum ? maximum : raw, minimum, maximum))
             return 0;
+        input.value[i].raw = raw; /* Preserve the observation while bounding its model position. */
     }
     return deliver(adapter, voice, &input, receiver, context);
 }

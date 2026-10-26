@@ -15,7 +15,7 @@ struct x0z_dn_mapping {
 
 struct x0z_dn_value {
     enum x0z_control control;
-    int32_t raw, minimum, maximum;
+    int32_t raw, minimum, maximum; /* Observed word and stock UI bounds; frame raw may exceed maximum. */
     struct x0z_position position;
 };
 
@@ -58,6 +58,10 @@ void x0z_dn_frame_end(struct x0z_dn_frame *frame);
  * view after the companion (voices order 60); render exit clears it again. */
 int x0z_dn_frame_read(const struct x0z_dn_frame *frame, int32_t slot,
                       uint32_t parameter, int32_t *raw, int32_t *minimum, int32_t *maximum);
+/* DN-only full-range SYN2 MODEL; observed raw and bounded existing-selector input.
+ * Output words must be distinct; failed reads leave both unchanged. */
+int x0z_dn_frame_model(const struct x0z_dn_frame *frame, int32_t slot,
+                       uint32_t parameter, int32_t *raw, uint32_t *canonical);
 int x0z_dn_render_frame(struct x0z_dn_adapter *adapter, int32_t slot, int32_t output[32],
                        const struct dnm_voice *voice, enum x0z_instrument instrument,
                        const struct x0z_dn_frame *frame,

@@ -10,8 +10,9 @@
 #endif
 #define RECORD(p, slot, hi) WORD(p, 4, slot), WORD(p, 12, hi)
 const uint8_t fw_params[134 * 60] __attribute__((aligned(4))) = {
-    RECORD(119, 27, 32512), RECORD(120, 28, 32512), RECORD(121, 29, 32512),
-    RECORD(124, 32, 32512), RECORD(133, 79, 32512)
+    RECORD(118, 26, 32512), RECORD(119, 27, 32512), RECORD(120, 28, 32512), RECORD(121, 29, 32512),
+    RECORD(122, 30, 32512), RECORD(123, 31, 32511), RECORD(124, 32, 32512),
+    RECORD(126, 34, 32512), RECORD(127, 35, 32512), RECORD(133, 79, 32512)
 };
 
 static int32_t raw[8][32], low[32], high[32];
@@ -81,7 +82,8 @@ static void delivered(void)
         assert(!x0z_dn_frame_read(&frame, 0, 119, &value, &lo, &hi));
         assert(value == -123 && lo == -123 && hi == -123);
         words[bank][27] = 32513;
-        assert(!x0z_dn_frame_read(&frame, 0, 119, &value, &lo, &hi));
+        assert(x0z_dn_frame_read(&frame, 0, 119, &value, &lo, &hi));
+        assert(value == 32513 && lo == 0 && hi == 32512);
         x0z_dn_frame_end(&frame);
         assert(!frame.words && !frame.phase);
         assert(!x0z_dn_frame_read(&frame, 0, 119, &value, &lo, &hi));
@@ -100,6 +102,78 @@ static void delivered(void)
     assert(!x0z_dn_render_frame(&adapter, 0, output, &voice, X0Z_808,
                                 &frame, map, 3, receive, &seen));
     assert(calls == previous && !memcmp(&before, &adapter, sizeof(adapter)));
+}
+
+static void endpoints(void)
+{
+    static const int32_t values[] = {0, 1, 12345, 16383, 16384, 32512, 32513, 32634, 32767};
+    struct x0z_dn_frame frame = {0};
+    struct x0z_dn_adapter adapter = {0}, before;
+    struct dnm_voice voice = {60 << 16, 37, 1, 2, 1};
+    const struct x0z_dn_frame_mapping map[] = {{X0Z_LEVEL,119}, {X0Z_TONE,120}, {X0Z_DECAY,121}};
+    int16_t words[8 * CORE_PARAMS_VOICE] = {0};
+    int32_t output[32] = {0}, observed = -123, lo, hi;
+    uint32_t canonical = 0xabcdef01;
+    unsigned slot, i, previous;
+    x0z_dn_frame_begin(&frame);
+    x0z_dn_frame_capture(&frame, words);
+    assert(!x0z_dn_frame_model(&frame, 0, 124, &observed, &canonical));
+    assert(observed == -123 && canonical == 0xabcdef01);
+    x0z_dn_frame_ready(&frame);
+    for (slot = 0; slot < 8; ++slot) {
+        for (i = 0; i < sizeof(values) / sizeof(values[0]); ++i) {
+            uint32_t bounded = values[i] > 32512 ? 32512 : (uint32_t)values[i];
+            words[79 * slot + 27] = values[i];
+            words[79 * slot + 32] = values[i];
+            assert(x0z_dn_render_frame(&adapter, slot, output, &voice, X0Z_808,
+                                       &frame, map, 3, receive, &seen));
+            assert(seen.value[0].raw == values[i]);
+            assert(seen.value[0].minimum == 0 && seen.value[0].maximum == 32512);
+            assert(seen.value[0].position.numerator == bounded);
+            assert(seen.value[0].position.denominator == 32512);
+            assert(x0z_dn_frame_model(&frame, slot, 124, &observed, &canonical));
+            assert(observed == values[i] && canonical == bounded);
+            assert((canonical >= 16384) == (values[i] >= 16384));
+            assert(words[79 * slot + 27] == values[i] && words[79 * slot + 32] == values[i]);
+        }
+    }
+    /* The approval is limited to verified full-range SYN2 records. */
+    words[26] = words[31] = words[34] = words[35] = 32513;
+    assert(!x0z_dn_frame_read(&frame, 0, 118, &observed, &lo, &hi));
+    assert(!x0z_dn_frame_read(&frame, 0, 123, &observed, &lo, &hi));
+    assert(x0z_dn_frame_read(&frame, 0, 126, &observed, &lo, &hi));
+    assert(!x0z_dn_frame_read(&frame, 0, 127, &observed, &lo, &hi));
+    before = adapter; previous = calls;
+    words[28] = -1;
+    assert(!x0z_dn_render_frame(&adapter, 0, output, &voice, X0Z_808,
+                                &frame, map, 3, receive, &seen));
+    assert(calls == previous && !memcmp(&before, &adapter, sizeof(adapter)));
+    words[28] = 0;
+    const struct x0z_dn_frame_mapping duplicate[] = {{X0Z_LEVEL,119}, {X0Z_LEVEL,126}};
+    assert(!x0z_dn_render_frame(&adapter, 0, output, &voice, X0Z_808,
+                                &frame, duplicate, 2, receive, &seen));
+    assert(calls == previous && !memcmp(&before, &adapter, sizeof(adapter)));
+    observed = -123; canonical = 0xabcdef01;
+    words[32] = -1;
+    assert(!x0z_dn_frame_model(&frame, 0, 124, &observed, &canonical));
+    assert(observed == -123 && canonical == 0xabcdef01);
+    words[32] = -32768;
+    assert(!x0z_dn_frame_model(&frame, 0, 124, &observed, &canonical));
+    assert(observed == -123 && canonical == 0xabcdef01);
+    words[32] = 32767;
+    words[31] = 0;
+    assert(x0z_dn_frame_read(&frame, 0, 123, &observed, &lo, &hi));
+    observed = -123;
+    assert(!x0z_dn_frame_model(&frame, 0, 118, &observed, &canonical));
+    assert(!x0z_dn_frame_model(&frame, 0, 123, &observed, &canonical));
+    assert(!x0z_dn_frame_model(&frame, 0, 124, 0, &canonical));
+    assert(!x0z_dn_frame_model(&frame, 0, 124, &observed, 0));
+    assert(!x0z_dn_frame_model(&frame, 0, 124, &observed, (uint32_t *)&observed));
+    assert(observed == -123 && canonical == 0xabcdef01);
+    x0z_dn_frame_end(&frame);
+    assert(!x0z_dn_frame_model(&frame, 0, 124, &observed, &canonical));
+    assert(observed == -123 && canonical == 0xabcdef01);
+    for (i = 0; i < 32; ++i) assert(output[i] == 0);
 }
 
 int main(void)
@@ -149,6 +223,10 @@ int main(void)
     assert(!x0z_dn_render(&adapter, 3, output, &voice, X0Z_808, wrong, 1, receive, &seen));
     assert(calls == previous && memcmp(&before, &adapter, sizeof(adapter)) == 0);
     assert(!x0z_dn_forget(&adapter, 8));
+    raw[3][8] = 32513;
+    assert(!x0z_dn_render(&adapter, 3, output, &voice, X0Z_808, map, 3, receive, &seen));
+    assert(calls == previous && !memcmp(&before, &adapter, sizeof(adapter)));
     delivered();
+    endpoints();
     return 0;
 }

@@ -1,6 +1,7 @@
-# DN final-control endpoints: proposal for review
+# DN final-control endpoint policy
 
-**Pending human review. No policy change is implemented.** Scope is the private
+**Approved by the user on 26 October 2026:** “Approve the DN-only endpoint policy.”
+The implementation is being verified against the acceptance checks below. Scope is the private
 Digitone OS 1.44 final-frame adapter at Elekloader PR 200 commit
 `2ab5f424c4721e4277d2112a5ae755d9938f50d6`. This adopts no saved layout or ID.
 
@@ -31,7 +32,7 @@ A separate stock-controller helper probe reaches 32767 at positive saturation
 and 0 at negative saturation. The final-frame result above establishes that a
 later stage need not clamp the selected control back to its UI maximum.
 
-## Recommended DN-only policy
+## Approved DN-only policy
 
 For verified full-range SYN2 records 119..126 with stock bounds 0..32512:
 
@@ -53,9 +54,9 @@ For verified full-range SYN2 records 119..126 with stock bounds 0..32512:
 This preserves the shared model's `[0,1]` control contract and raw observability.
 Normalizing against 32767 instead would move the UI maximum below position 1.
 Allowing positions above 1 would extend the shared instrument contract. Neither
-alternative is part of this proposal.
+alternative is part of the approved policy.
 
-## Acceptance after approval
+## Implementation acceptance
 
 1. Host cases cover 0, fractional values, 32512, 32513, 32634 and 32767;
    preserve actual raw/UI metadata and verify clamped positions exactly.
@@ -66,7 +67,7 @@ alternative is part of this proposal.
 4. Retain negative/malformed/missing/stale rejection and atomic state/receiver
    checks, and keep the target-only diagnostic's rejection behavior unchanged.
 
-The user's supplied AGENTS.md requires review before API changes. This proposal
-changes established raw-reader/receiver rejection behavior and metadata meaning,
-so approval is needed before implementation. Native-source, ownership, selector
+The user's supplied AGENTS.md requires review before API changes. The explicit
+approval above authorizes this DN-only raw-reader/receiver rejection behavior
+and metadata meaning. Native-source, ownership, selector
 integration, full-OS timing and fidelity gates in #75/#40 remain separate.
