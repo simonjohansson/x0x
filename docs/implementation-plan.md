@@ -57,6 +57,13 @@ Each row starts once its shared fixtures/comparator, CPU harness, own adapter an
 
 The six cell issues are progress trackers, not large implementation tickets. Their native children cover controls, early integration and qualification. Shared CPU/model tasks remain under the main roadmap and are linked by dependencies. Labels `808`/`909`, `cpu:coldfire`/`cpu:sharc`, `device:dt`/`device:dn`/`device:dn2` and `type:*` make the ownership explicit.
 
+DN2's #6/#24 C control slice implements the approved shared ID-20 descriptor and
+page, with per-slot START-latched selection and explicit tail-clear metadata.
+It requires neither kick renderer; fake DSP tests cover both models' exact
+control mappings and the common selector. This does not qualify native
+registration/save/load, ownership or audible model switching. DT's
+[control proposal](dt-controls-proposal.md) remains unadopted pending review.
+
 ## Small sound slices
 
 Prioritize a tiny 808 body on both CPUs and audible integration on at least one ColdFire device and DN2 before investing in expensive complete models. This is a scheduling priority, not a dependency on DN2 completion: ready ColdFire work and independent 909 work can continue. Bring up the other ColdFire device using the same kernel.

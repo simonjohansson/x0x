@@ -56,8 +56,12 @@ description = "Test the Digitone C adapter without firmware or an emulator"
 run = "python -m x0z.digitone_adapter --host"
 
 [tasks."test:ui:dn2"]
-description = "Test the Digitone II C adapter without firmware or an emulator"
-run = "python -m x0z.digitone2_adapter --host"
+description = "Test the Digitone II C adapter and approved controls without firmware or an emulator"
+run = ["python -m x0z.digitone2_adapter --host", "mise run test:ui:dn2:controls"]
+
+[tasks."test:ui:dn2:controls"]
+description = "Test the approved DN2 808/909 pages and START-latched selector with a fake DSP"
+run = "python -m x0z.digitone2_controls --host"
 
 [tasks."test:ui:coldfire"]
 description = "Check that C controls cross-compile without unsupported runtime helpers"

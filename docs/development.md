@@ -45,6 +45,7 @@ mise run test:ui           # common controls plus DT, DN and DN2 C adapters
 mise run test:ui:dt        # Digitakt C alone, no assembler/emulator/firmware
 mise run test:ui:dn        # Digitone C alone
 mise run test:ui:dn2       # Digitone II C alone
+mise run test:ui:dn2:controls  # approved combined pages/selector; fake DSP, no renderer
 mise run test:ui:coldfire  # no unsupported runtime imports in the target object
 mise run test:coldfire     # assemble and execute in digiemu
 mise run test:sharc        # assemble and execute in Digikit
@@ -173,6 +174,16 @@ OS control delivery. Test-only machine 31 exists only in emulator memory.
 Faulty C variants must be rejected: fraction loss, wrong slot and unwanted level
 scaling on DN2; fraction loss, unconditional reassignment and overwritten velocity
 on DN.
+
+The approved DN2 ID-20 declarations and selector live in
+`machines/digitone2/controls.c`. Their standalone C tests check the actual SDK
+descriptor/pages, both models' distinct endpoint/fractional values and the
+START-latched threshold at raw 16384. An edit during a tail stays pending until
+START; first initialization or a model change requests tail clearing, while a
+same-model START preserves residual state. Controls precede the notice. The
+fake DSP tests this metadata and per-slot isolation; no DSP reset or excitation
+is implemented in C. Blank E/G/H have no strength meaning. Native ownership,
+save/load and downstream processing remain integration work.
 
 ### Coupled DN2 setup blocker
 
