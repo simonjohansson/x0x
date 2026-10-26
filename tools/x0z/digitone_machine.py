@@ -22,6 +22,8 @@ LOCK_VOICE, LOCK_SLOT, LOCK_VALUE, RESTORE_VALUE = 1, 27, 17003, 12458
 LOCK_BITS, SMOOTHER = 0x431f26b4, 0x800046b0
 CC_TRACK, CC_NUMBER, CC_VALUE = 0, 1, 127
 CC_RAW, CC_TABLE = 0x80004640, 0x80004690
+BREATH_NUMBER, BREATH_VALUE = 2, 64
+BREATH_RAW, BREATH_TABLE = 0x80004638, 0x80004680
 DRIVER = r'''
 #include <stdint.h>
 #include "adapter.h"
@@ -121,7 +123,15 @@ def controller_step(state, raw):
     return result, (result - 0x40000000 + 0x4000) >> 15
 
 
-def bounded(image_path, names, stock, omit_live_store=False, omit_lock_store=False, omit_controller_producer=False):
+def controller_raw(msb):
+    """Stock decoded CC MSB scaling with the fixture's untouched zero LSB cache."""
+    if type(msb) is not int or not 0 <= msb <= 127:
+        raise ValueError("invalid decoded CC fixture MSB")
+    return min(((msb << 8) * 0x8102) >> 15, 32767)
+
+
+def bounded(image_path, names, stock, omit_live_store=False, omit_lock_store=False,
+            omit_controller_producer=False, alias_breath_source=False):
     from elekloader import formats
     from unicorn import UC_HOOK_CODE, UC_HOOK_MEM_READ, UC_HOOK_MEM_WRITE
     from unicorn import m68k_const as regs
@@ -279,13 +289,16 @@ def bounded(image_path, names, stock, omit_live_store=False, omit_lock_store=Fal
             uc.mem_write(lock_store, bytes.fromhex("4e714e71"))
         cc_router, producer_start, producer_end = 0x400edbc2, 0x4009dd92, 0x4009de1a
         cc_records, cc_states = 0x401ab694, 0x40236724
-        cc_sources, cc_destinations = (0x80004648, CC_RAW, 0x80004638, 0x80004630), (0x800046a0, CC_TABLE, 0x80004680, 0x80004670)
+        cc_sources, cc_destinations = (0x80004648, CC_RAW, BREATH_RAW, 0x80004630), (0x800046a0, CC_TABLE, BREATH_TABLE, 0x80004670)
         records = list(struct.unpack(">16I", uc.mem_read(cc_records, 64)))
         expected_records = [word for source, destination, offset in zip(cc_sources, cc_destinations, range(0, 64, 16))
                             for word in (destination, source, 4, cc_states + offset)]
         if (records != expected_records or read32(0x402296f0) & 0x80000 or
-            read_words(cc_states, 16) != [0x40000000] * 16 or any(uc.mem_read(CC_TABLE, 8))):
+            read_words(cc_states, 16) != [0x40000000] * 16 or any(uc.mem_read(CC_TABLE, 8)) or
+            any(uc.mem_read(BREATH_TABLE, 8))):
             raise ValueError("native controller records/model/stock initialized Q-states differ from fixture")
+        if alias_breath_source:
+            uc.mem_write(cc_records + 2 * 16 + 4, struct.pack(">I", CC_RAW))
         for address, expected in ((producer_start, "2039402296f0"), (0x4009ddae, "287c03d70000"),
                                   (0x4009ddb4, "2a3c7c290000"), (0x4009de0e, "31823800")):
             count = len(expected) // 2
@@ -319,6 +332,7 @@ def bounded(image_path, names, stock, omit_live_store=False, omit_lock_store=Fal
                 uc.mem_write(voice + 2 * parameter, struct.pack(">h", value))
             uc.mem_write(target + 1449 + 148 * slot, struct.pack(">4I", (0x1000 << 16) | 27, 0, 0, 0))
             uc.mem_write(target + 1449 + 148 * slot + 36, struct.pack(">4I", (0x1000 << 16) | 27, 0, 0, 0))
+            uc.mem_write(target + 1449 + 148 * slot + 52, struct.pack(">4I", (0x0800 << 16) | 27, 0, 0, 0))
             uc.mem_write(0x431F2928 + 2 * slot, struct.pack(">h", 0x3F80))
             note(slot)
         uc.mem_write(names["fw_voice_pitch"], struct.pack(">8I", *pitches))
@@ -327,31 +341,35 @@ def bounded(image_path, names, stock, omit_live_store=False, omit_lock_store=Fal
         # Decoded-router configuration only; raw and settled CC values come from stock code.
         uc.mem_write(0x419f0de0, struct.pack(">I", 1))
         uc.mem_write(0x419a93a4, b"\x01")
-        raw_before = bytes(uc.mem_read(0x80004620, 0x30))
-        table_before = bytes(uc.mem_read(0x80004650, 0x58))
-        state_before = bytes(uc.mem_read(cc_states, 64))
-        target_before = bytes(uc.mem_read(target, 0xa40))
-        writes = []
-        state["setter"] = ([(transport.STACK - 2048, transport.STACK), (transport.STACK + 4, transport.STACK + 24),
-                            (CC_RAW, CC_RAW + 2), (0x419a93cd, 0x419a93ce)], writes)
-        state["native_stack_end"] = transport.STACK + 24  # Stock tail calls reuse their C argument words.
-        state["native_reads"] = [(transport.STACK - 2048, transport.STACK + 24),
-                                 (0x419a93a4, 0x419a93a5), (0x419a93cc, 0x419a93cd),
-                                 (0x419f0de0, 0x419f0de4), (names["ev_midi_cc"], names["ev_midi_cc"] + 4)]
-        try:
-            native(cc_router, [CC_TRACK, CC_NUMBER, CC_VALUE, 0, 0])
-        finally:
-            state["setter"], state["native_reads"] = None, None
-            state["native_stack_end"] = transport.STACK
-        expected_raw = bytearray(raw_before)
-        struct.pack_into(">h", expected_raw, CC_RAW - 0x80004620, 32767)
-        if (bytes(uc.mem_read(0x80004620, 0x30)) != expected_raw or
-            bytes(uc.mem_read(0x80004650, 0x58)) != table_before or
-            bytes(uc.mem_read(cc_states, 64)) != state_before or
-            bytes(uc.mem_read(target, 0xa40)) != target_before or
-            sorted(writes) != sorted(((CC_RAW, 2), (0x419a93cd, 1))) or
-            bytes(uc.mem_read(0x419a93cd, 1)) != bytes([CC_VALUE])):
-            raise AssertionError("decoded native CC1 did not update only raw controller/MSB cache")
+        for number, value, raw_address, cache in ((CC_NUMBER, CC_VALUE, CC_RAW, 0x419a93cc),
+                                                  (BREATH_NUMBER, BREATH_VALUE, BREATH_RAW, 0x419a93ac)):
+            raw_before = bytes(uc.mem_read(0x80004620, 0x30))
+            table_before = bytes(uc.mem_read(0x80004650, 0x58))
+            state_before = bytes(uc.mem_read(cc_states, 64))
+            target_before = bytes(uc.mem_read(target, 0xa40))
+            if bytes(uc.mem_read(cache, 1)) != b"\x00":
+                raise ValueError("decoded CC fixture requires an untouched zero LSB cache")
+            writes = []
+            state["setter"] = ([(transport.STACK - 2048, transport.STACK), (transport.STACK + 4, transport.STACK + 24),
+                                (raw_address, raw_address + 2), (cache + 1, cache + 2)], writes)
+            state["native_stack_end"] = transport.STACK + 24  # Stock tail calls reuse their C argument words.
+            state["native_reads"] = [(transport.STACK - 2048, transport.STACK + 24),
+                                     (0x419a93a4, 0x419a93a5), (cache, cache + 1),
+                                     (0x419f0de0, 0x419f0de4), (names["ev_midi_cc"], names["ev_midi_cc"] + 4)]
+            try:
+                native(cc_router, [CC_TRACK, number, value, 0, 0])
+            finally:
+                state["setter"], state["native_reads"] = None, None
+                state["native_stack_end"] = transport.STACK
+            expected_raw = bytearray(raw_before)
+            struct.pack_into(">h", expected_raw, raw_address - 0x80004620, controller_raw(value))
+            if (bytes(uc.mem_read(0x80004620, 0x30)) != expected_raw or
+                bytes(uc.mem_read(0x80004650, 0x58)) != table_before or
+                bytes(uc.mem_read(cc_states, 64)) != state_before or
+                bytes(uc.mem_read(target, 0xa40)) != target_before or
+                sorted(writes) != sorted(((raw_address, 2), (cache + 1, 1))) or
+                bytes(uc.mem_read(cache + 1, 1)) != bytes([value])):
+                raise AssertionError(f"decoded native CC{number} did not update only its raw controller/MSB cache")
 
         def produce_controller():
             writes = []
@@ -375,7 +393,7 @@ def bounded(image_path, names, stock, omit_live_store=False, omit_lock_store=Fal
         settings = {1: 0x5000, 2: 0, 4: 27 << 8, 5: 2 << 8, 6: 64 << 8,
                     7: 1 << 8, 8: 72 << 8, 12: 0, 16: 64 << 8}
         cases, generations, live_edit, lock_transitions, cc_trace = [], [1] * 8, None, [], []
-        expected_cc_state, expected_cc = 0x40000000, 0
+        expected_cc_state, expected_cc, expected_breath_state, expected_breath = 0x40000000, 0, 0x40000000, 0
         for block in range(7):
             state["block"], state["order"] = block, []
             if block == 1:
@@ -464,9 +482,12 @@ def bounded(image_path, names, stock, omit_live_store=False, omit_lock_store=Fal
             used_cc = list(struct.unpack(">4h", uc.mem_read(CC_TABLE, 8)))
             if used_cc != [expected_cc, 0, 0, 0]:
                 raise AssertionError("native CC controller used the wrong block's settled table")
+            used_breath = list(struct.unpack(">4h", uc.mem_read(BREATH_TABLE, 8)))
+            if used_breath != [expected_breath, 0, 0, 0]:
+                raise AssertionError("native breath controller used the wrong block or source")
             native(names["core_render_params"], [frame])
             controllers = [int.from_bytes(uc.mem_read(words + 158 * lane + 54, 2), "big") for lane in range(8)]
-            expected_controllers = [value + 2032 + ((expected_cc >> 3) if track == CC_TRACK else 0)
+            expected_controllers = [value + 2032 + (((expected_cc >> 3) + (expected_breath >> 4)) if track == CC_TRACK else 0)
                                     for value, track in zip(smoothed, tracks)]
             if controllers != expected_controllers:
                 raise AssertionError("native CC controller changed the wrong voice or lost its fractional contribution")
@@ -474,14 +495,19 @@ def bounded(image_path, names, stock, omit_live_store=False, omit_lock_store=Fal
             producer_targets = bytes(uc.mem_read(target, 0xa40))
             producer_tracks = bytes(uc.mem_read(names["fw_voice_track"], 32))
             producer_writes = produce_controller()
-            expected_cc_state, expected_after_cc = controller_step(expected_cc_state, 32767)
+            expected_cc_state, expected_after_cc = controller_step(expected_cc_state, controller_raw(CC_VALUE))
+            expected_breath_state, expected_after_breath = controller_step(expected_breath_state, controller_raw(BREATH_VALUE))
             expected_states = [0x40000000] * 16
             expected_states[4] = expected_cc_state
+            expected_states[8] = expected_breath_state
             cc_trace.append(dict(block=block, used=used_cc, produced=list(struct.unpack(">4h", uc.mem_read(CC_TABLE, 8))),
                                  state=read_words(cc_states, 16), expected_states=expected_states,
                                  expected_produced=[expected_after_cc, 0, 0, 0], writes=producer_writes,
+                                 breath_used=used_breath, breath_produced=list(struct.unpack(">4h", uc.mem_read(BREATH_TABLE, 8))),
+                                 expected_breath_produced=[expected_after_breath, 0, 0, 0],
                                  affected_lanes=[lane for lane, track in enumerate(tracks) if track == CC_TRACK]))
             expected_cc = expected_after_cc
+            expected_breath = expected_after_breath
             uc.reg_write(regs.UC_M68K_REG_A6, 0x470E0000)
             uc.reg_write(regs.UC_M68K_REG_A2, bank); uc.reg_write(regs.UC_M68K_REG_D6, 0)
             uc.mem_write(0x470E0000 - 108, struct.pack(">I", frame))
@@ -545,14 +571,18 @@ def bounded(image_path, names, stock, omit_live_store=False, omit_lock_store=Fal
                                  [(cc_states + 4 * index, 4) for index in range(16)])
         for row in cc_trace:
             if (row["state"] != row["expected_states"] or row["produced"] != row["expected_produced"] or
+                row["breath_produced"] != row["expected_breath_produced"] or
                 sorted(row["writes"]) != expected_writes):
                 raise AssertionError("native CC controller producer Q31/table/write trace diverged")
         return dict(cases=cases, machine_callbacks=len(state["calls"]), guarded_frame_reads=state["reads"],
                     live_edit=live_edit, lock_transitions=lock_transitions,
                     cc_trace=cc_trace, decoded_cc=dict(router=hex(cc_router), track=CC_TRACK, cc=CC_NUMBER,
-                                                     value=CC_VALUE, raw=32767, non_stack_writes=2,
+                                                     value=CC_VALUE, raw=controller_raw(CC_VALUE), non_stack_writes=2,
                                                      initial_q_state="stock image initializes each state to0x40000000"),
-                    cc_stage_order=["decoded CC1 before block0", "controllers consume previous settled table",
+                    decoded_breath=dict(router=hex(cc_router), track=CC_TRACK, cc=BREATH_NUMBER,
+                                        value=BREATH_VALUE, raw=controller_raw(BREATH_VALUE), non_stack_writes=2,
+                                        mapping_amount="0x0800 (1/16)"),
+                    cc_stage_order=["decoded CC1/CC2 before block0", "controllers consume previous settled tables",
                                     "LFO", "controller producer updates table/Q-state", "final stage", "registered callback"],
                     blocks=7, instructions_per_call_or_stage=transport.LIMIT,
                     event_order=["in", "pre", "ready (40)", "companion/machine (50)", "end (60)", "out"],
@@ -606,6 +636,14 @@ def verify():
         rejected.append(dict(name="native controller producer omitted", reason=str(error)))
     else:
         raise AssertionError("machine diagnostic accepted an omitted controller producer")
+    try:
+        bounded(image, names, stock, alias_breath_source=True)
+    except AssertionError as error:
+        if "native breath controller used the wrong block or source" not in str(error):
+            raise
+        rejected.append(dict(name="native breath producer aliases mod-wheel raw source", reason=str(error)))
+    else:
+        raise AssertionError("machine diagnostic accepted an aliased breath controller source")
     result.update(rejected_mutations=rejected, kind="registered DN machine / native companion diagnostic", stock=stock,
                   emulator_revision=cpu.revision(ROOT / "vendor/digiemu"), project_revision=cpu.revision(ROOT),
                   elekloader_revision=stock["sdk_revision"],
@@ -619,7 +657,7 @@ def verify():
                   fixture_machine_id=127, production_machine_id_adopted=False,
                   live_edit_source="actual SDK/stock live setter with injected kit and voice ownership; not a UI/MIDI gesture",
                   lock_source="direct stock apply/restore helpers with prepared SDK-format list and sound record; not sequencer/event delivery",
-                  cc_source="decoded stock CC1 router, stock Q31 producer after controllers/LFO, next-block controller consumption; receive/mapping configuration injected",
+                  cc_source="decoded stock CC1/CC2 router, separate stock Q31 producer states after controllers/LFO, next-block summed controller consumption; receive/mapping configuration injected",
                   injection="initial target sound words, kit/ownership pointers, per-voice controller value and all mappings, receive/initialized flags, settled LFO settings, companion note events, pitch/track/gate state",
                   envelope="DNM_OWN_ENV bypasses companion AMP/velocity; these are covered by separate companion tests",
                   note_order="fixture calls dnm_voice_on before dispatch; native core_voice_on runs after core_render_voices, so START/frame alignment is unqualified",

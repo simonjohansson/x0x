@@ -104,6 +104,23 @@ class DigitoneMachineTests(unittest.TestCase):
             with self.subTest(state=state, raw=raw), self.assertRaises(ValueError):
                 machine.controller_step(state, raw)
 
+    def test_native_decoded_cc_msb_scaling_with_zero_lsb_cache(self):
+        for msb, raw in ((0, 0), (1, 258), (64, 16513), (127, 32767)):
+            with self.subTest(msb=msb):
+                self.assertEqual(machine.controller_raw(msb), raw)
+        for bad in (-1, 128, True):
+            with self.subTest(invalid=bad), self.assertRaises(ValueError):
+                machine.controller_raw(bad)
+
+    def test_breath_has_an_independent_fractional_producer_trace(self):
+        state = 0x40000000
+        expected = [(0x40f7af57, 495), (0x41e7f089, 976), (0x42d0fca6, 1442),
+                    (0x43b30b08, 1894), (0x448e5160, 2333), (0x456303c2, 2758), (0x463154b2, 3171)]
+        for want in expected:
+            actual = machine.controller_step(state, machine.controller_raw(64))
+            self.assertEqual(actual, want)
+            state = actual[0]
+
     def test_host_import_requires_no_firmware_or_emulator(self):
         with patch.dict(sys.modules, {"elekloader": None, "emu": None, "unicorn": None}):
             importlib.reload(machine)
