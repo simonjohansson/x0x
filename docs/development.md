@@ -171,7 +171,12 @@ mise run build:deps:dn2
 
 Each build verifies the manifest image identity and matched SDK release first.
 These commands build the existing core/companion dependencies under `out/`;
-they do not package or boot an unimplemented kick machine. Older profiles inside
+they do not package or boot an unimplemented kick machine. `mise run firmware:dt`,
+`firmware:dn` and `firmware:dn2` additionally package those dependencies into an
+SDK-verified `out/<target>/x0z-baseline.syx`, tagged `X0Z0`, for later emulator
+integration. These images contain no x0z machine, and packaging does not prove
+an emulator boot. The build records the output hash and refuses unexpected stale
+dependency artifacts. Older profiles inside
 Elekloader do not expand the supported OS set. New official firmware requires
 an explicit baseline/profile update rather than a fallback to an old version.
 

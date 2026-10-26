@@ -82,6 +82,18 @@ run = "python -m x0z.firmware build-deps dn"
 description = "Build Core for the latest Digitone II OS"
 run = "python -m x0z.firmware build-deps dn2"
 
+[tasks."firmware:dt"]
+description = "Package a latest-OS Core/companion baseline for Digitakt emulator work"
+run = "python -m x0z.firmware baseline dt"
+
+[tasks."firmware:dn"]
+description = "Package a latest-OS Core/companion baseline for Digitone emulator work"
+run = "python -m x0z.firmware baseline dn"
+
+[tasks."firmware:dn2"]
+description = "Package a latest-OS Core baseline for Digitone II emulator work"
+run = "python -m x0z.firmware baseline dn2"
+
 [tasks."test:dt"]
 description = "Digitakt firmware integration availability"
 run = "python -m x0z.cli unavailable dt"

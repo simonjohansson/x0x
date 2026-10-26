@@ -49,6 +49,8 @@ def main(argv=None):
     verify.add_argument("device", choices=tuple(DEVICES), nargs="?")
     build = commands.add_parser("build-deps")
     build.add_argument("device", choices=tuple(DEVICES))
+    package = commands.add_parser("baseline")
+    package.add_argument("device", choices=tuple(DEVICES))
     args = parser.parse_args(argv)
     try:
         entries, revision = baseline()
@@ -57,7 +59,7 @@ def main(argv=None):
         for target in targets:
             key, mods = DEVICES[target]
             report = verify_entry(entries[key], ROOT / "firmware", revision)
-            if args.command == "build-deps":
+            if args.command in {"build-deps", "baseline"}:
                 output = ROOT / "out" / target / "deps"
                 for mod in mods:
                     subprocess.run([sys.executable, "-m", "elekloader.sdk.build",
@@ -66,6 +68,20 @@ def main(argv=None):
                 report["built_dependencies"] = list(mods)
                 report["output"] = str(output)
                 write_json(output / "stock-baseline.json", report)
+                if args.command == "baseline":
+                    artifacts = sorted(output.glob("*.elemod"))
+                    if len(artifacts) != len(mods):
+                        raise ValueError("unexpected/stale dependency artifacts; inspect " + str(output))
+                    image = output.parent / "x0z-baseline.syx"
+                    command = [sys.executable, "-m", "elekloader.patch", "--stock", report["image"]]
+                    for artifact in artifacts:
+                        command += ["--mod", str(artifact)]
+                    command += ["--out", str(image), "--version", "X0Z0"]
+                    subprocess.run(command, check=True)
+                    report["baseline_image"] = str(image)
+                    report["baseline_sha256"] = hashlib.sha256(image.read_bytes()).hexdigest()
+                    report["scope"] = "Core/companion baseline only; no x0z kick machine"
+                    write_json(output.parent / "baseline-build.json", report)
             reports.append(report)
         print(json.dumps(dict(status="passed", reports=reports)))
         return 0
