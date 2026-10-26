@@ -18,6 +18,7 @@ int32_t probe_slot, probe_output[32], probe_status;
 uint32_t probe_seen[24], probe_calls;
 struct dnm_voice probe_voice;
 struct x0z_dn_adapter probe_adapter;
+const uint8_t fw_params[134 * 60] = {0};
 extern void x0z_diagnostic(int32_t *, int32_t);
 int32_t dnm_knob(int32_t voice, int32_t knob) { return probe_raw[voice][knob]; }
 void dnm_knob_range(int32_t knob, int32_t *minimum, int32_t *maximum)
@@ -55,6 +56,7 @@ def build(folder, altered=None, companion=False, exports=None, base=BASE):
     driver, linker = folder / "driver.c", folder / "probe.ld"
     text=DRIVER
     if exports is not None:
+        text=text.replace("const uint8_t fw_params[134 * 60] = {0};", "")
         text=text.replace('int32_t dnm_knob(int32_t voice, int32_t knob) { return probe_raw[voice][knob]; }\nvoid dnm_knob_range(int32_t knob, int32_t *minimum, int32_t *maximum)\n{ *minimum = probe_min[knob]; *maximum = probe_max[knob]; }','')
         # Isolated native-probe observer, never a production machine descriptor.
         text += '''
@@ -69,6 +71,7 @@ void probe_render_params(const int16_t *words)
 }
 '''
     if companion:
+        text=text.replace("const uint8_t fw_params[134 * 60] = {0};", "")
         text=text.replace('int32_t dnm_knob(int32_t voice, int32_t knob) { return probe_raw[voice][knob]; }\nvoid dnm_knob_range(int32_t knob, int32_t *minimum, int32_t *maximum)\n{ *minimum = probe_min[knob]; *maximum = probe_max[knob]; }',
             'volatile int16_t fw_voice_params[641];\nvolatile uint32_t fw_voice_pitch[8], fw_gate_off;\nint32_t probe_track, probe_event[18], probe_action;\nint32_t probe_buffers[8 * 32];\nuint32_t probe_sample_word = 0x20000000;\nvoid dnm_voice_on(int32_t, int32_t, void *);\nvoid dnm_render(int32_t *);')
         text=text.replace('x0z_diagnostic(in->output, in->value[0].raw);','x0z_diagnostic(in->output, (int32_t)probe_sample_word);')
@@ -115,7 +118,7 @@ void probe_run(void)
         objects.append(parameter_object)
     definitions=[]
     if exports is not None:
-        for name in ('dnm_knob','dnm_knob_range'):
+        for name in ('dnm_knob','dnm_knob_range','fw_params'):
             definitions += ['--defsym',f'{name}={exports[name]}']
     cpu.command([cpu.require_program(prefix + "ld"), "-T", linker, "-e", "probe_run", *( ["--gc-sections"] if companion else []),*definitions,
                  *objects, assembly, "-o", executable])
@@ -232,8 +235,8 @@ def verify():
     original=(ROOT/"machines/digitone/adapter.c").read_text()
     for name,old,new in (
         ("fraction-lost","(uint32_t)raw - (uint32_t)minimum","0"),
-        ("fresh-reset-all","if (!adapter->slot[slot].active || adapter->slot[slot].track != input.track)","if (1)"),
-        ("velocity-scaled","input.velocity = (uint32_t)voice->velocity;","input.velocity = 127;")):
+        ("fresh-reset-all","if (!adapter->slot[slot].active || adapter->slot[slot].track != input->track)","if (1)"),
+        ("velocity-scaled","input->velocity = (uint32_t)voice->velocity;","input->velocity = 127;")):
         if original.count(old)!=1: raise ValueError("mutation marker is not unique")
         mutant=folder/name
         mutant.mkdir(exist_ok=True)

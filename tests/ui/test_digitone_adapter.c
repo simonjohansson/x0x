@@ -3,6 +3,17 @@
 #include <string.h>
 #include "../../machines/digitone/adapter.h"
 
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#define WORD(p, o, v) [60*(p)+(o)] = (v)&255, [60*(p)+(o)+1] = ((v)>>8)&255
+#else
+#define WORD(p, o, v) [60*(p)+(o)+2] = ((v)>>8)&255, [60*(p)+(o)+3] = (v)&255
+#endif
+#define RECORD(p, slot, hi) WORD(p, 4, slot), WORD(p, 12, hi)
+const uint8_t fw_params[134 * 60] __attribute__((aligned(4))) = {
+    RECORD(119, 27, 32512), RECORD(120, 28, 32512), RECORD(121, 29, 32512),
+    RECORD(124, 32, 32512), RECORD(133, 79, 32512)
+};
+
 static int32_t raw[8][32], low[32], high[32];
 static unsigned calls;
 static struct x0z_dn_input seen;
@@ -17,6 +28,78 @@ static void receive(void *context, const struct x0z_dn_input *input)
     assert(context == &seen);
     seen = *input;
     ++calls;
+}
+
+static void delivered(void)
+{
+    struct x0z_dn_frame frame = {0};
+    struct x0z_dn_adapter adapter = {0}, before;
+    struct dnm_voice voice = {60 << 16, 37, 1, 2, 1};
+    const struct x0z_dn_frame_mapping map[] = {
+        {X0Z_LEVEL,119}, {X0Z_TONE,120}, {X0Z_DECAY,121}
+    };
+    int16_t words[2][8 * CORE_PARAMS_VOICE] = {{0}}, saved[8 * CORE_PARAMS_VOICE];
+    int32_t output[32] = {0}, value = -1, lo = -1, hi = -1;
+    unsigned bank, slot, previous;
+    for (bank = 0; bank < 2; ++bank) {
+        for (slot = 0; slot < 8; ++slot) {
+            words[bank][79 * slot + 27] = 370 + 360 * bank + slot;
+            words[bank][79 * slot + 28] = 12345 + slot;
+            words[bank][79 * slot + 29] = 16256 + slot;
+            words[bank][79 * slot + 32] = slot & 1 ? 16384 : 16383;
+        }
+        memcpy(saved, words[bank], sizeof(saved));
+        x0z_dn_frame_begin(&frame);
+        x0z_dn_frame_capture(&frame, words[bank]);
+        assert(!x0z_dn_frame_read(&frame, 0, 119, &value, &lo, &hi));
+        x0z_dn_frame_ready(&frame);
+        for (slot = 0; slot < 8; ++slot) {
+            assert(x0z_dn_render_frame(&adapter, slot, output, &voice, X0Z_808,
+                                       &frame, map, 3, receive, &seen));
+            assert(seen.slot == slot && seen.value[0].raw == 370 + (int32_t)(360 * bank + slot));
+            assert(seen.value[0].position.numerator == (uint32_t)seen.value[0].raw);
+            assert(seen.value[0].position.denominator == 32512);
+            assert(seen.value[1].raw == 12345 + (int32_t)slot);
+            assert(x0z_dn_frame_read(&frame, slot, 124, &value, &lo, &hi));
+            assert(value == (slot & 1 ? 16384 : 16383) && lo == 0 && hi == 32512);
+        }
+        assert(!memcmp(saved, words[bank], sizeof(saved)));
+        before = adapter; previous = calls;
+        const struct x0z_dn_frame_mapping invalid[] = {{X0Z_LEVEL,119}, {X0Z_TONE,133}};
+        assert(!x0z_dn_render_frame(&adapter, 0, output, &voice, X0Z_808,
+                                    &frame, invalid, 2, receive, &seen));
+        assert(calls == previous && !memcmp(&before, &adapter, sizeof(adapter)));
+        for (slot = 0; slot < 32; ++slot) assert(output[slot] == 0);
+        assert(!x0z_dn_frame_read(&frame, -1, 119, &value, &lo, &hi));
+        assert(!x0z_dn_frame_read(&frame, 8, 119, &value, &lo, &hi));
+        assert(!x0z_dn_frame_read(&frame, 0, 106, &value, &lo, &hi));
+        assert(!x0z_dn_frame_read(&frame, 0, 134, &value, &lo, &hi));
+        assert(!x0z_dn_frame_read(&frame, 0, 107, &value, &lo, &hi));
+        assert(!x0z_dn_frame_read(&frame, 0, 119, 0, &lo, &hi));
+        words[bank][27] = -1;
+        value = lo = hi = -123;
+        assert(!x0z_dn_frame_read(&frame, 0, 119, &value, &lo, &hi));
+        assert(value == -123 && lo == -123 && hi == -123);
+        words[bank][27] = 32513;
+        assert(!x0z_dn_frame_read(&frame, 0, 119, &value, &lo, &hi));
+        x0z_dn_frame_end(&frame);
+        assert(!frame.words && !frame.phase);
+        assert(!x0z_dn_frame_read(&frame, 0, 119, &value, &lo, &hi));
+    }
+    x0z_dn_frame_begin(&frame);
+    x0z_dn_frame_ready(&frame); /* Missing capture must not reuse the previous bank. */
+    assert(!x0z_dn_frame_read(&frame, 0, 119, &value, &lo, &hi));
+    x0z_dn_frame_begin(&frame);
+    x0z_dn_frame_capture(&frame, words[0]);
+    x0z_dn_frame_capture(&frame, words[1]); /* Duplicate capture poisons this block. */
+    x0z_dn_frame_ready(&frame);
+    assert(!frame.words && !frame.phase);
+    x0z_dn_frame_capture(&frame, words[0]); /* No render entry. */
+    assert(!frame.words && !frame.phase);
+    before = adapter; previous = calls;
+    assert(!x0z_dn_render_frame(&adapter, 0, output, &voice, X0Z_808,
+                                &frame, map, 3, receive, &seen));
+    assert(calls == previous && !memcmp(&before, &adapter, sizeof(adapter)));
 }
 
 int main(void)
@@ -66,5 +149,6 @@ int main(void)
     assert(!x0z_dn_render(&adapter, 3, output, &voice, X0Z_808, wrong, 1, receive, &seen));
     assert(calls == previous && memcmp(&before, &adapter, sizeof(adapter)) == 0);
     assert(!x0z_dn_forget(&adapter, 8));
+    delivered();
     return 0;
 }
