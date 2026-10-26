@@ -45,7 +45,9 @@ mise run test:ui           # production C conversion with a fake receiver
 mise run test:ui:coldfire  # no unsupported runtime imports in the target object
 mise run test:coldfire     # assemble and execute in digiemu
 mise run test:sharc        # assemble and execute in Digikit
-mise run test:emulators    # both bounded CPU diagnostics
+mise run test:coldfire:arithmetic  # fixed point, full EMAC context and event fixtures
+mise run test:sharc:callback       # pinned callback input, context and slot state
+mise run test:emulators    # all four bounded instruction suites
 ```
 
 The C boundary forwards declared stock controls as exact normalized fractions
@@ -57,8 +59,31 @@ It does not register native pages, reserve machine IDs or assign saved slots.
 Both CPU diagnostics write a 32-sample block for silence and positive/negative
 quarter scale. They check buffer guards and selected preserved registers, and
 reject reassembled skipped-output, overrun and register-corruption variants.
-These private diagnostic entry points do not yet exercise the complete native
-callback, EMAC context/arithmetic, all voice slots or the firmware event path.
+The stronger ColdFire arithmetic suite runs a handwritten saturated Q1.31
+multiply/accumulate probe against independent integer expectations, including
+40-bit product and 32-bit extraction ties. It checks all four accumulators,
+extension words, MACSR, MASK, callee registers, stack and every guest write.
+Sixteen diagnostic state lanes and event fixtures test reset, retrigger,
+reassignment, parameter ordering and muted-state continuity; this is not a
+claim of sixteen native hardware voices. The shared probe matches the host
+oracle within its declared two-LSB error bound, with measured error reported
+for each run. Eight reassembled defective programs must fail.
+
+The DN2 callback suite compiles static layout assertions against the pinned
+20-byte header, checks the SDK code/data bounds and executes the short-word C
+return. It exercises 16 persistent slots, START, fractional delivered controls,
+interleaving, guarded input/output and modeled register/stack/accumulator state.
+Every guest write is checked, including low RAM and memory-mapped controls.
+Seven defective callbacks must fail. Instructions are independently decoded,
+and the known malformed negative-immediate shift is rejected while its
+register-count workaround is executed. The initial diagnostic uses 150 code
+bytes, 128 state bytes and no additional kernel stack beyond the caller's
+eight-byte frame. Instruction counts describe emulator work, not CPU time.
+
+These suites establish the private kernel boundary under the pinned emulators.
+The native allocator, UI-to-DSP transport and downstream firmware processing
+remain device-adapter work. Digikit does not model every 40-bit register
+extension behavior; physical instruction behavior and timing remain unqualified.
 
 The three `test:dt`, `test:dn` and `test:dn2` tasks currently return JSON status
 `unavailable` and exit **77**. They must not look successful until their native
@@ -95,21 +120,27 @@ over-range data rather than silently clipping or normalizing it.
 
 ```sh
 mise run render -- tests/fixtures/diagnostic.json --out out/probe.json --wav out/probe.wav
+mise run test:coldfire:arithmetic -- --result-out out/coldfire.json
 mise run analyze -- out/probe.json --fixture tests/fixtures/diagnostic.json --out out/measurements.json
 mise run analyze -- out/probe.wav
 mise run compare -- tests/fixtures/diagnostic.json out/probe.json --coldfire out/coldfire.json --tolerances tests/fixtures/diagnostic-tolerances.json
 ```
 
-The final example needs a fixture-matched backend result; the standalone CPU
-diagnostic has its own report and is not yet an implementation of the pole
-fixture. The command fails on mismatched provenance or an absent file. With no
-backend supplied it returns unavailable, not a passing comparison.
+The arithmetic task exports the actual assembled pole-probe output as a
+fixture-matched result. The fill diagnostic and DN2 callback have their own
+reports and are not implementations of that pole fixture. Comparisons fail on
+mismatched provenance or an absent file. With no backend supplied the command
+returns unavailable, not a passing comparison.
 
 The analyzer accepts mono 16/24/32-bit integer PCM WAV or validated result arrays.
 It reports raw onset, peak/DC/RMS/energy, clipping indicators, reliable body-cycle
 frequency estimates, positive/negative decay fits and separate Hann-windowed
 onset/body/tail bands. Pitch estimates exclude the first 10 ms and quiet cycles;
 silence/insufficient evidence has unavailable pitch/decay rather than NaNs.
+Decay applicability requires a negative approximate two-standard-error slope
+interval; the report retains fit uncertainty and residuals. This ordinary
+regression assumption can be violated by correlated/selected peaks and needs
+later reference-specific calibration.
 
 The comparator requires explicit tolerance values in the units named by
 `TOLERANCE_KEYS`. The checked-in limits apply only to the synthetic probe and are
@@ -117,8 +148,12 @@ not timbre acceptance thresholds. Each backend is compared to the independent
 oracle before pairwise comparison. Two identically wrong outputs still fail.
 Missing peer output does not block a valid available backend. The Python API's
 statistical mode omits waveform-null gates for uncontrolled noise; deterministic
-fixtures use sample residuals. Explicit aligned residuals are supplemental and
-never change raw timing/gain acceptance.
+fixtures use sample residuals. Contiguous 10 ms RMS and 100 ms band windows cover
+the complete render, preventing middle dropouts or spectral changes from hiding
+between the named measurement windows. Pitch/decay reports include coverage so
+matching an early fragment does not imply matching a missing tail. These are
+coarse measurement windows, not a complete timbre model. Explicit aligned
+residuals are supplemental and never change raw timing/gain acceptance.
 
 ## Latest firmware only
 
