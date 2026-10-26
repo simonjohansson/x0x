@@ -63,7 +63,7 @@ Existing tests stay, but adding more edge-case coverage is not the priority.
 
 | Device | Useful evidence already available | Work still needed for this milestone |
 | --- | --- | --- |
-| DT, OS 1.54 | Full-OS PLAY reaches a C/ASM observer; bounded native edit/lock/LFO routines pass | Real combined registration/page, replacement output and the native smoke scenario |
+| DT, OS 1.54 | Real ID80 mod boots; native selection, UART controls, next-START MODEL and silent owned output pass | Fix native selection defaults; finish installed-mod p-lock/LFO and save/reload checks |
 | DN, OS 1.44 | Standard full OS boots; final-frame C reader and registered callbacks pass bounded tests | Real combined registration; connect final controls/START to its render callback; native smoke scenario |
 | DN2, OS 1.12 | Approved production C page declarations, actual bridge and selector component tests | Package silent voice payload and registration; complete coupled-emulator setup; native smoke scenario |
 

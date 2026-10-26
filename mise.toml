@@ -48,8 +48,8 @@ run = [
 ]
 
 [tasks."test:ui:dt"]
-description = "Test the Digitakt C adapter without firmware or an emulator"
-run = "python -m x0z.digitakt_adapter --host"
+description = "Test Digitakt adapter and approved silent-machine declarations without firmware"
+run = ["python -m x0z.digitakt_adapter --host", "python -m x0z.digitakt_silent --host"]
 
 [tasks."test:ui:dn"]
 description = "Test the Digitone C adapter without firmware or an emulator"
@@ -106,6 +106,14 @@ run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen -
 [tasks."test:dt:transport"]
 description = "Boot Digitakt and trace native panel PLAY through C and ASM observers"
 run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0z.digitakt_transport'
+
+[tasks."test:dt:silent"]
+description = "Test the production DT registration with actual selector and silent ASM in digiemu"
+run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0z.digitakt_silent'
+
+[tasks."test:dt:silent:full-os"]
+description = "Boot the silent DT mod and check native selection, defaults, MODEL and owned output"
+run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0z.digitakt_silent --full-os'
 
 [tasks."test:dn:component"]
 description = "Execute the compiled Digitone C adapter and ASM with native-service fakes"

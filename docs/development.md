@@ -149,6 +149,37 @@ used during setup, the ColdFire process terminated with SIGILL; the same bounded
 command passed when run with the executor's required native-code permission.
 Digikit's instruction interpreter and the host/C tests ran inside the sandbox.
 
+## Silent Digitakt mod
+
+The real ID80 `X0Z KICKS` registration now builds from `machines/digitakt`.
+It uses the approved A TNTUN/B DECAY/C ATTK/F MODEL layout, existing ColdFire
+selector and a 32-sample ASM zeroing routine. Native track level handles volume;
+D/E/G/H have no semantic control. Hidden D retains the SDK's `CM_NOT_SAMPLE`
+flag so SRC does not cycle into the stock sample view.
+
+```sh
+mise run test:ui:dt              # declarations and dispatch with host fakes
+mise run test:dt:silent          # compiled C + actual ASM, fake native services
+mise run test:dt:silent:full-os  # build firmware, native panel/UART smoke
+```
+
+Eight component scenarios pass, including mixed tracks, next-START switching,
+invalid delivery and leaving/re-entering x0z. The standard full-OS digiemu run
+boots the packaged latest-OS firmware, selects ID80 through the native menu
+and changes controls through native UART MIDI. It observes 2,103 real callbacks,
+520 with x0z selected: selected buffers are zero and other track buffers are
+unchanged. MODEL remains 808 during a held note and becomes 909 at the next START.
+
+**The full-OS task returns 1:** native selection supplies raw defaults
+`[16384, 768, 0, 0]` instead of `[16384, 16384, 16384, 0]` for A/B/C/F.
+The pinned companion restricts default overrides to extended pages; the host
+descriptor test does not conceal this legacy-page failure. No on-switch
+overwrite, extra storage or vendor modification was added. Installed p-lock/LFO
+and save/reload remain unchecked, so #39 stays open.
+
+Reports, firmware and screenshots are regenerated under `out/dt/silent/`.
+This is silent integration evidence, not kick synthesis or physical qualification.
+
 ## Device adapter slices
 
 The private adapters live under `machines/`. Callers supply control bindings;
