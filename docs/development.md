@@ -248,6 +248,19 @@ new target. Lane 2's pre-controller/final words begin `377/2409`, then
 rejected even though its kit write still occurs. This proves a bounded native
 SDK edit route; panel/MIDI input, locks and timing remain separate.
 
+The same command applies a prepared native lock list to voice 1, slot 27,
+value 17003 before block 2, then restores 12458 from its sound record before
+block 4. It executes the reviewed stock apply/restore routines, with bounded
+reads and exactly three non-stack writes each: one target word, its lock-bitmap
+word and its Q16 smoother word. Full target/bitmap/smoother/kit snapshots preserve
+other voices and the kit; the prepared list is readonly. Unlike live edits,
+these helpers reset the smoother directly: voice 1's pre-controller/final words
+change from `736/2767` to `17003/19034`, then `12458/14489` on restore. The other
+voice on the same track stays isolated. Removing the stock lock target store
+fails the intended validator even though the lock bit/smoother still update.
+This is direct helper execution with a prepared SDK-format list, not native
+sequencer/p-lock event dispatch or editor qualification.
+
 This fixture uses `DNM_OWN_ENV` to isolate transport from companion gain; it
 adopts no production envelope flag, machine ID or saved layout. Initial targets, native
 controller/LFO state, pitch/track/gate and companion note events are injected.

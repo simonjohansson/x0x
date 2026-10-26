@@ -18,6 +18,8 @@ from . import cpu, digitone_transport as transport
 ROOT = cpu.ROOT
 FOLDER = ROOT / "out/dn/machine"
 LIVE_TRACK, LIVE_SLOT, LIVE_VALUE = 2, 27, 20001
+LOCK_VOICE, LOCK_SLOT, LOCK_VALUE, RESTORE_VALUE = 1, 27, 17003, 12458
+LOCK_BITS, SMOOTHER = 0x431f26b4, 0x800046b0
 DRIVER = r'''
 #include <stdint.h>
 #include "adapter.h"
@@ -94,7 +96,22 @@ def validate_live_edit(before, after, kit_before, kit_after, tracks):
         raise AssertionError("native live edit changed unintended target/kit bytes or omitted the live store")
 
 
-def bounded(image_path, names, stock, omit_live_store=False):
+def validate_lock_transition(before, after, bits_before, bits_after, smooth_before, smooth_after,
+                             kit_before, kit_after, apply):
+    """Native locks change one voice's target, lock bit and Q16 smoother state."""
+    expected, bits, smooth = bytearray(before), bytearray(bits_before), bytearray(smooth_before)
+    value = LOCK_VALUE if apply else RESTORE_VALUE
+    struct.pack_into(">h", expected, 18 + 158 * LOCK_VOICE + 2 * LOCK_SLOT, value)
+    bit_offset = 12 * LOCK_VOICE + 4 * (LOCK_SLOT // 32)
+    old = struct.unpack_from(">I", bits, bit_offset)[0]
+    bit = 1 << (LOCK_SLOT % 32)
+    struct.pack_into(">I", bits, bit_offset, old | bit if apply else old & ~bit)
+    struct.pack_into(">I", smooth, 4 * (9 + 79 * LOCK_VOICE + LOCK_SLOT), value << 16)
+    if after != expected or bits_after != bits or smooth_after != smooth or kit_after != kit_before:
+        raise AssertionError("native lock transition changed unintended bytes or omitted its target store")
+
+
+def bounded(image_path, names, stock, omit_live_store=False, omit_lock_store=False):
     from elekloader import formats
     from unicorn import UC_HOOK_CODE, UC_HOOK_MEM_READ, UC_HOOK_MEM_WRITE
     from unicorn import m68k_const as regs
@@ -119,7 +136,8 @@ def bounded(image_path, names, stock, omit_live_store=False):
         uc.reg_write(regs.UC_M68K_REG_SR, 0x2700)
         read32 = lambda address: int.from_bytes(uc.mem_read(address, 4), "big")
         read_words = lambda address, count: list(struct.unpack(">" + "I" * count, uc.mem_read(address, 4 * count)))
-        state = dict(active=None, errors=[], returns=set(), calls=[], order=[], block=-1, frame=None, reads=0, setter=None)
+        state = dict(active=None, errors=[], returns=set(), calls=[], order=[], block=-1, frame=None,
+                     reads=0, setter=None, native_reads=None)
         saved_regs = [*(getattr(regs, "UC_M68K_REG_D" + str(i)) for i in range(2, 8)),
                       *(getattr(regs, "UC_M68K_REG_A" + str(i)) for i in range(2, 7))]
 
@@ -183,6 +201,9 @@ def bounded(image_path, names, stock, omit_live_store=False):
         def memory(write, address, size):
             active = state["active"]
             if active is None:
+                if not write and state["native_reads"] is not None:
+                    if not any(first <= address and address + size <= last for first, last in state["native_reads"]):
+                        raise AssertionError(f"native lock helper read unowned memory {address:#x}")
                 if write and state["setter"] is not None:
                     allowed, writes = state["setter"]
                     if not any(first <= address and address + size <= last for first, last in allowed):
@@ -231,6 +252,15 @@ def bounded(image_path, names, stock, omit_live_store=False):
             raise ValueError("native live store differs from reviewed OS 1.44")
         if omit_live_store:
             uc.mem_write(store, bytes.fromhex("4e714e71"))
+        lock_apply, lock_restore, lock_store = 0x4009bee8, 0x4009be06, 0x4009bf6a
+        for address, expected in ((lock_apply, "4fefffd448d77cfc"),
+                                  (lock_restore, "4fefffdc222f0028"),
+                                  (lock_store, "3d95ca02"), (0x4009be72, "3396da02")):
+            count = len(expected) // 2
+            if image[address - device.main_load:address - device.main_load + count] != bytes.fromhex(expected):
+                raise ValueError("native lock helper differs from reviewed OS 1.44")
+        if omit_lock_store:
+            uc.mem_write(lock_store, bytes.fromhex("4e714e71"))
         kit, kit_bytes = 0x43000000, 0x2c + 4 * 326
         uc.mem_write(names["fw_kit"], struct.pack(">I", kit))
         uc.mem_write(0x80003f54, struct.pack(">I", kit + 0x14))
@@ -240,6 +270,13 @@ def bounded(image_path, names, stock, omit_live_store=False):
         targets = [12345 + slot * 113 for slot in range(8)]
         uc.mem_write(0x80003f5c, struct.pack(">8I", *(kit + 0x2c + 326 * track for track in tracks)))
         event = 0x470D0000
+        lock_list = 0x470c0000
+        locks = bytearray(0x1c)
+        struct.pack_into(">I", locks, 8, 1)
+        struct.pack_into(">Hh", locks, 0x14, LOCK_SLOT, LOCK_VALUE)
+        uc.mem_write(lock_list, bytes(locks))
+        sound = kit + 0x18 + 326 * tracks[LOCK_VOICE]  # Native sound records have a 20-byte header.
+        uc.mem_write(sound + 20 + 2 * LOCK_SLOT, struct.pack(">h", RESTORE_VALUE))
 
         def note(slot):
             uc.mem_write(event, struct.pack(">18I", 0, 0, 0, 0, velocities[slot] << 8, *([0] * 13)))
@@ -258,7 +295,7 @@ def bounded(image_path, names, stock, omit_live_store=False):
         uc.mem_write(names["fw_lfo_state"], bytes(8 * 80))
         settings = {1: 0x5000, 2: 0, 4: 27 << 8, 5: 2 << 8, 6: 64 << 8,
                     7: 1 << 8, 8: 72 << 8, 12: 0, 16: 64 << 8}
-        cases, generations, live_edit = [], [1] * 8, None
+        cases, generations, live_edit, lock_transitions = [], [1] * 8, None, []
         for block in range(7):
             state["block"], state["order"] = block, []
             if block == 1:
@@ -289,6 +326,41 @@ def bounded(image_path, names, stock, omit_live_store=False):
                                  value=LIVE_VALUE, lanes=lanes, non_stack_writes=len(writes),
                                  sdk_function=hex(names["core_sound_set"]), stock_store=hex(store),
                                  stock_store_bytes=store_bytes.hex())
+            if block in (2, 4):
+                applying = block == 2
+                before = bytes(uc.mem_read(target, 0xa40))
+                bits_before = bytes(uc.mem_read(LOCK_BITS, 8 * 12))
+                smooth_before = bytes(uc.mem_read(SMOOTHER, 720 * 4))
+                kit_before = bytes(uc.mem_read(kit, kit_bytes))
+                target_word = target + 18 + 158 * LOCK_VOICE + 2 * LOCK_SLOT
+                bit_word = LOCK_BITS + 12 * LOCK_VOICE + 4 * (LOCK_SLOT // 32)
+                smooth_word = SMOOTHER + 4 * (9 + 79 * LOCK_VOICE + LOCK_SLOT)
+                writes = []
+                state["setter"] = ([(transport.STACK - 2048, transport.STACK),
+                                    (target_word, target_word + 2),
+                                    (bit_word, bit_word + 4), (smooth_word, smooth_word + 4)], writes)
+                state["native_reads"] = [(transport.STACK - 2048, transport.STACK + 16),
+                                         (LOCK_BITS + 12 * LOCK_VOICE, LOCK_BITS + 12 * (LOCK_VOICE + 1)),
+                                         (lock_list, lock_list + len(locks)) if applying else
+                                         (sound + 20 + 2 * LOCK_SLOT, sound + 22 + 2 * LOCK_SLOT)]
+                try:
+                    native(lock_apply if applying else lock_restore,
+                           [LOCK_VOICE, lock_list, target] if applying else [LOCK_VOICE, target, sound])
+                finally:
+                    state["setter"], state["native_reads"] = None, None
+                validate_lock_transition(before, bytes(uc.mem_read(target, 0xa40)),
+                                         bits_before, bytes(uc.mem_read(LOCK_BITS, 8 * 12)),
+                                         smooth_before, bytes(uc.mem_read(SMOOTHER, 720 * 4)),
+                                         kit_before, bytes(uc.mem_read(kit, kit_bytes)), applying)
+                if sorted(writes) != sorted(((target_word, 2), (bit_word, 4), (smooth_word, 4))):
+                    raise AssertionError("native lock helper write extents diverged")
+                if bytes(uc.mem_read(lock_list, len(locks))) != locks:
+                    raise AssertionError("native lock helper changed its prepared list")
+                targets[LOCK_VOICE] = LOCK_VALUE if applying else RESTORE_VALUE
+                lock_transitions.append(dict(block=block, kind="apply" if applying else "restore",
+                                             voice=LOCK_VOICE, sound_slot=LOCK_SLOT, value=targets[LOCK_VOICE],
+                                             native_function=hex(lock_apply if applying else lock_restore),
+                                             non_stack_writes=len(writes)))
             if block == 2:
                 note(3)  # Same-track retrigger through the actual companion entry.
             if block == 3:
@@ -304,6 +376,8 @@ def bounded(image_path, names, stock, omit_live_store=False):
             execute(0x4009D1DE, 0x4009D1E4, 1)
             native(0x4009BF86, [frame, target])
             smoothed = [int.from_bytes(uc.mem_read(words + 158 * lane + 54, 2), "big") for lane in range(8)]
+            if block >= 2 and smoothed[LOCK_VOICE] != targets[LOCK_VOICE]:
+                raise AssertionError("native lock apply/restore did not settle its smoother immediately")
             for slot in range(8):
                 for parameter, value in settings.items():
                     uc.mem_write(words + 158 * slot + 2 * parameter, struct.pack(">h", value))
@@ -369,7 +443,8 @@ def bounded(image_path, names, stock, omit_live_store=False):
         if len(state["calls"]) != 55 or len(cases) != 47 or state["reads"] != 94:
             raise AssertionError("machine callback/delivery/frame-read counts diverged")
         return dict(cases=cases, machine_callbacks=len(state["calls"]), guarded_frame_reads=state["reads"],
-                    live_edit=live_edit, blocks=7, instructions_per_call_or_stage=transport.LIMIT,
+                    live_edit=live_edit, lock_transitions=lock_transitions,
+                    blocks=7, instructions_per_call_or_stage=transport.LIMIT,
                     event_order=["in", "pre", "ready (40)", "companion/machine (50)", "end (60)", "out"],
                     missing_frame_block=5, unselected_fm_slot=dict(block=4, slot=7))
     finally:
@@ -405,6 +480,14 @@ def verify():
         rejected.append(dict(name="stock live target store replaced by NOPs", reason=str(error)))
     else:
         raise AssertionError("machine diagnostic accepted a kit-only edit")
+    try:
+        bounded(image, names, stock, omit_lock_store=True)
+    except AssertionError as error:
+        if "native lock transition changed unintended bytes or omitted its target store" not in str(error):
+            raise
+        rejected.append(dict(name="stock lock target store replaced by NOPs", reason=str(error)))
+    else:
+        raise AssertionError("machine diagnostic accepted an omitted lock target store")
     result.update(rejected_mutations=rejected, kind="registered DN machine / native companion diagnostic", stock=stock,
                   emulator_revision=cpu.revision(ROOT / "vendor/digiemu"), project_revision=cpu.revision(ROOT),
                   elekloader_revision=stock["sdk_revision"],
@@ -417,6 +500,7 @@ def verify():
                   firmware_sha256=hashlib.sha256(image.read_bytes()).hexdigest(),
                   fixture_machine_id=127, production_machine_id_adopted=False,
                   live_edit_source="actual SDK/stock live setter with injected kit and voice ownership; not a UI/MIDI gesture",
+                  lock_source="direct stock apply/restore helpers with prepared SDK-format list and sound record; not sequencer/event delivery",
                   injection="initial target sound words, kit/ownership pointers, controller mapping/value, settled LFO settings, companion note events, pitch/track/gate state",
                   envelope="DNM_OWN_ENV bypasses companion AMP/velocity; these are covered by separate companion tests",
                   note_order="fixture calls dnm_voice_on before dispatch; native core_voice_on runs after core_render_voices, so START/frame alignment is unqualified",

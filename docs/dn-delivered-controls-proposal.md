@@ -185,6 +185,24 @@ the kit updates but the missing target changes fail the intended validator.
 This advances the native SDK edit gate with injected kit/ownership context,
 without claiming a panel/MIDI gesture or parameter-lock path.
 
+The bounded registered-machine fixture also executes stock lock apply
+`0x4009bee8(voice, list, targets)` before block 2 and restore
+`0x4009be06(voice, targets, sound_record)` before block 4. The prepared list uses
+the pinned SDK's count/slot/value format. For voice 1, slot 27 it applies 17003,
+then restores 12458 from a sound record with its native 20-byte header. Each
+helper has bounded reads and exactly three permitted non-stack writes: the
+selected target word, lock-bitmap word and Q16 smoother word. Full snapshots
+preserve unrelated targets/lock bits/smoother state and every kit byte; the list
+is readonly. The other voice sharing its track remains isolated.
+
+Locks and restore reset smoothing immediately, unlike live edits: the native
+pre/final trace is `736/2767`, then `17003/19034`, then `12458/14489` on restore.
+Replacing the verified apply target store at `0x4009bf6a` with NOPs fails its
+intended validator despite the other lock side effects. These addresses belong
+only to the reviewed OS-1.44 test fixture. This is direct native helper evidence
+with a prepared list, not sequencer/event dispatch, lock-editor or sound-lock
+qualification. It does not establish START ownership or audible timing.
+
 The test-only machine uses `DNM_OWN_ENV` to isolate this transport test. Separate
 companion tests cover AMP/velocity. No production envelope flag, permanent ID or
 saved layout is adopted. Native stages/settings, initial target words, companion note

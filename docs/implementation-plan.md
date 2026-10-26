@@ -96,8 +96,10 @@ capture lifetime; a recompiled target-buffer substitution fails. The separate
 `test:dn:machine` now exercises registered callbacks through the actual Core and
 companion dispatch across all eight slots. A bounded native SDK live edit now
 updates only the edited track's two lanes and retains fractional smoothing
-through those callbacks; an omitted stock live-target store is rejected. Its
-note/state injection does not
+through those callbacks; an omitted stock live-target store is rejected.
+Prepared-list native lock apply/restore now reaches the same callbacks with
+voice isolation and the stock immediate smoother reset, independently of the
+remaining sequencer/editor lock-source gate. Its note/state injection does not
 qualify native START/frame ownership; the full-OS observer still uses an
 order-40 diagnostic receiver. Complete mappings, selector integration and native
 source/ownership/timing gates remain open.
