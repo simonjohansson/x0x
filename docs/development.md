@@ -1,0 +1,143 @@
+# Development and verification
+
+The initial scaffold has independent host, C control and assembled CPU tests.
+The synthetic probe is test equipment, not an 808/909 implementation or a VST
+reference. Production audio will use assembly; native pages and full firmware
+adapter tests remain separate work.
+
+## Setup
+
+Start from the repository root on macOS with mise and Homebrew available:
+
+```sh
+git submodule update --init
+mise trust
+mise bootstrap
+```
+
+Mise selects Python 3.12.13, Clang 23.1.3, CMake 4.4.4, uv 0.11.8 and Rust
+1.98.1. Its package bootstrap installs the `m68k-elf` GNU tools. The bootstrap
+task prepares digiemu's locked Python environment and patched Unicorn, then
+builds Digikit's pinned public SHARC assembler/linker locally. No proprietary
+toolchain is required. Re-running `mise run bootstrap` prepares the environments
+again after the tools are installed.
+
+The dependency revisions are Git submodule pins, not floating branches:
+
+| Dependency | Pin | Purpose |
+| --- | --- | --- |
+| Elekloader | `2ab5f424c4721e4277d2112a5ae755d9938f50d6` (PR 200) | Firmware profiles, build/patch tools and matching DN2 voice interface |
+| digiemu | `f57c2f237e84b8ff91bc3adb2a2931bccf9928e9` | Digitakt/Digitone ColdFire instruction and later firmware tests |
+| Digikit | `d0a4d76d533d7181ea5eee548ca68edaa8d49c35` | Digitone II SHARC instruction and later firmware tests |
+
+Selache is built at Digikit's pinned revision
+`2b26d3b75c53063575bc5c820fa0d38879335187` under its ignored `out/tools/`.
+The CPU report records tool versions/hashes, emulator and SDK revisions, source
+and image hashes, and the project revision/dirty state. Never substitute a
+different emulator installation for the pinned submodule.
+
+## Independent checks
+
+```sh
+mise run test              # host tests and compiled C control boundary
+mise run test:host         # no assembler, firmware, emulator or native pages
+mise run test:ui           # production C conversion with a fake receiver
+mise run test:coldfire     # assemble and execute in digiemu
+mise run test:sharc        # assemble and execute in Digikit
+mise run test:emulators    # both bounded CPU diagnostics
+```
+
+The C boundary converts declared stock controls to normalized positions, keeps
+fractional values and rejects invalid ranges/undeclared controls before calling
+the receiver. It does not register native pages, reserve machine IDs or assign
+saved control slots. Its arithmetic is control plumbing, not sample rendering.
+
+Both CPU diagnostics write a 32-sample block for silence and positive/negative
+quarter scale. They check buffer guards and selected preserved registers, and
+reject reassembled skipped-output, overrun and register-corruption variants.
+These private diagnostic entry points do not yet exercise the complete native
+callback, EMAC context/arithmetic, all voice slots or the firmware event path.
+
+The three `test:dt`, `test:dn` and `test:dn2` tasks currently return JSON status
+`unavailable` and exit **77**. They must not look successful until their native
+firmware adapters have actual integration coverage. CPU tests also use 77 for
+missing tooling; validation failures use 1 and passing checks use 0. Host tests
+remain runnable when unrelated target tooling or firmware is absent.
+
+digiemu's native JIT needs executable-memory permission. In the Codex sandbox
+used during setup, the ColdFire process terminated with SIGILL; the same bounded
+command passed when run with the executor's required native-code permission.
+Digikit's instruction interpreter and the host/C tests ran inside the sandbox.
+
+## Fixtures, results and measurements
+
+The [private contract](render-contract.md) defines settings and event meaning.
+Fixture version 1 records a named model revision, sample rate/count, named voice
+lanes, explicit initial reset, settings, ordered absolute-sample events and
+provenance. Equal-time events retain list order. `expected_audible` is explicit
+per lane: true requires nonzero output; false requires exact digital silence.
+These flags validate synthetic/kernel routing, not an analog noise floor.
+
+The diagnostic pole has a fixed sample-to-sample factor of one half. Its known
+response to an impulse of strength `s` is `s * 2**(-age)` before Level. Retriggers
+add excitation to residual state; reset retains settings. Diagnostic reassignment
+clears state and records a new identity in the fixture provenance; it does not
+prove a native allocator's ownership policy. The named lane continues to label
+the output stream across that reset. Unsupported kick models/parameters fail.
+
+Results carry the canonical fixture hash, model identity, rate/count, per-lane
+raw samples, fixed full-scale convention and build provenance. Wrong routing,
+truncation, non-finite values, missing provenance and fixture mismatches fail.
+The oracle preserves finite over-range samples for analysis. PCM export rejects
+over-range data rather than silently clipping or normalizing it.
+
+```sh
+mise run render -- tests/fixtures/diagnostic.json --out out/probe.json --wav out/probe.wav
+mise run analyze -- out/probe.json --fixture tests/fixtures/diagnostic.json --out out/measurements.json
+mise run analyze -- out/probe.wav
+mise run compare -- tests/fixtures/diagnostic.json out/probe.json --coldfire out/coldfire.json --tolerances tests/fixtures/diagnostic-tolerances.json
+```
+
+The final example needs a fixture-matched backend result; the standalone CPU
+diagnostic has its own report and is not yet an implementation of the pole
+fixture. The command fails on mismatched provenance or an absent file. With no
+backend supplied it returns unavailable, not a passing comparison.
+
+The analyzer accepts mono 16/24/32-bit integer PCM WAV or validated result arrays.
+It reports raw onset, peak/DC/RMS/energy, clipping indicators, reliable body-cycle
+frequency estimates, positive/negative decay fits and separate Hann-windowed
+onset/body/tail bands. Pitch estimates exclude the first 10 ms and quiet cycles;
+silence/insufficient evidence has unavailable pitch/decay rather than NaNs.
+
+The comparator requires explicit tolerance values in the units named by
+`TOLERANCE_KEYS`. The checked-in limits apply only to the synthetic probe and are
+not timbre acceptance thresholds. Each backend is compared to the independent
+oracle before pairwise comparison. Two identically wrong outputs still fail.
+Missing peer output does not block a valid available backend. The Python API's
+statistical mode omits waveform-null gates for uncontrolled noise; deterministic
+fixtures use sample residuals. Explicit aligned residuals are supplemental and
+never change raw timing/gain acceptance.
+
+## Latest firmware only
+
+The [firmware baseline](../firmware/README.md) supports only the latest official
+OS for DT, DN and DN2. Its tracked manifest contains URLs/hashes; downloaded
+images remain local and ignored. Obtain those images before SDK dependency
+builds, then run:
+
+```sh
+mise run firmware:verify
+mise run build:deps:dt
+mise run build:deps:dn
+mise run build:deps:dn2
+```
+
+Each build verifies the manifest image identity and matched SDK release first.
+These commands build the existing core/companion dependencies under `out/`;
+they do not package or boot an unimplemented kick machine. Older profiles inside
+Elekloader do not expand the supported OS set. New official firmware requires
+an explicit baseline/profile update rather than a fallback to an old version.
+
+VST selection, plugin captures and calibrated kick-fidelity gates remain deferred.
+All runs in this phase use host test equipment or the required emulators; no
+real device is operated.

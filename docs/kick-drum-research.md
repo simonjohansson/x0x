@@ -1,7 +1,8 @@
 # Research: faithful TR-808 and TR-909 bass drums
 
-Research snapshot: 26 October 2026. This document prepares future implementation;
-it does not report an implemented or qualified engine.
+Research snapshot: 26 October 2026. This document records the circuit evidence
+and modeling decisions. The [development guide](development.md) records subsequent
+scaffolding and emulator checks; neither engine is implemented or qualified.
 
 The intended product targets **Digitakt, Digitone and Digitone II**, using **C
 for native controls and other plumbing, ColdFire assembly for Digitakt/Digitone
@@ -517,8 +518,10 @@ voices on each device. No such workload measurements exist yet.
 The PRs were inspected while open. This research follows the user's assumption
 that they will merge. Snapshots are [197 at 65cfa950][U197] and [200 at
 2ab5f424][U200]; the [pinned voice documentation][UVOICE] and headers [UHEADER]
-are archived locally. Final implementation must use a matched merged revision,
-not merely a matching textual ABI name.
+are archived locally. Development now uses the user's requested PR #200 revision
+`2ab5f424c4721e4277d2112a5ae755d9938f50d6` as a pinned submodule, including its
+matching header and adapter. A later merge/revision change requires revalidation;
+a matching textual ABI name alone is insufficient.
 
 | Proposed upstream behavior | Consequence for the plan |
 | --- | --- |
@@ -662,8 +665,9 @@ kernel change needs regression checks in both ColdFire consumers without making
 their device-specific work a single inseparable ticket. Start with 808 feasibility;
 909 work does not require full qualification of all three 808 cells.
 
-No production C, ASM, build system or firmware is delivered by this research
-and planning update. The issue backlog uses engine labels **808** and **909**,
+The scaffold now includes C control boundaries, diagnostic ASM, host test tools
+and latest-only SDK dependency builds; the kick models remain future work. The
+issue backlog uses engine labels **808** and **909**,
 device/CPU labels and explicit blocking relationships. Shared work may carry
 both engine labels. UI, DSP, reference, test and integration work remain
 identifiable independently. Digitakt II has no active cell or delivery dependency.
@@ -694,9 +698,10 @@ unread full-text lead, not evidence for any equation here. Erica/Moritz Klein's
 guide [S35] and Tiptop's manual [S36] are useful derivative-circuit explanations,
 not stock 909 calibration sources.
 
-No circuit simulation, audio capture, ASM execution, firmware flash or hardware
-timing test was performed. The present deliverables are a source archive,
-reviewable research synthesis and a dependency-ordered plan.
+The initial research performed no circuit simulation, audio capture, ASM execution,
+firmware flash or hardware timing test. Subsequent synthetic tests and bounded
+assembly execution are recorded in the [development guide](development.md).
+VST captures, complete kick models and physical qualification remain open.
 
 ## 9. Annotated bibliography and archive map
 

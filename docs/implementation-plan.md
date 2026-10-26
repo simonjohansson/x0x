@@ -1,6 +1,8 @@
 # Implementation plan: two CPU backends, six device cells
 
-Planning baseline: 26 October 2026. No infrastructure, engine or hardware qualification is complete. The [research](kick-drum-research.md) defines the evidence and circuit basis; [roadmap #1](https://github.com/simonjohansson/x0z/issues/1) and its issues track execution.
+Planning baseline: 26 October 2026. Implementation has started with the shared contract, host fixtures, analyzer/comparisons and isolated C control tests. Bounded assembly diagnostics run in both required emulators; full callback/context harness work is in progress. Neither kick engine is implemented or qualified. The [research](kick-drum-research.md) defines the circuit basis; [development and verification](development.md) records commands and evidence boundaries, and [roadmap #1](https://github.com/simonjohansson/x0z/issues/1) tracks execution.
+
+Completed foundation scope: [shared semantics #4](https://github.com/simonjohansson/x0z/issues/4), [fixtures/test entry points #36](https://github.com/simonjohansson/x0z/issues/36), [known-signal analyzer #3](https://github.com/simonjohansson/x0z/issues/3) and [oracle/CPU comparisons #38](https://github.com/simonjohansson/x0z/issues/38). VST access/captures and the calibrated timbre gates remain deferred. Firmware support is restricted to the [latest official baseline](../firmware/README.md); builds use the pinned Elekloader PR #200 revision.
 
 ## Architecture and scope
 
@@ -26,7 +28,7 @@ Start the shared behavior/interface review, measurement checks and VST selection
 
 808 reference selection [#2](https://github.com/simonjohansson/x0z/issues/2) and 909 reference selection [#21](https://github.com/simonjohansson/x0z/issues/21) can run in parallel. Their capture/tolerance work is [#8](https://github.com/simonjohansson/x0z/issues/8) and [#22](https://github.com/simonjohansson/x0z/issues/22). DN2 packaging/persistence review [#23](https://github.com/simonjohansson/x0z/issues/23) is local to DN2 and does not block ColdFire.
 
-The shared interface is a reviewed private development contract. Concrete permanent IDs and saved control layouts need review before becoming stable. Pin each device's actual firmware/core/headers in its adapter work; only DN2 relies on the assumed merge of Elekloader PRs 197/200.
+The shared interface is a private development contract. Concrete permanent IDs and saved control layouts need review before becoming stable. Pin each device's actual firmware/core/headers in its adapter work. DN2 development uses the exact Elekloader PR #200 head rather than waiting for a merge; changing that revision requires matched header/adapter checks.
 
 ## Independent delivery matrix
 
@@ -85,4 +87,4 @@ Digitone's custom path runs on the main ColdFire and overwrites stock FM audio; 
 
 Current DN2 code/data allocation can be expanded if it obstructs fidelity. Record usage and concrete upstream needs, while measuring CPU time separately. Neither a host pass, emulator pass nor a larger allocation establishes sustainable polyphony. Required failing checks stay open; fixes are bounded follow-up issues, not silent tolerance widening.
 
-The backlog retains native GitHub blocked-by links and parent/sub-issue relationships. No release, firmware flash, stable API or persisted-format change is performed by this planning update.
+The backlog retains native GitHub blocked-by links and parent/sub-issue relationships. Current implementation uses private test interfaces, with firmware integration still separately gated. No release or real-device operation has occurred.
