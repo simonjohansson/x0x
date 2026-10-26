@@ -157,13 +157,14 @@
   },
   {
     "id": "S42",
-    "title": "ADSP-2156x SHARC+ Processor Hardware Reference",
+    "title": "ADSP-2156x SHARC+ Processor Hardware Reference, Rev. 1.0 (December 2020)",
     "url": "https://www.analog.com/media/en/dsp-documentation/processor-manuals/adsp-2156x_hwr.pdf",
     "authority": "Manufacturer processor manual",
     "retrieved": "2026-10-26",
-    "path": "sources/adsp-2156x-hwr.pdf",
-    "status": "failed",
-    "error": "Official download failed with HTTP/2 INTERNAL_ERROR; located mirrors failed certificate validation or required a browser challenge.",
-    "availability_note": "Complete PDF not saved. Pinned Digikit needs the full register reset tables extracted to vendor/digikit/out/refs/adsp-2156x-hwr/all.txt for coupled native setup. Its source notes name revision 1.0 (December 2020); verify any replacement revision and retain its hash before use. Do not substitute partial tables."
+    "path": "sources/adsp-2156x-hwr-rev1.0.pdf",
+    "status": "available",
+    "availability_note": "Complete 2331-page Rev.1.0 recovered byte-for-byte from the supplied working DN2 example archive; it was not fetched from the current official URL. Unchanged pinned Digikit extraction accepts 3558 reset rows (586 nonzero). Generated vendor/digikit/out/refs/adsp-2156x-hwr/all.txt SHA256: 1c6e5ab652da788932d24f5313876e7cba8e8ddea059b1dfd7ad5b3c8ef28121. The official URL currently serves Rev.1.1; the user-provided complete 2453-page copy is preserved at sources/adsp-2156x-hwr.pdf (12507068 bytes, SHA256 96545b862402a7fd803d3aa69d42e7bc81f9b966309702f114de7ff7f4680867). The unchanged parser rejects conflicting Rev.1.1 DDE_CFG/DMA35_CFG rows at 0x31026108; no reset rows were edited or suppressed. Reconstruct with the exact Rev.1.0 hash above; a newer PDF at the same URL is not interchangeable.",
+    "bytes": 11954387,
+    "sha256": "d9229038ca02a88c5279a39055e8d2cf1da635644f591dad3a228a7ec5318e27"
   }
 ]
