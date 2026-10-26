@@ -12,6 +12,7 @@ class SelectorTraceTests(unittest.TestCase):
         words = raw_words(invalid)
         self.assertEqual(words[callback.INPUT + 4], 15)
         self.assertEqual(words[callback.PARAM + 5 * 4], 0xffffffff)
+        self.assertEqual(words[callback.PARAM + 3 * 4], 0xffffffff)
         self.assertEqual(words[callback.PARAM + 4 * 4], 0xffffffff)
         null = next(row for row in inputs if row["label"] == "invalid-params_present-False")
         self.assertEqual(raw_words(null)[callback.INPUT + 16], 0)
@@ -34,7 +35,7 @@ class SelectorTraceTests(unittest.TestCase):
                                (" ".join(map(str, words[:-1])), 1)):
             with self.assertRaises(ValueError):
                 parse_reference(changed, count)
-        for index, value in ((0, 2), (2, 5), (8, 3), (7, -1)):
+        for index, value in ((0, 2), (2, 4), (8, 3), (7, -1)):
             corrupt = words.copy()
             corrupt[index] = value
             with self.subTest(index=index), self.assertRaises(ValueError):

@@ -25,7 +25,7 @@ BOUND = 1000
 
 def case(label, slot=0, flags=1, model=0, pitch=15487):
     params = [0xffffffff] * 40
-    params[:4] = [1 + slot, 128 + slot, 12345 - slot, 257 + slot]
+    params[:3] = [1 + slot, 128 + slot, 12345 - slot]
     params[5] = model
     return dict(label=label, slot=slot, pitch=pitch, flags=flags, params=params,
                 params_present=True, input_present=True)
@@ -34,7 +34,7 @@ def case(label, slot=0, flags=1, model=0, pitch=15487):
 def cases() -> list[dict]:
     result = []
     bad = case("invalid-before-initialization", model=32512)
-    bad["params"][3] = 32513
+    bad["params"][2] = 32513
     result.append(bad)
     for phase in ("inactive", "first", "pending", "same", "switch", "repeat"):
         for slot in range(16):
@@ -48,7 +48,7 @@ def cases() -> list[dict]:
         for slot in range(16):
             result.append(case(f"threshold-{threshold}-{slot}", slot, model=threshold))
     for slot in (0, 15):
-        for parameter in (0, 1, 2, 3, 5):
+        for parameter in (0, 1, 2, 5):
             for invalid in (32513, 0xffffffff):
                 row = case(f"invalid-parameter-{slot}-{parameter}-{invalid}", slot)
                 row["params"][parameter] = invalid
@@ -65,10 +65,10 @@ def cases() -> list[dict]:
         result.append(row)
         changed = copy.deepcopy(row)
         changed["label"] = f"ignored-change-{model}"
-        for index in [4, 6, 7, *range(8, 40)]:
+        for index in [3, 4, 6, 7, *range(8, 40)]:
             changed["params"][index] = index
         if model == 0:
-            changed["params"][3] = 32512
+            changed["params"][2] = 32512
         result.append(changed)
     return result
 
@@ -79,7 +79,7 @@ def parse_reference(text: str, count: int) -> list[dict]:
         words = [int(value) for value in line.split()]
         if len(words) != 39 or any(not 0 <= value <= 0xffffffff for value in words):
             raise ValueError("C selector trace must have 39 unsigned words per callback")
-        if any(words[index] not in (0, 1) for index in (0, 1, 3, 4, 5)) or words[2] > 4:
+        if any(words[index] not in (0, 1) for index in (0, 1, 3, 4, 5)) or words[2] > 3:
             raise ValueError("C selector trace has invalid policy metadata")
         if any(words[index] > 2 for index in range(8, 39, 2)):
             raise ValueError("C selector trace has an invalid selected model")

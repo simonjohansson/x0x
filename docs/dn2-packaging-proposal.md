@@ -2,8 +2,10 @@
 
 **Approved packaging and saved-control contract for
 [#23](https://github.com/simonjohansson/x0z/issues/23), 26 October 2026.**
-The user selected one synth with a selector and explicitly approved ID 20,
-the layout/defaults below and switching at START with old-model tail clearing.
+The user selected one synth with a selector and explicitly approved ID 20
+and switching at START with old-model tail clearing. The later explicit
+revision removes LEVEL, moves the sound controls to A/B/C and keeps MODEL
+in F; the table below is the current approved layout/defaults.
 Production declarations and tests are implemented separately in #6/#24; this
 decision is not native persistence, lifecycle or audio qualification.
 The [private contract](render-contract.md) still applies.
@@ -77,17 +79,18 @@ emulator checks.
 
 | SYN1 knob | Sound slot / callback parameter | Static label and meaning | Integer default |
 | --- | --- | --- | --- |
-| A | 25 / 0 | `LEVEL`, linear instrument gain | 100 |
-| B | 26 / 1 | `TNTUN`, 808 Tone / 909 Tune | 64 |
-| C | 27 / 2 | `DECAY`, selected model's decay control | 64 |
-| D | 28 / 3 | `ATTK`, 909 attack branch; ignored in 808 | 64 |
+| A | 25 / 0 | `TNTUN`, 808 Tone / 909 Tune | 64 |
+| B | 26 / 1 | `DECAY`, selected model's decay control | 64 |
+| C | 27 / 2 | `ATTK`, 909 attack branch; ignored in 808 | 64 |
+| D | 28 / 3 | undeclared | no declaration |
 | E | 29 / 4 | undeclared | no declaration |
 | F | 30 / 5 | `MODEL`, 808/909 selector | 0 |
 | G–H | 31–32 / 6–7 | undeclared | no declaration |
 
 These are initial positions, not calibrated Roland factory presets: 64 means
-64/127 of the eventual physical control mapping. LEVEL 100 is 100/127 of the
-declared linear level range, not a change to digital full scale. Trigger strength
+64/127 of the eventual physical control mapping. Native track level handles
+volume; the renderer uses fixed internal output calibration, with no separate
+x0z LEVEL knob or saved gain. Trigger strength
 is deferred to native velocity/accent and downstream AMP research; E stays
 undeclared. Fixed strength belongs in test fixtures only and does not establish
 a production strength policy. Ordinary note pitch must not turn the 808 into a
@@ -118,8 +121,10 @@ note locks, model changes during release and slot reuse require explicit tests.
 
 ## Preserving the first 808 sounds
 
-There are no adopted x0z DN2 production IDs/layouts to migrate; IDs 18/19 remain
-unadopted candidates from the alternatives. Preserve the approved ID, selector encoding,
+No released x0z sounds require migration. The explicitly approved compact-layout
+revision supersedes the earlier development-only LEVEL/B/C/D layout; existing
+local development sounds must be recreated rather than silently reinterpreted.
+IDs 18/19 remain unadopted alternatives. Preserve the current approved ID, selector encoding,
 slots, ranges and meanings when adding the 909. In particular, keep MODEL 0
 meaning 808. Do not reinterpret empty slots or assume their saved contents
 equal a newly added default. Defaults run on synth selection, which does not

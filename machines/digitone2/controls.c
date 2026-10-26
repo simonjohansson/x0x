@@ -1,17 +1,16 @@
 #include "controls.h"
 
-static const struct mk2_param level = {"LEVEL", 100}, tone_tune = {"TNTUN", 64},
+static const struct mk2_param tone_tune = {"TNTUN", 64},
     decay = {"DECAY", 64}, attack = {"ATTK", 64}, model = {"MODEL", 0};
-static const struct mk2_page pages[] = {{{&level, &tone_tune, &decay, &attack, 0, &model, 0, 0}}};
+static const struct mk2_page pages[] = {{{&tone_tune, &decay, &attack, 0, 0, &model, 0, 0}}};
 const struct mk2_synth x0z_dn2_synth = {20, 0, "X0Z KICKS", "KICKS"};
 const struct mk2_voice_pages x0z_dn2_voice_pages = {20, 1, pages};
 
 static const struct x0z_dn2_binding controls_808[] = {
-    {0, X0Z_LEVEL, &level}, {1, X0Z_TONE, &tone_tune}, {2, X0Z_DECAY, &decay}
+    {0, X0Z_TONE, &tone_tune}, {1, X0Z_DECAY, &decay}
 };
 static const struct x0z_dn2_binding controls_909[] = {
-    {0, X0Z_LEVEL, &level}, {1, X0Z_TUNE, &tone_tune},
-    {2, X0Z_DECAY, &decay}, {3, X0Z_ATTACK, &attack}
+    {0, X0Z_TUNE, &tone_tune}, {1, X0Z_DECAY, &decay}, {2, X0Z_ATTACK, &attack}
 };
 
 void x0z_dn2_controls_init(struct x0z_dn2_controls *state)
@@ -54,9 +53,9 @@ int x0z_dn2_controls_deliver(struct x0z_dn2_controls *state,
             input->pitch > 0xffff || (input->flags & ~DN2_VOICE_START) || !controls || !notice)
         return 0;
     /* Validate declared native destinations, including ATTK when semantically
-     * ignored in 808. Undeclared E/G/H and later pages are never consumed. */
+     * ignored in 808. Undeclared D/E/G/H and later pages are never consumed. */
     for (unsigned parameter = 0; parameter < 6; ++parameter)
-        if (parameter != 4 && input->param[parameter] > 32512)
+        if ((parameter < 3 || parameter == 5) && input->param[parameter] > 32512)
             return 0;
     struct x0z_dn2_selection *selection = &state->voice[input->slot];
     if (selection->initialized > 1 || (selection->initialized &&
@@ -73,7 +72,7 @@ int x0z_dn2_controls_deliver(struct x0z_dn2_controls *state,
     struct delivery delivery = {controls, notice, context,
         {{0, 0, X0Z_DN2_CONTINUE}, instrument, initialize, changed, initialize || changed}};
     const struct x0z_dn2_binding *bindings = instrument == X0Z_808 ? controls_808 : controls_909;
-    uint32_t count = instrument == X0Z_808 ? 3 : 4;
+    uint32_t count = instrument == X0Z_808 ? 2 : 3;
     if (!x0z_dn2_deliver(instrument, input, bindings, count,
                          deliver_control, deliver_notice, &delivery))
         return 0;

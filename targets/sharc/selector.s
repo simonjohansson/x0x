@@ -38,12 +38,15 @@ sharc_voice_render.:
     R15=PASS R15;
     IF EQ JUMP silent;
 
-    // Validate LEVEL/TNTUN/DECAY/ATTK/MODEL atomically, skipping blank E.
+    // Validate TNTUN/DECAY/ATTK/MODEL atomically, skipping blank D/E.
     R9=R15;
     R10=0;
     R11=32512;
     R12=0xffff8000;
 validate_word:
+    R13=3;
+    COMP(R10,R13);
+    IF EQ JUMP next_word;
     R13=4;
     COMP(R10,R13);
     IF EQ JUMP next_word;
@@ -105,10 +108,6 @@ selected:
     R0=DM(I4,M5);
     R1=R0+R9;
     R10=4;
-    R15=R15+R10;
-    I4=R15;
-    R0=DM(I4,M5);
-    R1=R1+R0;
     R15=R15+R10;
     I4=R15;
     R0=DM(I4,M5);

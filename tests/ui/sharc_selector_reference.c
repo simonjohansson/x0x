@@ -15,6 +15,7 @@ static void control(void *context, uint32_t slot, enum x0z_control kind,
 {
     struct reference *reference = context;
     assert(slot < 16 && kind < X0Z_STRENGTH && position.denominator == 32512);
+    assert(kind != X0Z_LEVEL);
     ++reference->controls;
     reference->sum += position.numerator;
 }

@@ -116,16 +116,21 @@ The test image is 472 bytes including its context wrapper, the state bank is
 116 emulated instructions including the wrapper, under a 1,000-instruction bound.
 Valid, aligned, disjoint caller-owned pointer extents are private ABI preconditions.
 
-The SHARC selector callback executes directly on 193 synthetic SDK frames,
+The SHARC selector callback executes directly on 189 synthetic SDK frames,
 compared with the compiled host C policy. It covers all sixteen slots, 148
-initialized callbacks and 29 invalid frames. Invalid or inactive deliveries
+initialized callbacks and 25 invalid frames. Invalid or inactive deliveries
 permit no selector-state writes, even transient writes later restored; a
 reassembled write-before-validation defect verifies this guard. Six defective
 variants fail. For a supplied input/output frame the diagnostic writes 32 floats;
 its checksum/tail signal is test equipment, not either kick model. The callback
-uses 438 code bytes, 128 state bytes and no additional kernel stack beyond the
-existing eight-byte bridge call frame. Worst case is 347 instructions under a
+uses 440 code bytes, 128 state bytes and no additional kernel stack beyond the
+existing eight-byte bridge call frame. Worst case is 351 instructions under a
 1,000-instruction bound. Required modeled context and all writes are checked.
+
+These counts use the latest approved A TNTUN/B DECAY/C ATTK/F MODEL layout.
+No LEVEL control is delivered; native track level handles volume. D/E/G/H are
+ignored. Four formerly invalid-D cases disappeared because D is now blank;
+malformed blank-D words are explicitly covered as ignored inputs.
 
 These diagnostics implement the common selection behavior in actual ASM;
 their private state/status encodings differ by CPU. They do not install the

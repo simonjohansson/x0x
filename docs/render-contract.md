@@ -39,7 +39,7 @@ device adapter and must be tested before they feed this boundary.
 | --- | --- | --- |
 | 808 Tone | Position in the stock output-tone network | Component/pot curve and network coefficients |
 | 808 Decay | Position controlling the resonator feedback network | Feedback mapping and coupled decay behavior; it is not assumed to be seconds |
-| 808/909 Level | Linear amplitude gain, with `0` muted and `1` the calibrated nominal maximum | One fixed instrument-to-digital calibration; no normalization per hit |
+| 808/909 Level (reference/internal only) | Linear amplitude gain for model comparisons; production uses fixed calibration and native track level | No separate x0z LEVEL knob, extra saved gain or normalization per hit |
 | 909 Tune | Position controlling the stock pitch-control path | CV/envelope time-course mapping; it is not semitone transpose |
 | 909 Decay | Position controlling the tonal amplitude-decay path | Envelope/VCA mapping |
 | 909 Attack | Level of the separate pulse/noise attack branch | Branch gain and stock pot curve; it is not ADSR attack time |
@@ -164,8 +164,10 @@ and lifecycle still require emulator tests.
 | Digitone | 80 | One SYN2 page; [exact slots and defaults](dn-controls-proposal.md) |
 | Digitone II | 20 | One SYN page; [exact slots and defaults](dn2-packaging-proposal.md) |
 
-The common positions are A LEVEL=100, B TNTUN=64, C DECAY=64, D ATTK=64,
-E blank, F MODEL=0, G/H blank. These values fall inside the pinned SDK namespaces
+The latest explicitly approved positions are A TNTUN=64, B DECAY=64,
+C ATTK=64, F MODEL=0, with D/E/G/H blank. This supersedes the earlier LEVEL
+knob and B/C/D sound-control positions on every device. Native track level
+handles volume; keep output calibration internal rather than adding a saved gain. These values fall inside the pinned SDK namespaces
 (DT 4–127, DN 1–127, DN2 5–31); builds still check resource conflicts against
 selected mods. Private C enums are unrelated to these native IDs. Trigger
 strength remains subject to the adapter's accent/velocity trace; no extra saved

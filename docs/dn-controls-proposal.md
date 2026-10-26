@@ -5,7 +5,9 @@ Mixed 808/909 voices must coexist in the same installed build. The earlier
 separate ID-80/ID-90 engine proposal is superseded. See the
 [common product contract](render-contract.md#one-combined-mod-on-every-device).
 
-**The user explicitly approved this combined ID/layout on 26 October 2026.**
+**The user explicitly approved this combined ID/layout on 26 October 2026,
+then revised it to remove LEVEL, move the sound controls to A/B/C and keep
+MODEL in F. The table below is the current approved layout.**
 Implementation and emulator acceptance belong to
 [#40](https://github.com/simonjohansson/x0z/issues/40). Approval does not establish
 working native defaults or persistence. Scope: DN OS 1.44,
@@ -22,10 +24,10 @@ slots. Keep one static shared page layout:
 
 | Position / knob index | Parameter ID / sound slot | Label and meaning | Raw default |
 | --- | --- | --- | --- |
-| SYN2 A / 8 | 119 / 27 | `LEVEL`, instrument gain | 25600 (100) |
-| SYN2 B / 9 | 120 / 28 | `TNTUN`, 808 Tone / 909 Tune | 16384 (64) |
-| SYN2 C / 10 | 121 / 29 | `DECAY`, selected model's decay | 16384 (64) |
-| SYN2 D / 11 | 122 / 30 | `ATTK`, 909 attack; ignored in 808 | 16384 (64) |
+| SYN2 A / 8 | 119 / 27 | `TNTUN`, 808 Tone / 909 Tune | 16384 (64) |
+| SYN2 B / 9 | 120 / 28 | `DECAY`, selected model's decay | 16384 (64) |
+| SYN2 C / 10 | 121 / 29 | `ATTK`, 909 attack; ignored in 808 | 16384 (64) |
+| SYN2 D / 11 | 122 / 30 | blank | -1 (unchanged) |
 | SYN2 E / 12 | 123 / 31 | blank | -1 (unchanged) |
 | SYN2 F / 13 | 124 / 32 | `MODEL`, 808/909 selector | 0 (808) |
 | SYN2 G–H / 14–15 | 125–126 / 33–34 | blank | -1 (unchanged) |
@@ -52,8 +54,8 @@ including simultaneously active voices using the other model. Same-model
 retrigger follows the circuit's separately tested residual-state policy.
 
 Descriptor flags stay 0: the companion applies AMP and velocity once; neither
-`DNM_OWN_ENV` nor `DNM_PAGES2` is enabled. Intrinsic kick decay and LEVEL remain
-model controls. Ordinary note pitch does not make the stock 808 chromatic, and
+`DNM_OWN_ENV` nor `DNM_PAGES2` is enabled. Intrinsic kick decay remains a model control. Native track level handles
+volume, with fixed internal output calibration and no x0z LEVEL knob. Ordinary note pitch does not make the stock 808 chromatic, and
 909 Tune is not semitone transpose.
 
 `set_knobs` applies defaults when selecting a different native machine, not on

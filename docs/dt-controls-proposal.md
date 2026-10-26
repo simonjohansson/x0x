@@ -6,7 +6,9 @@ concurrently. This supersedes the earlier two-machine proposal and its approval;
 IDs 80/90 must not become separate engine registrations. See the
 [common product contract](render-contract.md#one-combined-mod-on-every-device).
 
-**The user explicitly approved this combined ID/layout on 26 October 2026.**
+**The user explicitly approved this combined ID/layout on 26 October 2026,
+then revised it to remove LEVEL, move the sound controls to A/B/C and keep
+MODEL in F. The table below is the current approved layout.**
 Implementation and emulator acceptance belong to
 [#39](https://github.com/simonjohansson/x0z/issues/39). Approval does not establish
 working native defaults or persistence. Scope: DT OS 1.54, Elekloader PR #200 pin
@@ -24,18 +26,19 @@ ModelDigi. No `cm_ui32` extras or new saved storage are proposed.
 
 | Knob / accessor index | Native sound slot / parameter ID | Label and meaning | Display default |
 | --- | --- | --- | --- |
-| A / 0 | 17 / 132 | `LEVEL`, instrument gain | 100 |
-| B / 1 | 18 / 133 | `TNTUN`, 808 Tone / 909 Tune | 64 |
-| C / 2 | 19 / 134 | `DECAY`, selected model's decay | 64 |
-| D / 3 | 20 / 135 | `ATTK`, 909 attack; ignored in 808 | 64 |
+| A / 0 | 17 / 132 | `TNTUN`, 808 Tone / 909 Tune | 64 |
+| B / 1 | 18 / 133 | `DECAY`, selected model's decay | 64 |
+| C / 2 | 19 / 134 | `ATTK`, 909 attack; ignored in 808 | 64 |
+| D / 3 | 20 / 135 | hidden | none |
 | E / 4 | 21 / 136 | hidden | none |
 | F / 5 | 22 / 137 | `MODEL`, 808/909 selector | 0 (808) |
 | G–H / 6–7 | 23–24 / 138–139 | hidden | none |
 
 Declared words use `CM_RANGE | CM_DEFAULT`, raw 0..32512, with defaults
-`display << 8`: LEVEL 25600, Tone/Tune/Decay/Attack 16384 and MODEL 0.
-Use the generic knob look `0x86`. D requires `CM_NOT_SAMPLE` to keep SRC
-cycling out of the waveform view. E/G/H use `CM_HIDDEN` with no semantic
+`display << 8`: Tone/Tune/Decay/Attack 16384 and MODEL 0.
+Native track level owns volume; x0z has no saved LEVEL parameter.
+Use the generic knob look `0x86`. Hidden D retains `CM_NOT_SAMPLE` to keep SRC
+cycling out of the waveform view. D/E/G/H use `CM_HIDDEN` with no semantic
 binding or range/default override; their stored words need not be zero.
 The static shared label `TNTUN` fits the SDK's five-character limit.
 

@@ -14,6 +14,7 @@ static void control(void *context, uint32_t slot, enum x0z_control kind,
 {
     struct fake_dsp *dsp = context;
     assert(slot < 16 && kind < X0Z_STRENGTH && position.denominator == 32512);
+    assert(kind != X0Z_LEVEL);
     dsp->values[slot][kind] = position;
     dsp->mask[slot] |= 1u << kind;
     ++dsp->controls;
@@ -21,7 +22,7 @@ static void control(void *context, uint32_t slot, enum x0z_control kind,
 
 static uint32_t expected_mask(enum x0z_instrument instrument)
 {
-    return (1u << X0Z_LEVEL) | (1u << X0Z_DECAY) |
+    return (1u << X0Z_DECAY) |
            (instrument == X0Z_808 ? 1u << X0Z_TONE : (1u << X0Z_TUNE) | (1u << X0Z_ATTACK));
 }
 
@@ -59,8 +60,8 @@ static void declarations(void)
     assert(!strcmp(x0z_dn2_synth.name, "X0Z KICKS"));
     assert(!strcmp(x0z_dn2_synth.label, "KICKS"));
     assert(x0z_dn2_voice_pages.id == 20 && x0z_dn2_voice_pages.count == 1);
-    const char *labels[] = {"LEVEL", "TNTUN", "DECAY", "ATTK", 0, "MODEL", 0, 0};
-    const unsigned values[] = {100, 64, 64, 64, 0, 0, 0, 0};
+    const char *labels[] = {"TNTUN", "DECAY", "ATTK", 0, 0, "MODEL", 0, 0};
+    const unsigned values[] = {64, 64, 64, 0, 0, 0, 0, 0};
     for (unsigned index = 0; index < 8; ++index) {
         const struct mk2_param *knob = x0z_dn2_voice_pages.page->knob[index];
         if (!labels[index])
@@ -87,15 +88,14 @@ static void fractions(enum x0z_instrument instrument)
         params[0] = values[index];
         params[1] = values[4 - index];
         params[2] = values[(index + 1) % 5];
-        params[3] = values[(index + 2) % 5];
         deliver(&state, &input, &dsp);
         assert(dsp.last.instrument == instrument);
-        assert(dsp.values[15][X0Z_LEVEL].numerator == values[index]);
-        assert(dsp.values[15][X0Z_DECAY].numerator == values[(index + 1) % 5]);
+        assert(dsp.values[15][X0Z_LEVEL].denominator == 0);
+        assert(dsp.values[15][X0Z_DECAY].numerator == values[4 - index]);
         enum x0z_control pitch_control = instrument == X0Z_808 ? X0Z_TONE : X0Z_TUNE;
-        assert(dsp.values[15][pitch_control].numerator == values[4 - index]);
+        assert(dsp.values[15][pitch_control].numerator == values[index]);
         if (instrument == X0Z_909)
-            assert(dsp.values[15][X0Z_ATTACK].numerator == values[(index + 2) % 5]);
+            assert(dsp.values[15][X0Z_ATTACK].numerator == values[(index + 1) % 5]);
         else
             assert(dsp.values[15][X0Z_ATTACK].denominator == 0);
         assert(!dsp.last.model_changed && dsp.last.initialize == (index == 0));
@@ -168,7 +168,8 @@ static void ignored_and_invalid(void)
     struct x0z_position previous_values[16][6];
     memcpy(previous_values, dsp.values, sizeof(previous_values));
     input.flags = 0;
-    params[3] = 1; /* Declared ATTK is inert for 808. */
+    params[2] = 1; /* Declared ATTK is inert for 808. */
+    params[3] = 32513; /* Blank D is not a declared control. */
     params[4] = 42; /* E has no strength control. */
     params[6] = 1;
     params[7] = 0;
@@ -181,7 +182,7 @@ static void ignored_and_invalid(void)
     unsigned char dsp_before[sizeof(dsp)];
     memcpy(dsp_before, &dsp, sizeof(dsp));
     for (unsigned parameter = 0; parameter < 6; ++parameter) {
-        if (parameter == 4)
+        if (parameter == 3 || parameter == 4)
             continue;
         uint32_t saved = params[parameter];
         params[parameter] = 32513;

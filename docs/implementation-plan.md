@@ -41,7 +41,7 @@ Each device issue owns the same short, end-to-end acceptance scenario:
 
 - Build the latest supported firmware with one registered `X0Z KICKS` machine;
   boot it in the required emulator and select it using the native machine UI.
-- Show LEVEL, TNTUN, DECAY, ATTK and MODEL with their approved defaults. Verify
+- Show TNTUN, DECAY, ATTK and MODEL with their approved defaults. Verify
   each control reaches the actual render callback. ATTK is ignored in 808 mode.
 - Exercise a native sequencer p-lock and one ordinary LFO assignment, including
   MODEL selection at the next delivered START. Check two tracks selecting
@@ -68,8 +68,10 @@ Existing tests stay, but adding more edge-case coverage is not the priority.
 | DN2, OS 1.12 | Approved production C page declarations, actual bridge and selector component tests | Package silent voice payload and registration; complete coupled-emulator setup; native smoke scenario |
 
 The user explicitly approved the combined DT/DN saved layouts on 26 October:
-ID 80 `X0Z KICKS`, A LEVEL=100, B TNTUN=64, C DECAY=64, D ATTK=64,
-E blank, F MODEL=0, G/H blank. DT uses SRC and DN uses SYN2. See the
+ID 80 `X0Z KICKS`. The subsequently approved compact layout on all three
+devices is A TNTUN=64, B DECAY=64, C ATTK=64, F MODEL=0; D/E/G/H blank.
+There is no x0z LEVEL knob: native track level handles volume and the renderer
+uses fixed internal output calibration. DT uses SRC and DN uses SYN2. See the
 [DT contract](dt-controls-proposal.md) and [DN contract](dn-controls-proposal.md)
 for exact native slots. [DN2 ID 20 and its layout](dn2-packaging-proposal.md)
 remain approved. MODEL changes latch at the next START and clear only that
