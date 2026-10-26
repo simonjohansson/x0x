@@ -526,7 +526,7 @@ a matching textual ABI name alone is insufficient.
 | Proposed upstream behavior | Consequence for the plan |
 | --- | --- |
 | Digitone II OS 1.12 | DN2-specific baseline from the referenced PRs; Digitakt and Digitone use their own pinned adapters. |
-| One custom SHARC synth registration/program per build | Decide one machine with a model selector, separate firmware variants, or a future upstream registration expansion. Start 808 without settling every 909 packaging detail. |
+| One custom SHARC synth registration/program per build | The user selected one ID-20 synth with an 808/909 selector; see the [approved saved-control contract](dn2-packaging-proposal.md). No multiple-registration extension is needed for that direction. |
 | 32 mono float samples at 48 kHz | Persist audio and trigger states across calls. Block duration is 0.6667 ms, not the available execution budget. |
 | Allocated slots 0–15 | State belongs to slots; never use slot as a track number. |
 | Silent trigger-edge block, then START | Account for this latency separately from the acoustic attack. START is an event, not an analog pulse width. |
@@ -586,15 +586,18 @@ must not silently turn the 808 into a chromatic bass instrument. Likewise,
 909 Tune must not be redefined as static semitone tuning. Decide how unused
 native pitch/modulation behavior is handled and test it.
 
-If a combined model selector is chosen, its transition semantics need tests:
+DN2 now has an approved combined selector and standalone C tests. Its transition
+semantics still require native/DSP integration tests:
 quantization of a smoothed value, whether model changes apply at the next trigger,
 and which old states are cleared. Do not let interpolation accidentally blend
-two engines or reinterpret a saved value mid-note. This decision can follow the
-first 808 slice; it must precede combined-machine persistence commitments.
+two engines or reinterpret a saved value mid-note. The approved rule quantizes
+at raw 16384, latches at START and clears the old model's tail on a model change;
+same-model retrigger and native ownership remain separate work.
 
 The eventual contract review should distinguish reset, fresh trigger, same-voice
 retrigger, voice reassignment, silence and model change. Do not introduce a
-public API, generated schema or persisted format in this research phase.
+public API, generated schema or persisted format without review. DN2's exact
+saved-control layout has that user approval; DT/DN layouts remain proposals.
 
 ### 6.5 Retrigger and shared-state constraints
 
@@ -665,8 +668,12 @@ kernel change needs regression checks in both ColdFire consumers without making
 their device-specific work a single inseparable ticket. Start with 808 feasibility;
 909 work does not require full qualification of all three 808 cells.
 
-The scaffold now includes C control boundaries, diagnostic ASM, host test tools
-and latest-only SDK dependency builds; the kick models remain future work. The
+The scaffold now includes C control boundaries, diagnostic ASM, host test tools,
+latest-only SDK dependency builds, adapter components and a native DT observer.
+DN2's approved combined controls are tested independently of its renderers.
+The DN target-versus-delivered-control gap is tracked in #75; the
+[development guide](development.md) records current evidence boundaries.
+The kick models remain future work. The
 issue backlog uses engine labels **808** and **909**,
 device/CPU labels and explicit blocking relationships. Shared work may carry
 both engine labels. UI, DSP, reference, test and integration work remain

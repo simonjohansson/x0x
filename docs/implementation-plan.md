@@ -57,12 +57,17 @@ Each row starts once its shared fixtures/comparator, CPU harness, own adapter an
 
 The six cell issues are progress trackers, not large implementation tickets. Their native children cover controls, early integration and qualification. Shared CPU/model tasks remain under the main roadmap and are linked by dependencies. Labels `808`/`909`, `cpu:coldfire`/`cpu:sharc`, `device:dt`/`device:dn`/`device:dn2` and `type:*` make the ownership explicit.
 
-DN2's #6/#24 C control slice implements the approved shared ID-20 descriptor and
+Completed DN2 #6/#24 C control work implements the approved shared ID-20 descriptor and
 page, with per-slot START-latched selection and explicit tail-clear metadata.
 It requires neither kick renderer; fake DSP tests cover both models' exact
 control mappings and the common selector. This does not qualify native
 registration/save/load, ownership or audible model switching. DT's
 [control proposal](dt-controls-proposal.md) remains unadopted pending review.
+DN's corresponding [control proposal](dn-controls-proposal.md) is also pending
+review; it uses verified full-range SYN2 positions without extra saved slots.
+The [DN delivered-control investigation](dn-delivered-controls-proposal.md)
+prioritizes existing Core events and a tested same-interrupt bank lifetime over
+a new public hook.
 
 ## Small sound slices
 
