@@ -6,6 +6,27 @@ It does not define a firmware ABI, permanent machine ID or saved-sound format.
 The [research](kick-drum-research.md) remains the source for the circuit model;
 the [implementation plan](implementation-plan.md) assigns its implementation.
 
+## One combined mod on every device
+
+Digitakt, Digitone and Digitone II each run one x0z mod containing both engines
+under one native machine identity. MODEL is saved per sound/track and latched
+per active voice at its trigger boundary. Different tracks can therefore play
+808 and 909 kicks concurrently in the same installed build. There is no global
+selector that forces all voices to change model together.
+
+The six device/model cells are independent test and development slices of this
+product. They are not separate mods or single-engine firmware variants. Early
+incomplete slices may be tested without the other renderer, but a device's
+combined mod is not release-qualified until both models and their coexistence
+pass. Exercise mixed-model voices as soon as both first bodies are available.
+
+Use delivered MODEL values, not unsmoothed targets. The approved DN2 policy is
+the common behavior to carry into the DT/DN combined-layout work: 808 below raw
+16384, 909 from 16384, latched at the next delivered trigger/START; changing
+model clears only that voice's old dynamic state before excitation. Same-model
+retrigger preserves the circuit model's separately defined residual behavior.
+Native trigger/ownership differences still require each adapter's tests.
+
 ## Settings and audio units
 
 Shared settings describe the instrument, rather than a device's knob words.
@@ -143,8 +164,8 @@ DN2 saved contract:
 
 | Device | 808 ID | 909 ID | Control order and status |
 | --- | --- | --- | --- |
-| Digitakt | 80 | 90 | Level, Tone/Tune, Decay, 909 Attack, trigger strength |
-| Digitone | 80 | 90 | Same semantic order; choose native slots after checking their unequal stock ranges |
+| Digitakt | 80 (shared candidate) | 80 (shared candidate) | One combined SRC page with MODEL; exact combined layout remains a review proposal |
+| Digitone | 80 (shared candidate) | 80 (shared candidate) | One combined SYN page with MODEL; exact combined layout remains a review proposal |
 | Digitone II | 20 (shared) | 20 (shared) | Approved one-page layout with a MODEL selector; see the saved contract below |
 
 These values fall inside the pinned SDK's namespaces (DT 4–127, DN 1–127,

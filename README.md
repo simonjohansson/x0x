@@ -6,13 +6,18 @@ uses ColdFire assembly on Digitakt/Digitone and SHARC+ assembly on Digitone II.
 Each instrument has one shared behavioral model and independent reference,
 with a separate implementation for each CPU architecture.
 
+**One x0z mod per device contains both the 808 and 909 engines.** A saved
+MODEL selector chooses the sound per track/voice, so 808 and 909 tracks can
+play concurrently from the same installed mod. Each device has its own build
+of that combined mod.
+
 The [development guide](docs/development.md) covers mise setup, pinned emulator
 dependencies, independent test commands and the latest-only firmware baseline.
 
 Start with the [kick-drum research](docs/kick-drum-research.md) and
 [implementation plan](docs/implementation-plan.md). Establish the necessary
 interfaces, harnesses and device adapters first, then develop the six
-device/engine combinations in small independently testable slices. Digitakt II
+device/engine test combinations inside the combined mod in small slices. Digitakt II
 is outside the active scope.
 
 Downloaded source material is kept locally in `research/`. Its two tracked

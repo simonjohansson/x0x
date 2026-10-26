@@ -34,6 +34,7 @@ different claims and must have separate results.
 | Reference sound | Versioned, dry VST captures first. Original hardware evidence remains desirable but is not required to begin. |
 | Platform assumption | Use the existing Digitakt/Digitone custom-engine paths. For Digitone II, assume Elekloader PRs [197][U197] and [200][U200] merge. Pin and revalidate each target's headers, adapter and behavior before implementation. |
 | Sharing boundary | One model per drum, two CPU backends, three C device adapters; Digitakt and Digitone reuse each ColdFire engine kernel. Select targets at build time. |
+| Product packaging | One x0z mod per supported device contains both engines behind a saved per-sound/track MODEL selector. Mixed 808/909 voices coexist in the same installed build. The six cells are test slices, not separate mods or one-engine variants. |
 | Memory | Record current code/data usage. The user explicitly allows upstream memory expansion if needed; current limits must not silently dictate fidelity compromises. |
 | Progress | Establish shared interfaces/tests and each target's harness/adapter first. Then advance six device/engine cells independently through small audible slices, with independent C UI and ASM DSP suites. No final all-at-once integration milestone. |
 
@@ -586,8 +587,10 @@ must not silently turn the 808 into a chromatic bass instrument. Likewise,
 909 Tune must not be redefined as static semitone tuning. Decide how unused
 native pitch/modulation behavior is handled and test it.
 
-DN2 now has an approved combined selector and standalone C tests. Its transition
-semantics still require native/DSP integration tests:
+All three devices require the combined mod and saved MODEL selector. DN2 has
+an approved exact layout and standalone C reference-policy tests; revised
+combined DT/DN layouts remain proposals. Transition semantics still require
+native/DSP integration tests:
 quantization of a smoothed value, whether model changes apply at the next trigger,
 and which old states are cleared. Do not let interpolation accidentally blend
 two engines or reinterpret a saved value mid-note. The approved rule quantizes

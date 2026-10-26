@@ -1,115 +1,80 @@
-# Digitakt stock kick controls: review proposal
+# Digitakt combined x0z controls: review proposal
 
-**Nonbinding draft for [#55](https://github.com/simonjohansson/x0z/issues/55)
-and [#59](https://github.com/simonjohansson/x0z/issues/59), 26 October 2026.**
-The candidate IDs and saved positions below require user approval before
-implementation. This document assigns nothing and changes no API, descriptor,
-firmware registration or persisted layout. Scope: Digitakt OS **1.54**, pinned
-Elekloader PR #200 head `2ab5f424c4721e4277d2112a5ae755d9938f50d6`.
+The product direction is **one x0z mod containing both 808 and 909**, with a
+saved MODEL selector per sound/track. Different tracks can play both models
+concurrently. This supersedes the earlier two-machine proposal and its approval;
+IDs 80/90 must not become separate engine registrations. See the
+[common product contract](render-contract.md#one-combined-mod-on-every-device).
 
-Use separate candidate machines **80: `X0Z 808` / `808`** and
-**90: `X0Z 909` / `909`**, as proposed in the [private render contract](render-contract.md).
-Check resource conflicts against every selected mod before adoption; being
-inside the SDK's 4–127 range does not establish that an ID is available.
+This is the revised proposal for [#55](https://github.com/simonjohansson/x0z/issues/55)
+and [#59](https://github.com/simonjohansson/x0z/issues/59), 26 October 2026.
+The combined ID/layout below remains a review candidate, not a persisted
+implementation. Scope: DT OS 1.54, Elekloader PR #200 pin
+`2ab5f424c4721e4277d2112a5ae755d9938f50d6`.
 
-## Smallest layout candidate
+## One native registration and page
 
-One SRC page per machine, using `struct cm_machine` with `.params = 3`,
-`.render = id`, `.tag = CM_UI_TAG`, and a `struct cm_ui` with
-`.abi = cm_ui_v3`, `.page_from = 3`. This borrows SLICE's eight native SRC
-positions and UI machinery, as ModelDigi does. It proposes no extra sound
-slots, second page, model selector, custom persistence format or new MIDI CCs.
-The render subscriber would make the selected track's audio separately.
+Propose one shared candidate ID **80**, name `X0Z KICKS`, short name `KICKS`.
+Both models use that identity; ID 90 is unassigned. Check conflicts with every
+selected mod before adoption. Device-specific builds still contain both engines.
 
-| Position | Accessor index | Native sound slot / byte offset | Parameter ID in bank 3 | 808 label / meaning / default | 909 label / meaning / default |
-| --- | --- | --- | --- | --- | --- |
-| A | 0 | 17 / `0x36` | 132 (`0x84`) | `LEVEL` / instrument level / 100 | `LEVEL` / instrument level / 100 |
-| B | 1 | 18 / `0x38` | 133 (`0x85`) | `TONE` / output tone network / 64 | `TUNE` / stock pitch-control path / 64 |
-| C | 2 | 19 / `0x3a` | 134 (`0x86`) | `DECAY` / resonator feedback / 64 | `DECAY` / tonal amplitude decay / 64 |
-| D | 3 | 20 / `0x3c` | 135 (`0x87`) | hidden, ignored | `ATTK` / pulse/noise branch level / 64 |
-| E–H | 4–7 | 21–24 / `0x3e`–`0x44` | 136–139 | hidden, ignored | hidden, ignored |
+Use one legacy `cm_ui_v3` SRC page with `.params = 3`, `.page_from = 3`,
+`.render = id` and `CM_UI_TAG`, borrowing SLICE's existing positions as in
+ModelDigi. No `cm_ui32` extras or new saved storage are proposed.
 
-All declared controls propose **raw minimum 0, maximum `127 << 8` = 32512**,
-using `CM_RANGE | CM_DEFAULT`; table defaults are display positions, stored as
-`default << 8` (LEVEL **25600**, others **16384**). Use stock look **`0x86`**,
-the generic knob look used by ModelDigi, and explicit long names `Level`,
-`Tone`, `Tune`, `Decay`, `Attack`. For LFO names, use the same labels and names.
-These initial positions are review choices, not calibrated Roland presets.
-LEVEL 100 means **100/127** of the contract's linear instrument gain; position
-64 means **64/127** of the eventual physical control mapping.
+| Knob / accessor index | Native sound slot / parameter ID | Label and meaning | Display default |
+| --- | --- | --- | --- |
+| A / 0 | 17 / 132 | `LEVEL`, instrument gain | 100 |
+| B / 1 | 18 / 133 | `TNTUN`, 808 Tone / 909 Tune | 64 |
+| C / 2 | 19 / 134 | `DECAY`, selected model's decay | 64 |
+| D / 3 | 20 / 135 | `ATTK`, 909 attack; ignored in 808 | 64 |
+| E / 4 | 21 / 136 | hidden | none |
+| F / 5 | 22 / 137 | `MODEL`, 808/909 selector | 0 (808) |
+| G–H / 6–7 | 23–24 / 138–139 | hidden | none |
 
-Mark every unused knob `CM_HIDDEN`, with no semantic binding and no default
-or range override. D also needs `CM_NOT_SAMPLE` in **both** machines: visible
-Attack on the 909, hidden on the 808. The pinned one-page SRC cycling path
-uses D's flag to keep the page instead of opening the stock waveform view.
-Hidden positions still have native backing words and may appear as `Unused`
-in native LFO lists. Do not assume their words are zero, repurpose them as
-version markers, or promise migration to future controls.
+Declared words propose `CM_RANGE | CM_DEFAULT`, raw 0..32512, with defaults
+`display << 8`: LEVEL 25600, Tone/Tune/Decay/Attack 16384 and MODEL 0.
+Use the generic knob look `0x86`. D requires `CM_NOT_SAMPLE` to keep SRC
+cycling out of the waveform view. E/G/H use `CM_HIDDEN` with no semantic
+binding or range/default override; their stored words need not be zero.
+The static shared label `TNTUN` fits the SDK's five-character limit.
 
-This intentionally uses the legacy eight-position page rather than
-`cm_ui32`: the latter adds seven saved slots and its extended-value validation
-and persistence behavior. ModelDigi needs that larger layout for its controls;
-these kick pages do not. `CM_SRC_BLANK` belongs to the extended page map, so
-this legacy candidate expresses empty positions with `CM_HIDDEN`.
+## Selection, delivery and remaining checks
 
-## Delivery and sound policy
+The selector follows the [common policy](render-contract.md#one-combined-mod-on-every-device):
+raw below 16384 selects 808, otherwise 909; latch at the next delivered trigger,
+clear only that voice's old model state on a model change, and keep other
+tracks' models/tails unchanged. Same-model retrigger is a separate circuit
+policy. Both kernels must coexist in the same build and handle mixed tracks.
 
-The proposed range comes from the explicit declarations above, **not** from
-`cm_src_value()`. At this pin, indices 0–7 read the signed native
-`fw_voice_params[53 * track + index]` word unchanged; the accessor neither
-clamps nor normalizes it. The C adapter must validate the declared raw range
-and pass the exact fraction **raw / 32512**, preserving delivered fractional
-values such as raw 1. Native locks, smoothing and LFOs require emulator tests
-against this actual layout before claiming that every path obeys its bounds.
+`cm_src_value` sign-extends the final native word; it does not clamp or
+normalize it. Validate declared ranges and retain exact fractions. Native
+locks, smoothing, LFOs and selector threshold crossings require emulator tests.
+Stock 808 note pitch must not introduce chromatic tuning; 909 Tune retains its
+circuit meaning. There is no strength knob; velocity/accent and downstream AMP
+remain separate integration work.
 
-`CM_DEFAULT` participates in the page's range/reset lookup. The separate
-`mp_sound_defaults()` helper only handles extended `cm_ui32` pages, so it is
-not evidence that a legacy machine selection or fresh sound initializes the
-proposed words. Verify actual native selection/reset paths before adopting
-this candidate; if the legacy path cannot satisfy them, review the smallest
-necessary change rather than silently introducing extra persisted slots.
+Defaults remain a concrete SDK qualification concern: `mp_range` handles
+`CM_DEFAULT`, but `mp_reset_range` gates its override on `mp_ui32`, and
+`mp_sound_defaults` handles extended pages only. Prove actual selection/reset
+behavior for this legacy page; do not invent a switch callback that overwrites
+loaded sounds or add saved slots to conceal the gap.
 
-Stock **808 stays nonchromatic**: native note-pitch changes must not transpose
-the resonator. The 909's Tune remains its circuit control, not semitone
-transpose; this candidate adds no chromatic mapping. Tone/Decay and Attack
-retain their [shared meanings](render-contract.md): Attack is branch level,
-not ADSR attack time. Test note changes explicitly as unsupported pitch
-modulation for stock mode.
+## Small test increments
 
-There is **no strength/accent knob**. Native velocity/accent-to-excitation
-mapping remains deferred until its delivered values and host gain behavior
-are established. A fixed strength in a diagnostic fixture is not a production
-policy. Instrument LEVEL and decay remain part of the DSP model; the native
-AMP/velocity/filter pipeline is a separate integration concern. Do not apply
-velocity twice or use the host AMP envelope as a substitute for kick decay.
+1. Test the single production descriptor/page, both model interpretations,
+   exact endpoints/fractions, blanks and selector policy with fake services and
+   a fake DSP. Neither audio renderer is needed for these C checks.
+2. Test selection/defaults/reset, native encoder/MIDI/lock/LFO delivery and
+   per-track selector latching with diagnostic ASM in digiemu.
+3. Round-trip MODEL and controls through sound/kit save/reload/copy. Check
+   model switching during tails and that another track's mode/state is unchanged.
+4. Integrate each first body into this same mod. As soon as both bodies exist,
+   play mixed 808/909 tracks from one installed artifact and keep that regression
+   through later slices. Full qualification requires both engines.
 
-## Tests after approval, in small increments
-
-1. **Declarations without DSP:** compile each real page declaration against
-   the pinned SDK. Check ID/name, every label/default/range, native slot and
-   semantic binding; D's sample flag; all hidden positions; no extra slots.
-   Fake native-service tests must preserve fractions and reject out-of-range
-   words without partial delivery. Assert 808 note changes leave its model
-   settings unchanged and no strength value is invented.
-2. **Native controls with diagnostic ASM:** select each reviewed machine
-   through the emulated panel; inspect defaults and reset, turn every declared
-   encoder to endpoints, and prove hidden controls do not affect the receiver
-   or open the sample browser. Read each stored native word independently of
-   the callback; compare it with post-smoothing delivery. Exercise stock CC
-   mappings, parameter locks and LFO values, including fractional values,
-   without changing another track's settings.
-3. **Persistence before kick integration:** save/reload/copy sounds and kits;
-   compare IDs, raw words, labels and defaults. Switch stock/808/909 machines
-   on different tracks, and test loading with the relevant registration
-   absent. Keep the only saved copy intact; do not infer fallback behavior.
-4. **First audible slice:** replace only a selected track's block through the
-   existing render event. Check unrelated audio and buffer guards, native
-   AMP/filter behavior and exactly-once gain separately from model timbre.
-   Keep raw-kernel, emulator and eventual reference comparisons distinct.
-
-Current native observer tests prove PLAY → START → C capture → ASM observation
-with **no machine registration**. They do not qualify these proposed pages,
-their persistence, pitch policy, replacement audio or strength mapping.
+The existing native observer has no machine registration and does not qualify
+this proposed layout, persistence, defaults or replacement audio path.
 
 ## Inspected sources
 

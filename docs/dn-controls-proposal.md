@@ -1,93 +1,81 @@
-# Digitone stock kick controls: review proposal
+# Digitone combined x0z controls: review proposal
 
-**Nonbinding draft for [#63](https://github.com/simonjohansson/x0z/issues/63)
-and [#67](https://github.com/simonjohansson/x0z/issues/67), 26 October 2026.**
-Exact IDs and saved positions require user review before implementation. This
-document changes no source, registration, API or persisted layout. Scope:
-Digitone OS **1.44**, Elekloader PR #200 head
-`2ab5f424c4721e4277d2112a5ae755d9938f50d6`.
+**One x0z mod contains both engines**, selected per sound/track with MODEL.
+Mixed 808/909 voices must coexist in the same installed build. The earlier
+separate ID-80/ID-90 engine proposal is superseded. See the
+[common product contract](render-contract.md#one-combined-mod-on-every-device).
 
-Propose separate machines **80: `X0Z 808`** and **90: `X0Z 909`**, retaining
-the [private contract's](render-contract.md) candidate IDs. Check conflicts
-with every selected mod's `dnmachine:<id>` resource before adoption. Native
-sound slot 0 holds `id << 8`; this is a saved identity, not the private C enum.
+Revised proposal for [#63](https://github.com/simonjohansson/x0z/issues/63)
+and [#67](https://github.com/simonjohansson/x0z/issues/67), 26 October 2026.
+Exact combined ID/positions remain review candidates. Scope: DN OS 1.44,
+Elekloader PR #200 pin `2ab5f424c4721e4277d2112a5ae755d9938f50d6`.
 
-## Minimal page candidate
+## One registration and shared controls
 
-Declare **16** `dnm_knob` entries: SYN1 A–H blank; SYN2 A–C used for both
-machines, D used only for 909, E–H blank. Labels are at most five characters,
-with `fmt = NULL` for the native numeric display and `look = 0` for the SDK's
-plain knob. Use no `DNM_PAGES2`, extra page or new sound slots.
+Propose one shared candidate ID **80**, name `X0Z KICKS`; ID 90 is unassigned.
+Check the selected mods' `dnmachine:<id>` resources before adoption. Native
+sound slot 0 stores the one identity as `id << 8`; MODEL stores the chosen drum.
 
-| Position / knob index | Stock parameter ID | Native sound slot | Verified raw bounds | 808 label / meaning / default | 909 label / meaning / default |
-| --- | --- | --- | --- | --- | --- |
-| SYN2 A / 8 | 119 | 27 | 0..32512 | `LEVEL` / instrument gain / `100 << 8` | `LEVEL` / instrument gain / `100 << 8` |
-| SYN2 B / 9 | 120 | 28 | 0..32512 | `TONE` / output tone network / `64 << 8` | `TUNE` / stock pitch-control path / `64 << 8` |
-| SYN2 C / 10 | 121 | 29 | 0..32512 | `DECAY` / resonator feedback / `64 << 8` | `DECAY` / tonal amplitude decay / `64 << 8` |
-| SYN2 D / 11 | 122 | 30 | 0..32512 | blank, ignored; default `-1` | `ATTK` / pulse/noise branch level / `64 << 8` |
+Use 16 native knob entries, with SYN1 blank and no `DNM_PAGES2` or extra saved
+slots. Keep one static shared page layout:
 
-Every other `dnm_knob.name` is NULL and its `int16_t defaults[16]` entry is
-**-1**, meaning leave its native value unchanged. Blank words remain saved
-native data; they are not guaranteed zero or available for silent reuse.
-The declared defaults are **25600** for LEVEL and **16384** for the other
-controls, not calibrated Roland presets. LEVEL means linear gain 100/127;
-64 is position 64/127 of the eventual circuit mapping.
+| Position / knob index | Parameter ID / sound slot | Label and meaning | Raw default |
+| --- | --- | --- | --- |
+| SYN2 A / 8 | 119 / 27 | `LEVEL`, instrument gain | 25600 (100) |
+| SYN2 B / 9 | 120 / 28 | `TNTUN`, 808 Tone / 909 Tune | 16384 (64) |
+| SYN2 C / 10 | 121 / 29 | `DECAY`, selected model's decay | 16384 (64) |
+| SYN2 D / 11 | 122 / 30 | `ATTK`, 909 attack; ignored in 808 | 16384 (64) |
+| SYN2 E / 12 | 123 / 31 | blank | -1 (unchanged) |
+| SYN2 F / 13 | 124 / 32 | `MODEL`, 808/909 selector | 0 (808) |
+| SYN2 G–H / 14–15 | 125–126 / 33–34 | blank | -1 (unchanged) |
 
-These bounds were read independently from all four parameter records in the
-verified stock image, not inferred from UI names. The record table is at
-`0x4018d454`, 60 bytes per record: words 1/2/3 contain sound slot/min/max.
-Their original FM defaults are respectively **0, 8192, 32512, 0**; the machine's
-proposed defaults deliberately replace those on selection. The 134-record
-table SHA-256 is
-`d1c4f7627bdb3a78fec01bbdfaee265a618c69c89f01fe89182efef59a6fc2b1`;
-the verified OS image SHA-256 is
+All used positions have verified native range 0..32512. Records 119..122
+map to slots 27..30; record 124 independently verifies slot 32, min 0,
+max 32512 and original FM default 8192. The stock table at `0x4018d454` has
+60 bytes per record and SHA-256
+`d1c4f7627bdb3a78fec01bbdfaee265a618c69c89f01fe89182efef59a6fc2b1`.
+The verified SysEx hash is
 `d4f200d04484333d82822db7744e6484d0def8f2db8ddf55ee2b780cc13c9659`.
 
-The companion's `knob_id`, `dnm_knob_range()` and `set_knobs()` agree with this
-mapping. Selecting a **different** machine applies its nonnegative defaults
-through `core_sound_set(track, record[1], value)`, then sets slot 0. Selecting
-the same machine does not reset controls. Returning to FM restores its first
-16 knob defaults. Second-page defaults are restored when leaving a machine
-that had `DNM_PAGES2`; these candidates do not take those pages. Defaults on
-selection do not prove save/load behavior or migration of existing sounds.
+Use native numeric formatting and the plain knob look. Every unused entry has
+NULL name and default -1. Blank words remain native saved data, not guaranteed
+zero. Initial defaults are control positions rather than calibrated Roland
+presets; no strength/accent control is introduced.
 
-## Sound policy and remaining gates
+## Per-voice policy and native limits
 
-Set descriptor **flags = 0**: `DNM_OWN_ENV` stays off so the companion applies
-its AMP envelope **and velocity** after the machine render. Turning that flag
-on bypasses both, not just the envelope. The kick's LEVEL and intrinsic decay
-remain model controls; native AMP/filter/mixer processing stays a separate
-integration check. No additional velocity gain or strength/accent knob is
-proposed while the circuit excitation mapping remains unresolved.
+Apply the [common selector policy](render-contract.md#one-combined-mod-on-every-device):
+quantize delivered MODEL at raw 16384, latch at the next trigger/START and clear
+only that voice's old model tail when the model changes. Preserve other voices,
+including simultaneously active voices using the other model. Same-model
+retrigger follows the circuit's separately tested residual-state policy.
 
-Ordinary note pitch must not make the stock 808 chromatic. Keep 909 Tune's
-circuit meaning rather than treating it as semitone transpose. A pitch change
-must not alter these control positions; test the stock-mode pitch policy
-independently of voice pitch telemetry and trigger strength.
+Descriptor flags stay 0: the companion applies AMP and velocity once; neither
+`DNM_OWN_ENV` nor `DNM_PAGES2` is enabled. Intrinsic kick decay and LEVEL remain
+model controls. Ordinary note pitch does not make the stock 808 chromatic, and
+909 Tune is not semitone transpose.
 
-[#75](https://github.com/simonjohansson/x0z/issues/75) does **not** block
-standalone C declaration/default/mapping tests. It **does** block native
-control acceptance: the bounded smoother probe observes delivered values
-`370, 730, 1078, 1416, 1744, 2062, 2370, 2670`, while the current accessor path
-keeps returning target `12345`. Do not present target-buffer edits as final
-smoothed/locked/LFO control delivery or bypass the missing route with injected
-delivered frames.
+`set_knobs` applies defaults when selecting a different native machine, not on
+same-machine reselection. Switching 808/909 uses MODEL inside x0z, so it must
+not invoke machine-selection defaults or overwrite saved controls. Native
+selection, reset, FM/x0z switching and save/load still need emulator coverage.
 
-After user approval, take these steps separately:
+[#75](https://github.com/simonjohansson/x0z/issues/75) blocks delivered-control
+acceptance, including MODEL: `dnm_knob` currently supplies target words rather
+than the observed final smoothed/controller/LFO frame. C-only declaration tests
+can proceed after combined-layout review; they do not resolve that transport gap.
 
-1. Compile real C descriptors and test all 16 entries, defaults, flags and
-   semantic bindings with native-service fakes. Use distinct A/B/C/D values,
-   endpoints and fractional raw words; verify exact `(raw-min)/(max-min)`,
-   invalid-frame atomicity, ignored blanks and no invented strength control.
-2. Resolve #75, then select each machine through the emulator's native menu.
-   Independently inspect sound slots and final render values for selection,
-   same-machine reselection, encoder/MIDI edits, reset, locks and LFO ramps.
-   Verify every callback's track/voice identity and unrelated-track isolation.
-3. Qualify sound/kit save/reload/copy, FM/808/909 switching, and missing-mod
-   loading without overwriting the only saved copy. Add the first audible
-   selected-voice slice only after its transport is established; check buffer
-   guards, stock-voice coexistence and exactly-once companion AMP/velocity
-   separately from kick fidelity.
+## Small test increments
+
+1. Test the one descriptor, both control interpretations, blanks, distinct
+   fractions/endpoints and selector policy without either renderer.
+2. Resolve final-frame delivery, then test native control and MODEL ramps,
+   locks, threshold crossings, per-voice latching and unrelated-track isolation.
+3. Round-trip the single identity, MODEL and controls through sound/kit saves.
+   Model changes must not select another native machine or reset all controls.
+4. Add each body to the same mod. Test mixed 808/909 voices as soon as both are
+   present, including companion gain and voice limits. Complete qualification
+   requires both models and their coexistence, not one-engine artifacts.
 
 ## Inspected sources
 

@@ -5,6 +5,11 @@ The synthetic probe is test equipment, not an 808/909 implementation or a VST
 reference. Production audio will use assembly; native pages and full firmware
 adapter tests remain separate work.
 
+The product is one combined x0z mod per device, containing both engines behind
+a saved MODEL selector. Different tracks can run 808 and 909 concurrently.
+Model-specific test commands and incomplete diagnostic builds are development
+slices; they do not define separate products or releasable one-engine variants.
+
 ## Setup
 
 Start from the repository root on macOS with mise and Homebrew available:
@@ -175,7 +180,7 @@ Faulty C variants must be rejected: fraction loss, wrong slot and unwanted level
 scaling on DN2; fraction loss, unconditional reassignment and overwritten velocity
 on DN.
 
-The approved DN2 ID-20 declarations and selector live in
+The approved DN2 ID-20 production declarations and C reference selector live in
 `machines/digitone2/controls.c`. Their standalone C tests check the actual SDK
 descriptor/pages, both models' distinct endpoint/fractional values and the
 START-latched threshold at raw 16384. An edit during a tail stays pending until
@@ -183,7 +188,9 @@ START; first initialization or a model change requests tail clearing, while a
 same-model START preserves residual state. Controls precede the notice. The
 fake DSP tests this metadata and per-slot isolation; no DSP reset or excitation
 is implemented in C. Blank E/G/H have no strength meaning. Native ownership,
-save/load and downstream processing remain integration work.
+save/load and downstream processing remain integration work. Settled frames
+reach SHARC directly through the SDK bridge; actual ASM selector execution is
+tracked in #76, not established by these C reference tests.
 
 ### Coupled DN2 setup blocker
 

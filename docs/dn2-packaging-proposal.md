@@ -10,6 +10,8 @@ The [private contract](render-contract.md) still applies.
 
 ## Selected packaging direction
 
+This is the DN2 binding of the [one-mod requirement on all three devices](render-contract.md#one-combined-mod-on-every-device).
+
 The selected direction is **one registered synth with an 808/909 selector**.
 Each sound saves its model selection and controls, so both models can coexist
 on different allocated voices in one firmware image. This uses the pinned
@@ -39,21 +41,23 @@ Inspected Elekloader PR #200 head
   knob `k` persists in sound slot `25 + 8p + k`, and arrives as
   `param[8p+k]`, unsigned 8.8 **0..32512**, after native processing. The current
   companion allocates **five custom pages in total**, through `used_pages` and
-  `ADDED=40`; a future multi-registration solution must account for that shared
-  capacity. Empty positions have stored data too; they are not safe implicit
+  `ADDED=40`; x0z's one shared page fits that capacity. Empty positions have
+  stored data too; they are not safe implicit
   version markers or guaranteed-zero future controls.
 - A callback receives one of sixteen voice slots, pitch, START and forty knob
   words, without a track ID, logical ownership token, model ID or separate
   accent field. Its trigger-edge block is silent; START arrives in the next
   settled block. Native control edits can be fractional, smoothed and modulated.
 
-## Options
+## Packaging decision
 
-| Option | Save/load identity and coexistence | Work and tradeoff |
-| --- | --- | --- |
-| One registered machine, model selector — selected | One candidate ID, with each sound saving its selector and knobs; both models can run on different allocated voices in one image. | Supported by the current packaging. Requires both DSPs in one payload, a permanent selector slot, per-voice model state and reviewed switching semantics. One static page cannot change its labels with the model through the current page API. |
-| Separate firmware variants — alternative only | Separate candidate IDs 18/19; only the installed model renders. | Simpler first persistence contract, but cannot play both models in one image. Switching firmware interrupts all audio. These IDs were never adopted. |
-| Upstream multiple native SHARC registrations — alternative only | Separate stable IDs and independent pages; both models coexist in one image. | Unavailable at this pin. Requires coordinated artifact, linker, bridge and test changes, rather than disabling one linker refusal. |
+| Design | Status for x0z |
+| --- | --- |
+| One registered machine containing both engines, with a saved selector per sound | Required on DT, DN and DN2; mixed 808/909 voices share one installed build. |
+| Separate one-engine firmware variants or separate 808/909 machines | Superseded and excluded from the delivery plan. |
+
+The earlier alternative IDs 18/19 were never adopted. They are not future
+registrations for x0z. Both kernels belong in the same ID-20 SHARC payload.
 
 With `machines-dn2` retained, an absent synth ID 5..31 is preserved on load,
 reported as MISSING by name accessors and mapped to silent MIDI DSP type.
@@ -124,30 +128,13 @@ prove migration of old sounds. Future layout changes need separate review.
 Switching the native synth or loading another sound has separate host voice
 allocation/tail behavior that is not established by the isolated bridge tests.
 Do not promise tail preservation there. Firmware replacement always ends the
-running performance; separate variants offer no live model-switch facility.
+running performance. The installed combined mod switches per voice through MODEL.
 
-## Alternative upstream extension, separate from memory growth
+## Memory growth and registration
 
-The selected single-synth direction needs no multi-registration extension.
-For comparison, a minimal alternative would package **one shared voice payload**
-containing both kernels and an explicit binding list for candidate IDs 18/19:
-
-1. Extend/version the artifact contract and producer/validator to describe that
-   list; retain strict duplicate-ID, clone-conflict, entry-range and stack checks.
-2. Teach the linker to match all declared native registrations to bindings and
-   generate a bounded dispatch table, instead of the current single entry/ID.
-3. Rebuild and qualify the bridge so frame type dispatches to the corresponding
-   entry. Each entry can identify its own model, preserving the current input
-   structure if that is the agreed upstream design. Recheck per-slot trigger
-   bookkeeping across registered-model transitions: current `stock_slot` cleanup
-   only handles types outside the one accepted ID. Model reassignment/reset
-   cannot be inferred from an unchanged callback slot.
-4. Keep two separate one-page layouts within the companion's five-page total;
-   preserve missing-ID behavior, positional MIDI/locks and original 808 slots.
-   Test both models concurrently and every saved/missing registration combination.
-
-This is a proposed upstream shape, not an available API. A second independent
-payload would additionally need placement/relocation and ownership rules.
+The one-mod selector design requires no multiple-registration extension. Keep
+one native identity while adding both kernels to its payload. The earlier
+multi-ID extension discussion is superseded and is not implementation work.
 
 Current voice allocation gives **6,080 usable author-code bytes** (6 KiB minus
 the 64-byte guard) and **7 KiB author data**, including all per-slot state.

@@ -6,6 +6,15 @@ Completed foundation scope: [shared semantics #4](https://github.com/simonjohans
 
 ## Architecture and scope
 
+**One x0z mod on every supported device contains both 808 and 909 engines.**
+Each device has one native x0z machine identity and a saved MODEL selector per
+sound/track. Different tracks/voices can play both models concurrently in the
+same installed build. Target-specific firmware builds package this same product.
+Separate engine registrations and single-engine delivery variants are superseded.
+The [common product contract](render-contract.md#one-combined-mod-on-every-device)
+is authoritative. The earlier approval of two Digitakt machines is withdrawn by
+the user's correction; revised DT/DN combined positions/IDs remain proposals.
+
 Support Digitakt (DT), Digitone (DN) and Digitone II (DN2). Digitakt II is outside the active scope. Each instrument has one behavioral/mathematical definition and independent high-precision host oracle. Production audio has two handwritten assembly implementations: ColdFire shared by DT/DN, and SHARC+ for DN2. Three thin C adapters own firmware callbacks, native controls, voice identity and output integration.
 
 Share physical units, event semantics, reference fixtures and fidelity criteria. Keep arithmetic formats, state layouts, coefficient encoding and scheduling inside each CPU backend. Select the target at build time. Do not create a portable assembly language, per-operation dispatch or independently fitted copies of the instrument.
@@ -30,6 +39,12 @@ Start the shared behavior/interface review, measurement checks and VST selection
 
 The shared interface is a private development contract. Concrete permanent IDs and saved control layouts need review before becoming stable. Pin each device's actual firmware/core/headers in its adapter work. DN2 development uses the exact Elekloader PR #200 head rather than waiting for a merge; changing that revision requires matched header/adapter checks.
 
+Selector infrastructure is explicit for both CPU backends:
+[ColdFire #77](https://github.com/simonjohansson/x0z/issues/77) serves DT/DN,
+and [SHARC #76](https://github.com/simonjohansson/x0z/issues/76) serves DN2.
+These test per-voice model selection and state isolation before sound models;
+they do not depend on VST captures or complete engines.
+
 The adapter foundations #39, #40 and #7 remain open. Their C boundaries and
 diagnostic assembly components are now independently executable; each issue
 retains its missing native transport/lifecycle gates. Next, establish complete
@@ -44,7 +59,10 @@ table input; its bridge component can continue independently. See the
 
 ## Independent delivery matrix
 
-Each row starts once its shared fixtures/comparator, CPU harness, own adapter and next slice prerequisites are ready. No row waits for another row's completed UI, integration or hardware qualification. DT and DN share kernel work, so independence does not mean duplicating the ColdFire sound engine.
+Each row is a model-specific test/development slice within the combined mod,
+not a separate package. Start a slice once its fixtures/comparator, CPU harness,
+adapter and next prerequisites are ready; do not wait for the other complete
+engine or another device. DT and DN share the ColdFire kernels and selector.
 
 | Cell tracker | C controls | First audible body and continuing integration | Device qualification |
 | --- | --- | --- | --- |
@@ -60,7 +78,9 @@ The six cell issues are progress trackers, not large implementation tickets. The
 Completed DN2 #6/#24 C control work implements the approved shared ID-20 descriptor and
 page, with per-slot START-latched selection and explicit tail-clear metadata.
 It requires neither kick renderer; fake DSP tests cover both models' exact
-control mappings and the common selector. This does not qualify native
+control mappings and the host reference selector policy. Production C owns the
+page declarations; the SHARC bridge calls ASM directly, so these C helpers do
+not establish an installed C-to-SHARC selector path. This does not qualify native
 registration/save/load, ownership or audible model switching. DT's
 [control proposal](dt-controls-proposal.md) remains unadopted pending review.
 DN's corresponding [control proposal](dn-controls-proposal.md) is also pending
@@ -93,6 +113,14 @@ Prioritize a tiny 808 body on both CPUs and audible integration on at least one 
 | 909 fidelity | [#54](https://github.com/simonjohansson/x0z/issues/54) | [#34](https://github.com/simonjohansson/x0z/issues/34) |
 
 Every kernel slice exports direct fixture results immediately. Each ready cell consumes it through the continuing adapter regression command established by its first-body issue; retain a small audible observation for relevant control/attack changes. A blocked device does not prevent kernel acceptance or another device's progress. Its missing integration evidence remains visible in its own tracker. Final qualification checks the accumulated per-slice evidence rather than introducing the complete pipeline.
+
+Bring up both models incrementally in this same mod. As soon as both first
+bodies are available on a device, test mixed 808/909 tracks, saved MODEL values,
+voice isolation and switching during tails. Keep those tests through every
+later slice. A partial cell can progress independently; a releasable device
+artifact must contain and qualify both engines. Per-device qualification waits
+for the other model's first integration, not its complete fidelity work, so
+coexistence is exercised early rather than as a final integration project.
 
 ## What each test proves
 
