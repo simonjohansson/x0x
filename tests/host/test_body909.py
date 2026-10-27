@@ -29,3 +29,24 @@ class Body909Tests(unittest.TestCase):
         self.assertAlmostEqual(amplitude(3)/fundamental,1/9,delta=1e-5)
         self.assertAlmostEqual(amplitude(5)/fundamental,1/25,delta=1e-5)
         self.assertLess(amplitude(2),1e-12)
+
+
+class Decay909Tests(unittest.TestCase):
+    def test_unloaded_RC_values_and_fractional_control(self):
+        self.assertAlmostEqual(body.decay_tau(0),.01551)
+        self.assertAlmostEqual(body.decay_tau(32512),.34551)
+        self.assertAlmostEqual(body.decay_tau(16384),.1818092125984252)
+        self.assertLess(body.decay_tau(16384),body.decay_tau(16385))
+        for raw in (-1,32513,True,64.5):
+            with self.assertRaises(ValueError): body.decay_tau(raw)
+
+    def test_live_decay_preserves_phase_and_accumulated_envelope(self):
+        switch=1024
+        baseline=body.reference(4096,0)
+        actual=body.reference(4096,0,{switch:32512})
+        self.assertEqual(actual[:switch],baseline[:switch])
+        n=2048
+        expected=body.GAIN*math.exp(-switch/(48000*body.decay_tau(0))
+            -(n+1-switch)/(48000*body.decay_tau(32512)))*body.triangle(50*(n+1)/48000)
+        self.assertAlmostEqual(actual[n],expected,places=12)
+        self.assertGreater(abs(actual[n]),abs(baseline[n]))

@@ -38,9 +38,9 @@ void x0x_808_body(int32_t state[2], int32_t output[32], uint32_t start, uint32_t
     for (unsigned i = 0; i < 32; ++i) output[i] = 17;
 }
 
-void x0x_909_body(int32_t state[2], int32_t output[32], uint32_t start)
+void x0x_909_body(int32_t state[2], int32_t output[32], uint32_t start, uint32_t decay_raw)
 {
-    assert(state && start == (body909_calls == 0));
+    assert(state && start == (body909_calls == 0) && decay_raw == 23457);
     ++body909_calls;
     for (unsigned i = 0; i < 32; ++i) output[i] = 29;
 }
@@ -87,6 +87,7 @@ int main(void)
     values[0][1] = 12345;
     values[0][5] = 16383;
     values[7][5] = 16384;
+    values[7][1] = 23457;
     x0x_dt_render(blocks);
     for (unsigned track = 0; track < 8; ++track) {
         int active = track == 0 || track == 7;

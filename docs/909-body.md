@@ -1,8 +1,8 @@
-# First 909 triangle body
+# 909 triangle body and live Decay
 
 This [#25](https://github.com/simonjohansson/x0x/issues/25) increment adds an
 unshaped triangle foundation to the existing combined mod. It is not yet a
-complete or calibrated 909. The stock pitch path, diode shaping, VCA/envelopes,
+complete or calibrated 909. The stock pitch path, diode shaping, complete VCA/envelopes,
 Attack pulse/noise and circuit retrigger behavior remain open in #25/#79.
 The existing controls/IDs and START-latched MODEL selection stay unchanged.
 
@@ -14,16 +14,41 @@ through R52=10 kΩ. The original schematic, not the 909-like Plaits class, is
 the selected baseline. Source hashes/paths are recorded in
 [research/manifest.json](../research/manifest.json).
 
-This first slice implements only the triangle waveform. The fixed 50 Hz pitch,
-250 ms amplitude decay, internal gain 0.25 and zero-crossing phase restart are
-explicitly provisional audition values, not values derived from the complete
-Roland VCO/trigger/VCA. Unlike 808's resonant feedback loss, this amplitude
+The triangle's fixed 50 Hz pitch, internal gain 0.25 and zero-crossing phase
+restart remain provisional audition values. Live DECAY now uses the unloaded
+C8 discharge path described below; it is not the complete Roland ENV1/VCA. Unlike 808's resonant feedback loss, this amplitude
 multiplies a separate oscillator. Native AMP/velocity, filtering, effects and
 track volume remain downstream.
 
 At 48 kHz, the independent analytical reference is
 
-`y[n] = 0.25 * exp(-(n+1)/12000) * (2/pi) * asin(sin(2*pi*50*(n+1)/48000))`.
+`y[n] = 0.25 * exp(-sum(1/(48000*tau(d[k])), k=0..n)) * (2/pi) * asin(sin(2*pi*50*(n+1)/48000))`.
+
+### Unloaded C8 Decay increment
+
+S02 p.11 and S05 p.12 draw C8=0.33 µF, VR5=1 MΩ(A) wired as a rheostat,
+and R58=47 kΩ in the ENV1 discharge path. The first functional Decay mapping is
+`tau(d) = C8 * (R58 + VR5*d/32512)`, using the exact delivered native word.
+Minimum/default/maximum time constants are 15.510/181.809/345.510 ms.
+The saved default remains 64; only its formerly provisional 250 ms sound changes.
+
+This is an **unloaded RC approximation**, with a provisional resistance-linear
+mapping. The physical A taper is uncalibrated. D8/R36/R22, loading through R54
+into Q12, charging/accent and the transistor VCA transfer remain missing. Thus
+the component values are source-derived but the complete audible envelope and
+control curve are not claimed faithful. 808 Decay keeps its separate feedback model.
+
+Each backend computes bilinear capacitor retention `r = 1-2/(1+2*48000*tau)`
+once per block. ColdFire forms the denominator in unsigned Q16 and uses fractional
+integer division; SHARC refines a positive reciprocal and applies a small negative
+amplitude increment to avoid rounding a near-one retention. Live edits retain
+phase and accumulated envelope. START still restarts both. State size, IDs,
+public SDK boundary, native level and saved controls do not change.
+
+The independent oracle integrates the continuous analytical exponential rather
+than copying the DSP recurrence. Corner/fractional words and live long/short
+edits must pass the unchanged 1e-5 FS waveform tolerance, without fitting,
+alignment or normalization.
 
 Each ASM backend uses a wrapping unsigned 32-bit phase accumulator with step
 `round(50*2^32/48000)=4473924`, then folds it into a triangle and multiplies by
@@ -37,7 +62,7 @@ restarts the prototype's phase and amplitude. This does not claim the physical
 909's clamp-release or free-running behavior. The 808 retains its separate
 Tone history and existing live Tone/Decay behavior.
 
-909 TNTUN, DECAY and ATTK are delivered but do not yet shape this first body.
+909 DECAY shapes amplitude on every callback. TNTUN and ATTK remain delivered but unused.
 The stock Tune controls pitch-envelope time, not chromatic transpose; deriving
 that path is a later increment. The raw triangle also lacks the diode stage's
 harmonic rounding and an antialiasing qualification.
@@ -55,8 +80,12 @@ ASM implementations and cross-CPU comparison, and `mise run test:{dt,dn,dn2}`
 separately for native installed-mod checks. The independent model is committed
 in `5cb8a73`, and actual ASM/C routing in `6b3e05e`.
 
-111 host tests and all independent C/UI suites pass. The actual 24000-sample
-renders give:
+### Historical first fixed-Decay triangle evidence
+
+The following measurements and hashes describe the first fixed-250 ms version,
+before live Decay. Current results are recorded in the live-Decay evidence below.
+At that stage, 111 host tests and all independent C/UI suites passed. Actual
+24000-sample renders gave:
 
 | Check | ColdFire | SHARC+ |
 | --- | --- | --- |
@@ -75,7 +104,7 @@ passes 4686 component calls with 914 code bytes, unchanged 320 state bytes and
 overall worst 827 observed instructions.
 The 808 path and its Tone/Decay comparisons remain checked by that same suite.
 
-The actual ColdFire four-second run exposes a known fixed-point limit: the
+That historical ColdFire four-second run exposes a known fixed-point limit: the
 nearest-even envelope settles at 6022 Q31 LSBs, producing a peak residual of
 2.805e-6 FS. This is bounded below the existing 1e-5 FS numeric limit, not exact
 tail silence. Revisit the tail policy when implementing the stock VCA/envelope;
@@ -116,6 +145,34 @@ waveform matching. Raw waveform comparison stays in the actual-ASM component
 suite; native tests separately inspect owned phase/envelope state and PCM.
 The isolated T1 note's early/late amplitude errors are 1.484e-7/4.364e-10 FS.
 
+## Live-Decay evidence
+
+`mise run test` checks the independent model and C delivery; `mise run test:909:body` checks both actual ASM backends and matching outputs at raw
+0/1/16384/16385/32511/32512. Component runners additionally change Decay at
+samples 4096 and 8192 without START. The shared SHARC suite retains all 808
+Tone/coupling, guards, model latching and mixed-slot checks.
+
+Native `mise run test:{dt,dn,dn2}` exercises minimum/default/maximum Decay
+through actual controls in the installed mods. DT/DN compare captured raw
+callback samples to the analytical model. DN also checks each delivered 909
+block using that voice's integrated control history. DN2 separately checks owned
+phase/amplitude and downstream PCM; generic phase-age checks cannot assume a
+constant Decay history after live edits. Its explicit constant-control captures
+check absolute amplitude and fitted time constant. These remain emulator tests,
+not VST, real-device timing or complete stock-circuit qualification.
+
+Current component results: 116 host tests and all isolated C/UI suites pass.
+Six matching 24000-sample CPU renders have maximum continuous-model errors of
+8.503e-7 FS (ColdFire) and 4.644e-7 FS (SHARC), and maximum CPU difference
+5.491e-7 FS. Live control-change errors are 5.961e-7 / 3.442e-07 FS. All are below
+the original 1e-5 FS limit. The shared SHARC suite passes 8820 calls, with 1084
+code bytes and unchanged 448 private state bytes. Instruction counts are
+informational, not acceptance limits.
+
+The new default ColdFire four-second amplitude floor is 4380 Q31 LSBs (peak
+2.040e-6 FS), still bounded rather than exact tail silence. Stock VCA/tail
+behavior remains open.
+
 ## Unresolved native transition
 
 [#80](https://github.com/simonjohansson/x0x/issues/80) tracks a separate failure:
@@ -134,7 +191,7 @@ later coupling increment). It is separate evidence,
 not production audio qualification. Its source/firmware hashes are recorded in
 `out/dn2/late-model-probe{,-immediate}/provenance.json`.
 
-The unmodified production reproduction uses the canonical firmware hash above.
+The unmodified production reproduction uses the historical canonical firmware hash above.
 Its explicit failed verdict and observations are in
 `out/dn2/late-model-production/{verdict,probe-observations,production-probe-report}.json`.
 The original failure remains at

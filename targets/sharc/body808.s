@@ -244,13 +244,20 @@ body_sample:
     DM(I5,M5)=R10;
     JUMP finish;
 body909:
+    R0=4;
+    R0=R15+R0;
+    I4=R0;
+    R11=DM(I4,M5);
+    F11=FLOAT R11;
+    R12=0x38010204;
+    F11=F11*F12;
     R0=124;
     R14=R3+R0;
     R0=4;
     R15=R14+R0;
     R7=PASS R7;
     IF EQ JUMP continue909;
-    // shortcut: fixed 50 Hz, 250 ms envelope and zero-crossing START until 909 circuit modeling.
+    // shortcut: fixed pitch and zero-crossing START until the complete 909 circuit is modeled.
     R0=0x40000000;
     R1=0x3e800000;
     JUMP render909;
@@ -260,7 +267,28 @@ continue909:
     I4=R15;
     R1=DM(I4,M5);
 render909:
-    R2=0xb8aec161;
+    // Unloaded C8*(R58+VR5*t) discharge; resistance-linear taper remains provisional.
+    R4=0x46f78000;
+    F2=F11*F4;
+    R4=0x44ba3eb8;
+    F2=F2+F4;
+    R3=0x7f000000;
+    R3=R3-R2;
+    R4=0x40000000;
+    F5=F2*F3;
+    F5=F4-F5;
+    F3=F3*F5;
+    F5=F2*F3;
+    F5=F4-F5;
+    F3=F3*F5;
+    F5=F2*F3;
+    F5=F4-F5;
+    F3=F3*F5;
+    F5=F2*F3;
+    F5=F4-F5;
+    F3=F3*F5;
+    R4=0xc0000000;
+    F2=F3*F4;
     R3=4473924;
     R9=32;
     R10=4;

@@ -6,50 +6,9 @@ import struct
 
 from . import audio, body909, cpu
 from .analysis import analyze
-from .coldfire_arithmetic import EMAC_SEED
-from .coldfire_body808 import Runner as BodyRunner
+from .coldfire_body808 import Runner
 
 SOURCE = cpu.ROOT / "targets/coldfire/body909.s"
-
-
-class Runner(BodyRunner):
-    def render(self, voice=0, start=0):
-        assert 0 <= voice < 8 and start in (0, 1)
-        uc = self.uc
-        register = lambda name: getattr(self.regs, "UC_M68K_REG_" + name)
-        state = self.STATES + 16 * voice
-        before = bytes(uc.mem_read(self.STATES - 4, 136))
-        uc.mem_write(self.OUTPUT - 4, b"\xa5" * 136)
-        uc.mem_write(self.SNAPSHOT - 4, b"\xa5" * 44)
-        uc.mem_write(self.STACK - 112, b"\xa5" * 144)
-        arguments = struct.pack(">5I", self.STOP, state, self.OUTPUT, start, self.SNAPSHOT)
-        uc.mem_write(self.STACK, arguments)
-        uc.reg_write(register("SR"), 0x2700)
-        saved = {register(name): 0x10203040 + i for i, name in enumerate(
-            [*(f"D{i}" for i in range(2, 8)), *(f"A{i}" for i in range(2, 7))])}
-        for reg, value in saved.items():
-            uc.reg_write(reg, value)
-        uc.reg_write(register("A7"), self.STACK)
-        self.steps, self.invalid = 0, []
-        self.allowed = [(state, state + 8), (self.OUTPUT, self.OUTPUT + 128),
-                        (self.SNAPSHOT, self.SNAPSHOT + 36), (self.STACK - 92, self.STACK)]
-        uc.emu_start(self.BASE, self.STOP, timeout=10_000_000)
-        assert not self.invalid, self.invalid
-        assert uc.reg_read(register("PC")) == self.STOP, "body did not return before the test watchdog"
-        assert uc.reg_read(register("A7")) == self.STACK + 4, "caller stack pointer changed"
-        assert all(uc.reg_read(reg) == value for reg, value in saved.items()), "callee register changed"
-        assert bytes(uc.mem_read(self.STACK, 20)) == arguments, "caller arguments changed"
-        assert bytes(uc.mem_read(self.STACK - 112, 16)) == b"\xa5" * 16, "stack underflow"
-        assert bytes(uc.mem_read(self.STACK + 20, 12)) == b"\xa5" * 12, "stack overflow"
-        snapshot = bytes(uc.mem_read(self.SNAPSHOT - 4, 44))
-        assert snapshot[:4] == snapshot[-4:] == b"\xa5" * 4, "EMAC snapshot guard changed"
-        assert struct.unpack(">8I", snapshot[4:36]) == EMAC_SEED, "EMAC context changed"
-        after = bytes(uc.mem_read(self.STATES - 4, 136))
-        at = state - (self.STATES - 4)
-        assert before[:at] == after[:at] and before[at + 8:] == after[at + 8:], "other voice/guard changed"
-        output = bytes(uc.mem_read(self.OUTPUT - 4, 136))
-        assert output[:4] == output[-4:] == b"\xa5" * 4, "output guard changed"
-        return list(struct.unpack(">32i", output[4:-4]))
 
 
 def run(folder=None):
@@ -57,7 +16,21 @@ def run(folder=None):
     folder.mkdir(parents=True, exist_ok=True)
     wrapper_source = cpu.ROOT / "targets/coldfire/selector.s"
     wrapper = wrapper_source.read_text().split("    .globl x0x_selector\n")[0]
-    wrapper = wrapper.replace("bsr x0x_selector", "bsr x0x_909_body")
+    first = wrapper.index("    lea -12(%sp), %sp")
+    last = wrapper.index("    move.l %d0, 32(%a0)")
+    wrapper = wrapper[:first] + """    lea -16(%sp), %sp
+    move.l 20(%sp), %d0
+    move.l %d0, 0(%sp)
+    move.l 24(%sp), %d0
+    move.l %d0, 4(%sp)
+    move.l 28(%sp), %d0
+    move.l %d0, 8(%sp)
+    move.l 32(%sp), %d0
+    move.l %d0, 12(%sp)
+    bsr x0x_909_body
+    lea 16(%sp), %sp
+    movea.l 20(%sp), %a0
+""" + wrapper[last:]
     combined = folder / "probe.s"
     combined.write_text(wrapper + "\n" + SOURCE.read_text())
     image, _ = cpu.build_coldfire(folder, combined)
@@ -76,6 +49,30 @@ def run(folder=None):
     frequency, tau = measures["frequency"]["median_hz"], measures["decay_positive"]["time_constant_s"]
     assert frequency is not None and abs(frequency-body909.FREQUENCY) <= .02, frequency
     assert tau is not None and abs(tau-body909.TAU) <= .001, tau
+    decay_cases=[]
+    for raw in (0,1,16384,16385,32511,32512):
+        case=Runner(image)
+        rendered=[]
+        for block in range(frames//32):
+            rendered.extend(case.render(start=int(block==0),decay_raw=raw))
+            worst=max(worst,case.steps)
+        signal=[x/2**31 for x in rendered]
+        expected=body909.reference(frames,raw)
+        peak_error=max(abs(a-b) for a,b in zip(signal,expected))
+        assert peak_error<=1e-5,(raw,peak_error)
+        fit=analyze(signal[:min(frames,int(5*body909.decay_tau(raw)*48000))],48000)
+        assert abs(fit["decay_positive"]["time_constant_s"]-body909.decay_tau(raw))<=.001,(raw,fit)
+        (folder/f"samples_{raw}.json").write_text(json.dumps(signal)+"\n")
+        decay_cases.append(dict(raw=raw,maximum_error_fs=peak_error,expected_tau_s=body909.decay_tau(raw)))
+    live_runner=Runner(image)
+    changes={4096:32512,8192:0}
+    raw=16384
+    live=[]
+    for n in range(0,12288,32):
+        raw=changes.get(n,raw)
+        live.extend(v/2**31 for v in live_runner.render(start=int(n==0),decay_raw=raw))
+    live_error=max(abs(a-b) for a,b in zip(live,body909.reference(len(live),changes=changes)))
+    assert live_error<=1e-5,live_error
     assert runner.render(start=1) == words[:32], "retrigger differs"
     assert runner.render() == words[32:64], "retrigger continuation differs"
     # Cover exact fold extrema, including positive unity's Q31 clamp.
@@ -107,14 +104,15 @@ def run(folder=None):
         emulator_revision=cpu.revision(cpu.ROOT / "vendor/digiemu"),
         image_sha256=hashlib.sha256(image).hexdigest(),frames=frames,
         waveform_peak_error_fs=error,frequency_hz=frequency,decay_tau_s=tau,
+        decay_cases=decay_cases,live_decay_maximum_error_fs=live_error,
         onset_sample=measures["onset_sample"],peak_fs=measures["peak_fs"],
         maximum_instructions_per_block_with_wrapper=worst,
         tail_after_seconds=4,tail_amplitude_q31=amplitude,tail_peak_fs=tail_peak,
         samples=str(samples_path),wav=str(folder / "body909.wav"),
-        checked=["zero-state silence","streamed analytic triangle and decay","phase wrap and exact fold extrema",
+        checked=["zero-state silence","streamed analytic triangle and unloaded RC Decay corners/fractions", "live Decay without START","phase wrap and exact fold extrema",
                  "output/state/stack guards","callee registers and complete EMAC context",
                  "independent interleaved voice","provisional START restart","bounded long tail"],
-        unqualified=["909 diode shaping and circuit envelopes","Tune/Decay/Attack controls",
+        unqualified=["909 diode shaping and circuit envelopes","stock VCA/taper and Tune/Attack controls",
                      "stock 909 fidelity","native OS integration","hardware timing"],
         known_limit="nearest-even Q31 amplitude settles above zero; this is not exact tail silence")
     (folder / "report.json").write_text(json.dumps(report,indent=2) + "\n")

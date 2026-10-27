@@ -1,8 +1,8 @@
-/* First unshaped 909 triangle at 48 kHz: provisional 50 Hz, tau 250 ms, gain .25.
- * void x0x_909_body(int32_t state[2], int32_t output[32], uint32_t start).
+/* First unshaped 909 triangle at 48 kHz: provisional 50 Hz, live unloaded C8 Decay, gain .25.
+ * void x0x_909_body(int32_t state[2], int32_t output[32], uint32_t start, uint32_t decay_raw).
  * State is {unsigned phase, Q1.31 amplitude}; caller owns aligned disjoint extents.
  * shortcut: START resets to a rising zero crossing; replace the fixed pitch,
- * exponential envelope and restart when the circuit model is implemented.
+ * unloaded envelope/taper and restart when the full circuit is implemented.
  * Nearest-even envelope multiplication has a small nonzero Q31 tail floor.
  */
     .text
@@ -40,7 +40,34 @@ x0x_909_body:
 .L909continue:
     move.l #0xb0, %d0 /* fractional, saturated, nearest-even */
     move.l %d0, %macsr
-    move.l #2147304698, %d2 /* round(exp(-1/12000) * 2^31) */
+    /* D = 1489.96 + 31680*t, t=raw/32512; Q16 D fits unsigned32. */
+    move.l 92(%sp), %d6
+    move.l #66052, %d0
+    mulu.l %d0, %d6
+    move.l #2076180480, %d0
+    moveq #0, %d3
+    move.l %d3, %acc0
+    mac.l %d6, %d0, %acc0
+    movclr.l %acc0, %d3
+    addi.l #97646019, %d3
+    /* Loss = 2/D, using unsigned fractional division including the carry bit. */
+    move.l #131072, %d2
+    moveq #0, %d7
+    moveq #31, %d6
+.L909divide:
+    add.l %d7, %d7
+    add.l %d2, %d2
+    bcs.s .L909subtract
+    cmp.l %d3, %d2
+    bcs.s .L909nextbit
+.L909subtract:
+    sub.l %d3, %d2
+    addq.l #1, %d7
+.L909nextbit:
+    subq.l #1, %d6
+    bne.s .L909divide
+    move.l #0x80000000, %d2
+    sub.l %d7, %d2
     moveq #32, %d6
 .L909sample:
     addi.l #4473924, %d4 /* round(50/48000 * 2^32), natural phase wrap */

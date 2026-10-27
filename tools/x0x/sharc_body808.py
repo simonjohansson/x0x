@@ -33,6 +33,7 @@ def component() -> tuple[dict, bytes]:
     inputs = selector.cases()
     expected, provenance = selector.c_reference(FOLDER, inputs)
     position909 = [0] * 16
+    attenuation909 = [0.0] * 16
     for row, reference in zip(inputs, expected, strict=True):
         samples, state = policy.call_raw(row, state_writable=reference["notices"] == 1)
         assert state[:32] == reference["state"], row["label"]
@@ -45,8 +46,13 @@ def component() -> tuple[dict, bytes]:
                 slot = row["slot"]
                 if row["flags"]:
                     position909[slot] = 0
+                    attenuation909[slot] = 0.0
                 begin = position909[slot]
-                wave = body909.reference(begin + 32)[begin:]
+                loss = -1 / (body909.SAMPLE_RATE * body909.decay_tau(row["params"][1]))
+                wave = [body909.GAIN * math.exp(attenuation909[slot] + (j+1)*loss)
+                        * body909.triangle(body909.FREQUENCY*(begin+j+1)/body909.SAMPLE_RATE)
+                        for j in range(32)]
+                attenuation909[slot] += 32*loss
                 assert max(abs(a-b) for a,b in zip(samples, wave)) < 1e-5, row["label"]
                 position909[slot] += 32
                 assert state[32 + 2 * slot] == (0x40000000 + position909[slot] * body909.PHASE_STEP) & 0xffffffff
@@ -122,19 +128,39 @@ def component() -> tuple[dict, bytes]:
     live_tone, _, live_tone_error = render(16384, 6400, tone=0, tone_changes={3200: 32512})
     tone_runs.append(live_tone)
 
-    triangle = runner()
-    triangle_samples = []
-    for block in range(FRAMES // 32):
-        chunk, _ = triangle.call_raw(body_case("909-body", flags=int(block == 0), model=32512), True)
-        triangle_samples.extend(chunk)
-    triangle_reference = body909.reference(FRAMES)
-    triangle_error = max(abs(a-b) for a,b in zip(triangle_samples, triangle_reference))
-    assert triangle_error < 1e-5, triangle_error
-    triangle_measured = analysis.analyze(triangle_samples, body909.SAMPLE_RATE)
-    assert abs(triangle_measured["frequency"]["median_hz"] - body909.FREQUENCY) < .02
-    assert abs(triangle_measured["decay_positive"]["time_constant_s"] - body909.TAU) < .001
+    triangle_runs = []
+    triangle_cases = []
+    for raw in (0, 1, 16384, 16385, 32511, 32512):
+        machine = runner()
+        result = []
+        for block in range(FRAMES // 32):
+            chunk, _ = machine.call_raw(body_case("909-body", raw, flags=int(block == 0), model=32512), True)
+            result.extend(chunk)
+        error = max(abs(a-b) for a,b in zip(result, body909.reference(FRAMES, raw)))
+        assert error <= 1e-5, (raw, error)
+        measured = analysis.analyze(result[:min(FRAMES, int(5*body909.decay_tau(raw)*48000))], 48000)
+        assert abs(analysis.analyze(result,48000)["frequency"]["median_hz"]-body909.FREQUENCY) < .02
+        assert abs(measured["decay_positive"]["time_constant_s"]-body909.decay_tau(raw)) < .001
+        path = FOLDER / f"samples_909_{raw}.f32"
+        path.write_bytes(struct.pack(f"<{len(result)}f", *result))
+        triangle_cases.append(dict(raw=raw, maximum_error_fs=error,
+                                   expected_tau_s=body909.decay_tau(raw)))
+        triangle_runs.append(machine)
+        if raw == 16384:
+            triangle, triangle_samples, triangle_error, triangle_measured = machine, result, error, measured
     triangle_path = FOLDER / "samples_909.f32"
     triangle_path.write_bytes(struct.pack(f"<{len(triangle_samples)}f", *triangle_samples))
+    changes = {4096:32512, 8192:0}
+    live909 = runner()
+    live909_samples = []
+    current = 16384
+    for n in range(0, 12288, 32):
+        current = changes.get(n, current)
+        chunk, _ = live909.call_raw(body_case("909-live", current, flags=int(n == 0), model=32512), True)
+        live909_samples.extend(chunk)
+    live909_error = max(abs(a-b) for a,b in zip(live909_samples, body909.reference(12288, changes=changes)))
+    assert live909_error <= 1e-5, live909_error
+    triangle_runs.append(live909)
     triangle_retrigger, _ = triangle.call_raw(body_case("909-retrigger", model=32512), True)
     assert triangle_retrigger == triangle_samples[:32], "909 START did not reset phase/envelope"
 
@@ -162,7 +188,7 @@ def component() -> tuple[dict, bytes]:
                   project_revision=cpu.revision(cpu.ROOT),
                   elekloader_revision=cpu.revision(cpu.ROOT / "vendor/elekloader"),
                   emulator_revision=cpu.revision(cpu.ROOT / "vendor/digikit"),
-                  calls=policy.calls + live.calls + triangle.calls + sum(r[0].calls for r in rendered.values())
+                  calls=policy.calls + live.calls + sum(r.calls for r in triangle_runs) + sum(r[0].calls for r in rendered.values())
                         + sum(r.calls for r in tone_runs),
                   code_bytes=len(code), state_bytes=STATE_BYTES,
                   source_sha256=hashlib.sha256(SOURCE.read_bytes()).hexdigest(),
@@ -176,12 +202,13 @@ def component() -> tuple[dict, bytes]:
                   tone_cases=tone_cases, live_tone_change=dict(sample=3200, before_raw=0, after_raw=32512,
                                                              maximum_error_fs=live_tone_error),
                   body909=dict(frames=FRAMES, maximum_error_fs=triangle_error,
+                               decay_cases=triangle_cases, live_decay_maximum_error_fs=live909_error,
                                frequency_hz=triangle_measured["frequency"]["median_hz"],
                                decay_time_constant_s=triangle_measured["decay_positive"]["time_constant_s"],
                                samples_path=str(triangle_path),
                                samples_sha256=hashlib.sha256(triangle_path.read_bytes()).hexdigest(),
-                               worst_instructions=triangle.worst_instructions),
-                  worst_instructions=max(policy.worst_instructions, live.worst_instructions, triangle.worst_instructions,
+                               worst_instructions=max(r.worst_instructions for r in triangle_runs)),
+                  worst_instructions=max(policy.worst_instructions, live.worst_instructions, *(r.worst_instructions for r in triangle_runs),
                                          *(r[0].worst_instructions for r in rendered.values()),
                                          *(r.worst_instructions for r in tone_runs)),
                   c_reference=provenance,
@@ -189,9 +216,9 @@ def component() -> tuple[dict, bytes]:
                            "continuous live DECAY edit", "source-derived Tone RC and continuous edits",
                            "unloaded C47 coupling after Tone", "provisional full-chain reset on every START", "all 16 independent slots",
                            "START-only MODEL latch", "provisional same-model retrigger",
-                           "model-change body clear", "909 triangle and independent mixed models", "invalid-input atomicity",
+                           "model-change body clear", "909 triangle, unloaded RC Decay with live edits and independent mixed models", "invalid-input atomicity",
                            "state/output guards", "SDK context preservation"],
-                  unqualified=["808/909 circuit fidelity", "909 diode shaper, pitch/amp/attack circuits and controls",
+                  unqualified=["808/909 circuit fidelity", "909 diode shaper, pitch/attack circuits, complete VCA and pot taper",
                                "stock 808 Decay circuit and Tone pot taper calibration", "loaded output/buffer/C49/C50 network", "native OS integration",
                                "VST or hardware comparison", "real-device timing"])
     (FOLDER / "report.json").write_text(json.dumps(report, indent=2) + "\n")
