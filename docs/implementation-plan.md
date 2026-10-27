@@ -11,7 +11,8 @@ native integration checks, with provisional knob mapping. The
 devices, fixed internally at full level; native track level still controls
 volume. A [nominal 1 ms rectangular excitation](808-excitation.md) now replaces
 the instantaneous oscillator reset; edge shaping and physical forcing remain
-provisional. Current component/DT checks pass; DN/DN2 native checks are running.
+provisional. Current component and all three native functional checks pass; only the known DT
+reset checks fail in that full run.
 
 #25 now adds the first unshaped [909 triangle body](909-body.md) to those same
 mods. Its fixed pitch and START phase remain provisional audition values;
@@ -25,9 +26,11 @@ T2's stored MODEL, and the selector correctly follows the delivered 808 value.
 Tracing native CC handling versus STOP cleanup is still needed. The successful
 saved-909 T1 capture does not close this failed path. A one-PCM16-count DN
 baseline between captures is separately retained as a failed acceptance check
-in #20; all native 909 Decay endpoint checks pass. The DN full-run verdict stays
-failed on that bright-808-Tone baseline, while DT retains only #78 and DN2's
-tested scenario passes. These failures do not block independent engine work.
+in #20. The latest finite-excitation build passes DN's complete scenario and
+all three exact-zero baselines, but changing the waveform does not identify the
+old residue's cause or establish a general fix. Keep the historical failure open.
+DT retains only #78 and DN2's tested scenario passes. These gates do not block
+independent engine work.
 
 The product remains one mod per device containing 808 and 909 behind a saved
 per-sound/track MODEL selector. Different tracks/voices can select different

@@ -91,7 +91,7 @@ def component():
         uc.mem_write(address("blocks"), original)
         allowed = [(address("selection"), address("selection") + 96),
                    (address("reads"), address("reads") + 32),
-                   (address("body_state"), address("body_state") + 64),
+                   (address("body_state"), address("body_state") + 96),
                    (address("tone_state"), address("tone_state") + 32),
                    (address("coupling_state"), address("coupling_state") + 64), (STACK - 2048, STACK)]
         allowed += [(address("blocks") + 128 * t, address("blocks") + 128 * (t + 1))
@@ -195,7 +195,7 @@ def full_os():
         state = dict(active=None, callbacks=0, selected_callbacks=0, violations=[], controls=[],
                      body_peak=0, body909_peak=0, body909_callbacks=0, mixed_audible_blocks=0,
                      capture909=False, started909=False, samples909=[], words909=[], lock_edit=False, lock_display=[],
-                     decay_phase=None, decay_started=False, decay_samples=[], decay_words=[], tone_words=[])
+                     pulse_blocks=0, pulse_counts=set(), decay_phase=None, decay_started=False, decay_samples=[], decay_words=[], tone_words=[])
         state.update(coupling_blocks=0, coupling_error=0.0, coupling_difference=0)
         returns = set()
         def checked(fn):
@@ -229,6 +229,11 @@ def full_os():
                     state["coupling_blocks"] += 1
                     state["coupling_error"] = max(state["coupling_error"],error)
                     state["coupling_difference"] = max(state["coupling_difference"],max(abs(a-b) for a,b in zip(words,coupling["input"])))
+                    owner, expected = active["pulses"][track]
+                    remaining = word(owner+8)
+                    assert remaining == expected, "native 808 pulse length changed"
+                    state["pulse_counts"].add(remaining)
+                    state["pulse_blocks"] += 1
                     state["body_peak"] = max(state["body_peak"], peak)
                     assert peak < 0x40000000, "808 body exceeded fixed internal headroom"
                     if track == 0 and state["decay_phase"] and state["decay_started"]:
@@ -263,15 +268,16 @@ def full_os():
             state["active"] = dict(before=bytes(uc.mem_read(names["fw_track_blocks"], 1024)),
                                    machines=bytes(uc.mem_read(names["fw_render_machine"], 8)),
                                    controls=list(struct.unpack(">8h", uc.mem_read(names["fw_voice_params"], 16))))
-            state["active"].update(tones=set(),coupling={})
+            state["active"].update(tones=set(),coupling={},pulses={})
             state["active"]["return"] = ret
         session.at(names["x0x_dt_render"], checked(entered))
         def body_entered(_uc, _at, _size, _data):
-            if not state["decay_phase"]:
-                return
             sp = uc.reg_read(UC_M68K_REG_A7)
             owner, _output, start, decay = struct.unpack(">4I", uc.mem_read(sp + 4, 16))
-            if owner != names["body_state"]:
+            track, offset = divmod(owner-names["body_state"],12)
+            assert offset == 0 and 0 <= track < 8
+            state["active"]["pulses"][track] = (owner,16 if start else max(word(owner+8)-32,0))
+            if owner != names["body_state"] or not state["decay_phase"]:
                 return
             if start:
                 state["decay_started"] = True
@@ -630,6 +636,9 @@ def full_os():
             report["checked"].append("native project save and pattern reload")
         report["checked"].append("native mixed 808/909 tracks")
         assert state["coupling_blocks"] > 0 and state["coupling_difference"] > 0
+        assert state["pulse_counts"] == {0,16}, state["pulse_counts"]
+        report["excitation_808"] = dict(blocks=state["pulse_blocks"],counter_after_blocks=sorted(state["pulse_counts"]),
+            scope="actual native 808 counter: 48-sample rectangle spans 32+16 samples")
         report["coupling_808"] = dict(blocks=state["coupling_blocks"],
             maximum_entry_recurrence_error_fs=state["coupling_error"],
             maximum_input_output_difference_q31=state["coupling_difference"],

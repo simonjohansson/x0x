@@ -2,8 +2,9 @@
 
 The subsequent [808 finite-excitation increment](808-excitation.md) updates the
 shared payload to 1170 code bytes/512 private data bytes; the 909 algorithm is
-unchanged and its actual CPU comparisons still pass. Native requalification of
-the shared build is recorded with that increment. Earlier results below retain
+unchanged and its actual CPU comparisons still pass. Current native requalification of
+the shared build is recorded with that increment: DN/DN2 scenarios pass and DT
+retains only #78. The historical DN baseline remains an open investigation in #20. Earlier results below retain
 their original firmware/source identities.
 
 This [#25](https://github.com/simonjohansson/x0x/issues/25) increment adds an
@@ -151,7 +152,7 @@ waveform matching. Raw waveform comparison stays in the actual-ASM component
 suite; native tests separately inspect owned phase/envelope state and PCM.
 The isolated T1 note's early/late amplitude errors are 1.484e-7/4.364e-10 FS.
 
-## Live-Decay evidence
+## Historical live-Decay evidence before finite 808 excitation
 
 `mise run test` checks the independent model and C delivery; `mise run test:909:body` checks both actual ASM backends and matching outputs at raw
 0/1/16384/16385/32511/32512. Component runners additionally change Decay at
@@ -183,7 +184,7 @@ adding a fitted amplitude threshold. The four-second default tail and one-LSB
 seeded residues at all three Decay settings reach exact zero. Stock VCA/tail
 and physical retrigger behavior remain open.
 
-### Current native Decay evidence (27 October 2026)
+### Historical native Decay evidence before finite 808 excitation
 
 | Device | New 909 Decay evidence | Native regression |
 | --- | --- | --- |
@@ -196,15 +197,15 @@ Decay history. Generic live-control/phase snapshots cannot infer that history
 from the current knob value. Its raw callback proof remains the actual-ASM
 component comparison, separate from stock-processed buffers and native PCM.
 
-Current firmware SHA256:
+Firmware SHA256 at that increment:
 
 - DT: `5b2ec3a2f15ef20d138bc8747a4a034075508db6b17a6b46cc43fc2152cd10a8`.
 - DN: `0eb802ef5cdfcfb75e7f4b8855894516da8c5199628a3b7ec94ff2e4ce1619a4`.
 - DN2: `bc41a76aeff3119921741a1d2e2329821974f3547131022c2b01637b049b2ac0`.
 
 New native captures are `out/{dt,dn,dn2}/silent/909-decay-{short,long}-native.wav`;
-DN2's default is `native-909.wav`. No capture is normalized. The DN bright-Tone
-baseline remains one count for all sixty 100 ms windows. That failed
+DN2's default is `native-909.wav`. No capture is normalized. At that increment, the DN bright-Tone
+baseline remained one count for all sixty 100 ms windows. That failed
 check is retained in #20 and `out/dn/silent/909-decay-6s-baseline-failure.json`.
 Longer waiting and the 909 fixed-point cleanup do not resolve it. Independent
 909 endpoint checks pass, but the overall native verdict remains failed and

@@ -177,12 +177,15 @@ a provisional stock-pot mapping; ATTK remains ignored in 808 mode. Existing
 reports/samples live in `out/coldfire/{body808,tone808}` and `out/sharc/body808`;
 native captures remain under `out/{dt,dn,dn2}/silent`. See [808-body.md](808-body.md)
 and [808-tone.md](808-tone.md) for historical 808 evidence; [808-coupling.md](808-coupling.md)
-records the current chain. [909-body.md](909-body.md) records
+records its historical chain; [808-excitation.md](808-excitation.md) records the
+current finite-drive implementation, private counters and native evidence.
+[909-body.md](909-body.md) records
 the triangle, unloaded RC Decay increment and remaining circuit gaps. Current
-909 Decay endpoints pass on DT/DN/DN2. DN's full verdict still fails solely on a
-one-PCM16-count baseline before the bright 808 Tone capture (#20); the runner
-retains that failed check while completing independent checks. No threshold or
-waveform tolerance is relaxed.
+909 Decay endpoints pass on DT/DN/DN2. The current finite-808-drive build also
+passes DN's full scenario and all exact-zero capture baselines. The historical
+one-count baseline in #20 remains open because changing the waveform does not
+identify its cause. Failed baseline checks still produce a failed overall verdict;
+no threshold or waveform tolerance is relaxed.
 DN2's passing scenario uses its verified saved-909 T1 for the isolated capture;
 the separate late T2 MODEL transition is unqualified and tracked in #80.
 

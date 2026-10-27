@@ -83,12 +83,35 @@ for installed-mod evidence. Component proof is not native or VST qualification.
 
 ## Native integration status
 
-DT's current native run observes 28685 actual pulse/coupling blocks with remaining
-counts [0,16] across 39728 callbacks. Controls, Decay/Tone, 909 endpoints, p-lock/LFO,
-persistence and simultaneous models pass; only the already-deferred #78 parameter
-and page resets fail. Native DN/DN2 qualification is running at this increment.
-The independent C and DSP test layers remain separately runnable.
+| Device | Current native evidence | Verdict |
+| --- | --- | --- |
+| DT 1.54 | 28685 actual pulse/coupling blocks across 39728 callbacks; counter after blocks is 16 then 0; first native PCM peak 4574/32768 | Functional checks pass; only known #78 parameter/page resets fail |
+| DN 1.44 | 92401 pulse/coupling blocks across 100788 callbacks; counter values [0,16]; first 808 capture peak 6670/32768 | Current complete scenario passes, including all three exact-zero capture baselines |
+| DN2 1.12 | Private pulse bank is consumed after the settled note; native 808 PCM peak 0.021596 FS; precise 32+16 timing remains actual-ASM component proof | Tested scenario passes 31879 DSP frames, with no halt/missing blocks |
 
-VST #2 and physical-device validation remain outside this emulator-only phase.
+All three retain native Decay/Tone, 909 endpoints, p-lock/LFO, save/reload,
+MODEL latching, simultaneous models and unrelated stock-output checks. DN2's
+stock-processed buffers/PCM remain distinct from raw callback samples and owned
+state. Independent C and DSP test layers remain separately runnable.
+
+DN's current exact-zero baselines pass after the excitation changes the input
+waveform. This does not identify or establish a general fix for the historical
+one-count failure. Keep #20 open and retain its failed two-/six-second reports;
+no threshold, gain fitting, baseline subtraction or longer workaround was added
+for this pulse increment. #80's late DN2 delivery path was not re-probed.
+
+Firmware SHA256:
+
+- DT: `870a8fac11859d5aea21110e491400e62d682e98752af6d0aeee564fe2fb5acf`.
+- DN: `36f92fa0aff0bb52b4f7297c995fb0f2d66a126ae4804e1eb3f277ba3a616c23`.
+- DN2: `a58b304c13f55e8b168786061cc2cb8e8432255d4e43f386822b56772433783f`.
+
+Current reports are `out/{dt,dn}/silent/native-report.json` and
+`out/dn2/silent/native-boot-report.json`. Unnormalized first-hit PCM captures are
+`out/dt/silent/native-808.wav`, `out/dn/silent/808-native.wav` and
+`out/dn2/silent/native-808.wav`; Decay/Tone endpoints remain alongside them.
+
+Subsample edges, diode discretization/oversampling and alias qualification remain
+circuit work. VST #2 and physical-device validation remain outside this emulator-only phase.
 The pre-existing DN baseline gate #20 and late DN2 delivery gate #80 remain open;
 this pulse change is not a fix or qualification of either historical failure.

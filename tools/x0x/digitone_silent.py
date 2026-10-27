@@ -69,7 +69,7 @@ def full_os():
     state = dict(active=None, callbacks=0, starts=[], violations=[], observations=[], phase="", samples=[], decay_text=[],
                  body_nonzero=0, body_peak=0, triangle_nonzero=0, triangle_peak=0,
                  triangle_error=0.0, triangle_samples=[None] * 8, triangle_attenuation=[0.0] * 8, audio_capture=None,
-                 coupling_blocks=0, coupling_error=0.0, coupling_difference=0)
+                 coupling_blocks=0, coupling_error=0.0, coupling_difference=0, pulse_blocks=0, pulse_counts=set())
     session = None
     try:
         with (FOLDER / "native-boot.log").open("w") as log, contextlib.redirect_stdout(log):
@@ -114,6 +114,10 @@ def full_os():
                 state["coupling_error"] = max(state["coupling_error"], error)
                 state["coupling_difference"] = max(state["coupling_difference"], max(abs(a-b) for a,b in zip(words,coupling["input"])))
                 state["triangle_samples"][active["slot"]] = None
+                remaining = word(names["body"] + 12*active["slot"] + 8)
+                assert remaining == active["expected_pulse"], "native 808 pulse length changed"
+                state["pulse_counts"].add(remaining)
+                state["pulse_blocks"] += 1
                 state["body_peak"] = max(state["body_peak"], peak)
                 state["body_nonzero"] += peak != 0
             else:
@@ -167,7 +171,7 @@ def full_os():
             assert active is not None, "909 ASM ran outside the machine callback"
             sp = uc.reg_read(UC_M68K_REG_A7)
             saved, output, start, decay = struct.unpack(">4I", uc.mem_read(sp + 4, 16))
-            assert saved == names["body"] + active["slot"] * 8 and output == names["fw_voices"] + active["slot"] * 128
+            assert saved == names["body"] + active["slot"] * 12 and output == names["fw_voices"] + active["slot"] * 128
             assert start == active["fresh"], "909 lost the native START flag"
             active["triangle"] = True
             active["decay909"] = decay
@@ -175,6 +179,15 @@ def full_os():
             if capture is not None and active["track"] == capture.get("track", 0) and capture.get("model") == 1 and (active["fresh"] or active["slot"] == capture["slot"]):
                 capture["decay_words"].append(decay)
         session.at(names["x0x_909_body"], checked(triangle_entered))
+        def pulse_entered(_uc, _at, _size, _data):
+            active = state["active"]
+            assert active is not None
+            sp = uc.reg_read(UC_M68K_REG_A7)
+            owner, output, start = struct.unpack(">3I",uc.mem_read(sp+4,12))
+            assert owner == names["body"]+12*active["slot"] and start == active["fresh"]
+            assert output == names["fw_voices"]+128*active["slot"]
+            active["expected_pulse"] = 16 if start else max(word(owner+8)-32,0)
+        session.at(names["x0x_808_body"],checked(pulse_entered))
         def coupling_entered(_uc, _at, _size, _data):
             active = state["active"]
             assert active is not None and active.get("tone") and not active.get("coupling"), "coupling must follow Tone once per 808 block"
@@ -430,7 +443,7 @@ def full_os():
             report["tone_pre_capture_peak_trace"] = quiet_peaks
             report["tone_pre_capture_pcm16_peak"] = quiet_peaks[-1]
             if any(quiet):
-                report["tone_pre_capture_body_state"] = list(struct.unpack(">16i",uc.mem_read(names["body"],64)))
+                report["tone_pre_capture_body_state"] = list(struct.unpack(">24i",uc.mem_read(names["body"],96)))
                 report["tone_pre_capture_selection"] = list(struct.unpack(">24I",uc.mem_read(names["selection"],96)))
             report["tone_pre_capture_wait_ms"] = (quiet_wait+1)*100
             report["capture_baselines"]["tone_"+name] = dict(peak_pcm16=quiet_peaks[-1],
@@ -513,6 +526,9 @@ def full_os():
             report["decay_909"][label] = audio909
         report["audio_909"] = report["decay_909"]["default"]
         assert not state["active"] and state["callbacks"] > 0 and state["body_nonzero"] > 0 and state["triangle_nonzero"] > 0
+        assert state["pulse_counts"] == {0,16}, state["pulse_counts"]
+        report["excitation_808"] = dict(blocks=state["pulse_blocks"],counter_after_blocks=sorted(state["pulse_counts"]),
+            scope="actual native 808 counter: 48-sample rectangle spans 32+16 samples")
         report["render_audio"] = dict(nonzero_808_blocks=state["body_nonzero"], peak_q31=state["body_peak"],
                                       nonzero_909_blocks=state["triangle_nonzero"], peak_909_q31=state["triangle_peak"],
                                       maximum_909_reference_error_fs=state["triangle_error"])
