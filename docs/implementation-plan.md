@@ -5,7 +5,7 @@ mod milestones are accepted, with the DT reset bug deferred to #78. In #9, the
 [first audible 808 body](808-body.md) now runs in all three emulators. It is a
 provisional damped sine, now with [settled pitch calibrated to 47.65 Hz](808-pitch.md).
 Live Decay uses a [reference-informed three-point range](808-decay.md),
-with actual CPU and native-control checks. This remains a provisional mapping. The subsequent
+with actual CPU and native-control checks. This remains a provisional mapping. The existing
 [source-derived Tone RC filter](808-tone.md) also passes both CPU and all three
 native integration checks, with provisional knob mapping. The
 [C47/VR4 coupling RC](808-coupling.md) is also integrated and tested on all three
@@ -228,7 +228,7 @@ halt/missing blocks. The original HTML report remains unchanged.
 
 Keep #9/#79 open for initial pitch/forcing, stock Decay feedback/control curves,
 loaded Tone/output stages and faithful retrigger. The subsequent Decay increment
-corrects the coarse range; the full curve is still unqualified; full-grid/held-out fidelity and #80 remain open. Component
+corrects the coarse range; the full curve remains unqualified. Full-grid/held-out fidelity and #80 stay open. Component
 precision does not qualify reference or native acceptance gates.
 
 ## Reference-informed 808 Decay — 27 October 2026
@@ -244,3 +244,11 @@ Continue the existing model work, not new features or ticket trees: initial
 excitation/pitch, stock feedback/control mapping, loaded output and retrigger.
 The HTML stays unchanged at the user's request. Keep emulator/component, native
 control/audio and reference-fidelity evidence separate, with #78/#20/#80 open.
+
+The Decay increment passes both CPU suites and all three native functional
+scenarios. DT retains only #78 resets; DN currently passes all zero baselines
+without resolving its historical #20 failure; DN2 passes with no halt/missing
+blocks. All five raw reference residuals improve. The dark/short fit still
+differs (29.4 vs 25.4 ms), and interior knob positions remain approximate.
+Keep those in #9/#2/#79 while proceeding with the missing initial pitch/forcing
+and stock feedback/control model. See [current evidence](808-decay.md).

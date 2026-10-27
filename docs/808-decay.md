@@ -77,5 +77,40 @@ MODEL, ownership and context checks remain passing, including existing 909 audio
 DT native functional checks pass across 39,611 callbacks; full acceptance fails
 only known #78 parameter/page resets. Firmware SHA256:
 `90275b62fb3d89f08da4f3c1dd50c20388c9f2a933866f6185f1fa9178d5814a`.
-DN/DN2 native checks and full two-second five-setting measurements are still
-running at this code increment; component passes do not qualify those results.
+DN's native scenario passes across 100,778 callbacks, including all three
+exact-zero capture baselines. The earlier #20 one-count residue remains an
+unresolved historical acceptance gate; this waveform change does not establish
+a general fix. Firmware SHA256:
+`1a30b9576c8b74de6ecb2d210eecb5c540ac6d9eaca6712decfcb624dd1ca470`.
+DN2's native scenario passes across 31,879 DSP frames with no halt
+or missing blocks. Actual body-state time constants are
+33.300010/366.000485 ms at the two endpoints. Native controls,
+locks/LFO, reload, mixed models, Tone/coupling and 909 checks pass in this tested
+scenario. #80's separate late MODEL path is unqualified. Firmware SHA256:
+`c539ea0dc93cf1b4ceade07bf561a8e12da98b366b5b7258c3ffc29d70649185`.
+Fresh two-second comparison results follow below; they are separate from
+downstream/native PCM and circuit-fidelity evidence.
+
+## Two-second five-setting results
+
+| Setting | Reference / ColdFire / SHARC decay fit ms | Raw waveform RMS FS before / after |
+| --- | --- | --- |
+| Default | 143.013 / 143.264 / 143.263 | 0.03154 / 0.02770 |
+| Dark, short | 25.443 / 29.439 / 29.440 | 0.03422 / 0.02034 |
+| Bright, short | 29.151 / 29.512 / 29.512 | 0.03503 / 0.02126 |
+| Dark, long | 365.809 / 366.557 / 366.563 | 0.11633 / 0.08514 |
+| Bright, long | 364.795 / 366.550 / 366.556 | 0.11790 / 0.08638 |
+
+Both CPUs were freshly executed for 96,000 samples per setting. Before means
+the previous 47.65 Hz pitch increment, with its old Decay range. All five raw
+residuals improve, but none is declared a fidelity pass. Dark/short still has
+a roughly 4 ms positive-peak fit difference; initial pitch/excitation, phase,
+Tone/loading and the uncalibrated interior curve remain visible limitations.
+Detailed measures and executable/source hashes are retained locally in
+`out/reference/808-decay/measurements.json`. No fitted gain, onset alignment,
+held-out audio or changed fidelity tolerances were used. The HTML is unchanged.
+
+Across the full two-second comparison, maximum analytical errors are
+1.478e-6 FS (ColdFire), 4.748e-7 FS (SHARC), and 1.714e-6 FS between CPUs, below
+the existing 1e-5 FS numeric limit. These are numeric-model checks, not a
+software-reference acceptance tolerance.
