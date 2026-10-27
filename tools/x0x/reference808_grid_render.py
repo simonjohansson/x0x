@@ -45,7 +45,10 @@ def render(backend, output, captures, frozen_metadata):
             proofs[name] = dict(source_sha256=receipt['source_sha256'], image_sha256=digest(image),
                                 component_report_sha256=digest(target/'report.json'))
     else:
-        from reference_grid_sharc import FastRunner, prepare
+        try:
+            from .reference_grid_sharc import FastRunner, prepare
+        except ImportError:
+            from reference_grid_sharc import FastRunner, prepare
         support = output/'native-support'
         proofs = prepare(frozen_metadata, support)
         machine = FastRunner(support)
@@ -93,10 +96,10 @@ def render(backend, output, captures, frozen_metadata):
         guards='ColdFire normal accepted per-call/context/write guards; SHARC NativeCore per-call return/trap/boundary guards plus separate architectural preflight; full-tail independentoracle1e-5',
         wall_seconds=time.monotonic()-started,normalization=False,alignment_samples=0,fitted_gain=False)
     (folder/'report.json').write_text(json.dumps(report,indent=2)+'\n')
-    render_histories(backend,output,captures,kernels if backend=='coldfire' else support)
+    render_histories(backend,output,captures,kernels if backend=='coldfire' else support,frozen_metadata['commit'])
 
 
-def render_histories(backend, output, captures, images_or_support):
+def render_histories(backend, output, captures, images_or_support, commit):
     import math
     protocol = json.loads((captures/'protocol.json').read_text())
     tests = [t for t in protocol['tests'] if t['split']=='history']; assert len(tests)==7
@@ -107,7 +110,10 @@ def render_histories(backend, output, captures, images_or_support):
         from x0x.coldfire_coupling808 import Runner as Coupling
         images = images_or_support
     else:
-        from reference_grid_sharc import FastRunner
+        try:
+            from .reference_grid_sharc import FastRunner
+        except ImportError:
+            from reference_grid_sharc import FastRunner
         from x0x import sharc_selector
     records = []
     for test in tests:
@@ -136,7 +142,7 @@ def render_histories(backend, output, captures, images_or_support):
         records.append(dict(name=test['name'],tone_displayed=tone,decay_displayed=decay,
             tone_raw=raw(tone),decay_raw=raw(decay),frames=frames,sample_rate=RATE,
             path=path.name,sha256=digest(path),schedule=schedule))
-    (folder/'report.json').write_text(json.dumps(dict(commit='65aeaf7a76a55248903f2eec2b464752711defd7',
+    (folder/'report.json').write_text(json.dumps(dict(commit=commit,
         sample_rate=RATE,cases=records,declared_test_voice='one explicit componentvoice; no nativeallocatoridentity',
         START_policy='body,Tone,C47 clear; NOTE-OFF inert',scheduling='ceil32 from scheduledMIDI, noalignment',
         driver_sha256=digest(Path(__file__))),indent=2)+'\n')

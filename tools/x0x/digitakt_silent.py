@@ -11,7 +11,7 @@ import sys
 import time
 import wave
 
-from . import audio, body808, body909, coupling808, cpu, firmware
+from . import audio, body808, body909, coupling808, cpu, firmware, tone808
 from .digitakt_adapter import BASE, STACK, STOP
 
 ROOT = cpu.ROOT
@@ -584,7 +584,7 @@ def full_os():
         # Same native track/AMP/velocity, different B values; compare actual DSP tails.
         send([0x80, 60, 0, 0x81, 60, 0])
         report["decay_audio"] = {}
-        for label, position in (("short", 0), ("long", 127)):
+        for label, position in (("short", 0), ("lower-64", 32), ("lower-96", 48), ("long", 127)):
             send([0xb0, 16, 64, 0xb0, 17, position, 0xb0, 18, 64, 0xb0, 21, 0])
             wait(600)
             state["decay_phase"] = label
@@ -596,6 +596,15 @@ def full_os():
             state["decay_phase"] = None
             samples = state["decay_samples"]
             assert len(samples) >= 19200 and state["decay_words"], label
+            assert set(state["decay_words"]) == {position << 8}, (label, state["decay_words"])
+            oracle = {}
+            if label.startswith("lower-"):
+                expected = coupling808.filter_reference(tone808.filter_reference(
+                    body808.reference(len(samples), position << 8)))
+                error = max(abs(actual / 2**31 - wanted) for actual, wanted in zip(samples, expected))
+                assert error <= 1e-5, (label, error)
+                oracle = dict(maximum_reference_error_fs=error, reference_frames=len(samples),
+                              reference_scope="fresh actual callback body/Tone/C47 samples, no alignment or gain correction")
             early = sum(x*x for x in samples[:4800])
             late = sum(x*x for x in samples[14400:19200])
             assert early > 0
@@ -606,7 +615,7 @@ def full_os():
             audio.write_wav(FOLDER / f"decay-{label}-raw.wav", [x/2**31 for x in samples], 48000)
             pcm_peak = max(abs(x) for x in struct.unpack("<"+"h"*(len(pcm)//2), pcm))
             assert 0 < pcm_peak < 32767, label
-            report["decay_audio"][label] = dict(target=position, delivered_min=min(state["decay_words"]),
+            report["decay_audio"][label] = dict(**oracle, target=position, delivered_min=min(state["decay_words"]),
                 delivered_max=max(state["decay_words"]), frames=len(samples),
                 late_early_energy_ratio=late/early, native_pcm_peak=pcm_peak,
                 native_wav=str(FOLDER / f"decay-{label}-native.wav"),

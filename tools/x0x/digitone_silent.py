@@ -11,7 +11,7 @@ import sys
 import time
 import wave
 
-from . import body808, body909, coupling808, cpu, firmware
+from . import body808, body909, coupling808, cpu, firmware, tone808
 
 ROOT = cpu.ROOT
 SOURCE = ROOT / "machines/digitone/machine.c"
@@ -307,17 +307,38 @@ def full_os():
                                peak_pcm16=pcm_peak, normalization="none", source="isolated native note on the 808 track")
         assert state["starts"], "native key produced no x0x START"
         report["808"] = state["starts"][-1]
+        def target909(knob, index, target, track=3):
+            trace = dict(knob=knob, target=target, observed=[])
+            report.setdefault("control_targeting_808" if track == 0 else "control_targeting_909", []).append(trace)
+            for _ in range(256):
+                actual = stored(track)[index]
+                trace["observed"].append(actual)
+                if actual == target:
+                    if track == 3:
+                        wait()
+                    return
+                # Native encoder acceleration makes bulk detents non-linear.
+                delta = target-actual
+                amount = (1 if delta > 0 else -1) * (8 if abs(delta) > 16*256 else 1)
+                session.turn(session.encoder(knob), amount, after_ms=150)
+                assert not session.halted and not state["violations"], (session.halted,state["violations"])
+            raise AssertionError(("909 native control target not reached", trace))
         # The same isolated note at both native Decay endpoints, before adding locks or LFOs.
         response = {}
-        for name, target, detents in (("short", 0, -320), ("long", 32512, 320)):
-            turn("B", detents)
+        for name, target, detents in (("short", 0, -320), ("lower-64", 8192, 32),
+                                      ("lower-96", 12288, 16), ("long", 32512, 320)):
+            if name.startswith("lower-"):
+                target909("B", 2, target, track=0)
+            else:
+                turn("B", detents)
             assert stored()[2] == target, (name, stored())
             wait(500)
             state["phase"] = "decay-" + name
-            state["audio_capture"] = dict(slot=None, words=[])
+            state["audio_capture"] = dict(track=0,slot=None,words=[],tone_words=[],decay_words=[],dry=[])
             begin = len(session.pcm)
             session.press(session.code("9")); wait(800)
             raw = state["audio_capture"]["words"]
+            captured_controls = state["audio_capture"]
             state["audio_capture"] = None
             native = bytes(session.pcm[begin:])
             session.release(session.code("9")); wait(300)
@@ -331,7 +352,18 @@ def full_os():
                 early_power = sum(v * v for v in early) / len(early)
                 assert early_power > 0, "decay capture has no attack"
                 return math.sqrt(sum(v * v for v in late) / len(late) / early_power)
-            response[name] = dict(raw=target, raw_late_early_rms=ratio(raw, 1),
+            oracle = {}
+            if name.startswith("lower-"):
+                assert set(captured_controls["decay_words"]) == {target}, (name,captured_controls["decay_words"])
+                tones = set(captured_controls["tone_words"])
+                assert tones == {stored()[1]}, (name,tones,stored())
+                tone_raw = tones.pop()
+                expected = coupling808.filter_reference(tone808.filter_reference(body808.reference(len(raw), target),tone_raw))
+                error = max(abs(actual / 2**31 - wanted) for actual, wanted in zip(raw, expected))
+                assert error <= 1e-5, (name, error)
+                oracle = dict(tone_raw=tone_raw,maximum_reference_error_fs=error, reference_frames=len(raw),
+                              reference_scope="fresh actual callback body/Tone/C47 samples, no alignment or gain correction")
+            response[name] = dict(**oracle, raw=target, raw_late_early_rms=ratio(raw, 1),
                                   native_late_early_rms=ratio(pcm_words, 2), raw_frames=len(raw),
                                   native_frames=len(native)//4)
             for kind, data, channels, width in (("raw", struct.pack("<" + "i" * len(raw), *raw), 1, 4),
@@ -517,21 +549,6 @@ def full_os():
         report["decay_909"] = {}
         cases909 = (("default",16384,16384), ("short",0,16384), ("long",32512,16384),
                     ("tune-low",16384,0), ("tune-high",16384,32512))
-        def target909(knob, index, target):
-            trace = dict(knob=knob, target=target, observed=[])
-            report.setdefault("control_targeting_909", []).append(trace)
-            for _ in range(256):
-                actual = stored(3)[index]
-                trace["observed"].append(actual)
-                if actual == target:
-                    wait()
-                    return
-                # Native encoder acceleration makes bulk detents non-linear.
-                delta = target-actual
-                amount = (1 if delta > 0 else -1) * (8 if abs(delta) > 16*256 else 1)
-                session.turn(session.encoder(knob), amount, after_ms=150)
-                assert not session.halted and not state["violations"], (session.halted,state["violations"])
-            raise AssertionError(("909 native control target not reached", trace))
         for label, raw, tune in cases909:
             target909("B",2,raw)
             target909("A",1,tune)

@@ -20,6 +20,18 @@ class Body808Tests(unittest.TestCase):
 
 
 class Decay808Tests(unittest.TestCase):
+    def test_lower_curve_corrects_interiors_and_preserves_all_upper_words(self):
+        import math
+        from x0x.body808 import decay_tau, retention, RETENTION_DEFAULT, RETENTION_MAX
+        for raw, tau in ((0, .0333), (4096, .04015625),
+                         (8192, .060725), (12288, .09500625), (16384, .143)):
+            self.assertAlmostEqual(decay_tau(raw), tau, delta=1e-12)
+        for raw in range(16384, 32513):
+            previous = RETENTION_DEFAULT + (RETENTION_MAX-RETENTION_DEFAULT)*(raw-16384)/16128
+            self.assertEqual(retention(raw), previous)
+        for raw in (0, 16384, 32512):
+            self.assertTrue(math.isfinite(retention(raw)))
+
     def test_feedback_positions_give_monotonic_decay_without_changing_pitch(self):
         from x0x.body808 import decay_tau
         lengths = []
@@ -55,6 +67,17 @@ class Decay808Tests(unittest.TestCase):
         for raw in (-1, 32513, True, 64.5):
             with self.assertRaises(ValueError):
                 retention(raw)
+
+    def test_live_interior_changes_keep_the_existing_phase_and_state_policy(self):
+        from x0x.body808 import retention
+        switch = 3200
+        for before, after in ((4096, 8193), (12288, 24576), (24576, 8191)):
+            actual = reference(6400, before, {switch: after})
+            baseline = reference(6400, before)
+            self.assertEqual(actual[:switch], baseline[:switch])
+            n = switch + 200
+            expected = baseline[n]*(retention(after)/retention(before))**(n+1-switch)
+            self.assertAlmostEqual(actual[n], expected, places=11)
 
 
 class Excitation808Tests(unittest.TestCase):

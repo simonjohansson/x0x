@@ -115,7 +115,8 @@ def run(folder=None):
     image, _ = cpu.build_coldfire(folder, combined)
     cases, default_words, worst = [], [], 0
     frames = body808.SAMPLE_RATE // 2
-    for raw in (0, 1, 16383, 16384, 16385, 32511, 32512):
+    for raw in (0, 1, 4096, 8191, 8192, 8193, 12288,
+                16383, 16384, 16385, 32511, 32512):
         runner = Runner(image, state_words=5)
         assert runner.render(decay_raw=raw) == [0] * 32, "untriggered zero state is not silent"
         words = []
@@ -166,6 +167,14 @@ def run(folder=None):
     live_error = max(abs(a - b) for a, b in zip(live, expected))
     assert live_error <= 1e-5, f"live decay error {live_error} exceeds 1e-5 FS"
     (folder / "samples_live.json").write_text(json.dumps(live) + "\n")
+    interior, interior_samples, raw = Runner(image, state_words=5), [], 4096
+    interior_changes = {3200: 8193, 8000: 12288, 16000: 24576}
+    for sample in range(0, frames, 32):
+        raw = interior_changes.get(sample, raw)
+        interior_samples.extend(word/2**31 for word in interior.render(start=int(sample==0), decay_raw=raw))
+    interior_expected = body808.reference(frames, 4096, interior_changes)
+    interior_error = max(abs(a-b) for a,b in zip(interior_samples, interior_expected))
+    assert interior_error <= 1e-5, f"live interior Decay error {interior_error} exceeds 1e-5 FS"
     samples_path = folder / "samples.json"
     samples_path.write_text(json.dumps(default_samples) + "\n")
     audio.write_wav(folder / "body808.wav", default_samples, body808.SAMPLE_RATE)
@@ -176,6 +185,7 @@ def run(folder=None):
                   wrapper_source_sha256=hashlib.sha256(wrapper_source.read_bytes()).hexdigest(),
                   image_sha256=hashlib.sha256(image).hexdigest(), frames=frames,
                   cases=cases, live_decay_peak_error_fs=live_error,
+                  live_interior_peak_error_fs=interior_error,
                   waveform_peak_error_fs=default_case["waveform_peak_error_fs"],
                   frequency_hz=default_case["frequency_hz"], decay_tau_s=default_case["decay_tau_s"],
                   onset_sample=default_measures["onset_sample"], peak_fs=default_measures["peak_fs"],

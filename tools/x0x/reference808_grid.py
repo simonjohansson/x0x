@@ -123,11 +123,13 @@ def references(captures):
         yield receipt, data[RATE:, 0].copy()
 
 
-def load_backend(folder):
-    import numpy as np
+def load_backend(folder, revision=COMMIT):
     report = json.loads((folder / 'report.json').read_text())
-    assert report['commit'] == COMMIT and report['frames'] == FRAMES
+    assert report['commit'] == revision, 'render revision differs from selected comparison'
+    assert report['status'] == 'passed', 'numeric render is not qualified'
+    assert report['frames'] == FRAMES
     assert report['sample_rate'] == RATE and len(report['cases']) == 81
+    import numpy as np
     result = {}
     for row in report['cases']:
         key = row['tone_displayed'], row['decay_displayed']
@@ -141,9 +143,9 @@ def load_backend(folder):
     return report, result
 
 
-def compare(captures, output):
+def compare(captures, output, revision=COMMIT):
     import numpy as np
-    backends = {b: load_backend(output / b) for b in ('coldfire', 'sharc')}
+    backends = {b: load_backend(output / b, revision) for b in ('coldfire', 'sharc')}
     assert set(backends['coldfire'][1]) == set(backends['sharc'][1])
     cpu_features = {b: {key: features(data) for key, (_, data) in rows.items()}
                     for b, (_, rows) in backends.items()}
@@ -179,7 +181,7 @@ def compare(captures, output):
         ranked[backend] = sorted(ranking, key=lambda r: r['mean_rms_error_fs'], reverse=True)
     result = dict(measurement_driver_sha256=digest(Path(__file__)),
         scope='full808 training grid only, actual isolated CPU components, not native OS or fidelity acceptance',
-        commit=COMMIT, sample_rate=RATE, frames=FRAMES, reference_recordings=243, settings=81, repeats_per_setting=3,
+        commit=revision, sample_rate=RATE, frames=FRAMES, reference_recordings=243, settings=81, repeats_per_setting=3,
         posttrigger_window_s=[0,12], feature_window_s=[0,2], reference_multiplier=4,
         gain_reason='verifiedREAPERtrackVOLPAN.25/master1; as-recorded residuals retained',
         fitted_gain=False, alignment_samples=0, held_out_audio_read=False, html_changed=False,
@@ -198,7 +200,7 @@ def compare(captures, output):
     return result
 
 
-def compare_histories(captures, output):
+def compare_histories(captures, output, revision=COMMIT):
     import numpy as np
     import soundfile as sf
     p, OUT = captures, output
@@ -209,8 +211,9 @@ def compare_histories(captures, output):
     with (p/'settings.tsv').open() as stream:
      for row in csv.DictReader(stream,delimiter='\t'):
       if row['capture'] in readbacks:readbacks[row['capture']][int(row['index'])]=row
-    fixed=json.loads((OUT/'reference-validation.json').read_text())['rows'][0]['fixed_source_controls']
+    fixed=json.loads((OUT/'measurements.json').read_text())['records'][0]['reference']['fixed_source_controls']
     backends={b:json.loads((OUT/f'history/{b}-current/report.json').read_text()) for b in ('coldfire','sharc')}
+    assert all(report['commit'] == revision for report in backends.values()), 'history render revision differs'
     by_backend={b:{r['name']:r for r in report['cases']} for b,report in backends.items()}
     result=[]
     for name,test in tests.items():
@@ -235,7 +238,7 @@ def compare_histories(captures, output):
        measured[backend]['per_reference_trigger'].append(dict(reference_onset_sample=onset,first25ms_residual=waveform((actual-reference*4)[onset:onset+1200]),first150ms_residual=waveform((actual-reference*4)[onset:onset+7200])))
      error=float(np.max(np.abs(cpu_data['coldfire']-cpu_data['sharc'])))
      result.append(dict(name=name,protocol=test,reference_sha256=records[name]['sha256'],project_sha256=digest(project),frames=len(reference),reference_as_recorded=waveform(reference),reference_host_gain_removed=waveform(reference*4),backends=measured,cpu_maximum_difference_fs=error,cpu_numeric_limit_fs=1e-5,cpu_status='passed' if error<=1e-5 else 'failed'))
-    output=dict(scope='seven explicit declared-single-voice component timelines; not inferred native allocator identity or retrigger fidelity acceptance',commit='65aeaf7a76a55248903f2eec2b464752711defd7',records=result,reference_multiplier=4,fitted_gain=False,alignment_samples=0,held_out_audio_read=False,actual_start_scheduling='ceil scheduled MIDI onto32sample blocks; musical event3.125s is16sampleslate; retained visibly, never onset-aligned',START_policy='acceptedbody,Tone,C47clear; priorretainedfiltertrial excluded',rejected_alternate='history/coldfire is initial retainedTone/C47policy trial, not currentmodbaseline',input_metadata_sha256={f:digest(p/f) for f in ('protocol.json','recordings.csv','settings.tsv')},renderer_report_sha256={b:digest(OUT/f'history/{b}-current/report.json') for b in backends},driver_sha256=digest(Path(__file__)))
+    output=dict(scope='seven explicit declared-single-voice component timelines; not inferred native allocator identity or retrigger fidelity acceptance',commit=revision,records=result,reference_multiplier=4,fitted_gain=False,alignment_samples=0,held_out_audio_read=False,actual_start_scheduling='ceil scheduled MIDI onto32sample blocks; musical event3.125s is16sampleslate; retained visibly, never onset-aligned',START_policy='acceptedbody,Tone,C47clear; priorretainedfiltertrial excluded',rejected_alternate=('history/coldfire is initial retainedTone/C47policy trial, not currentmodbaseline' if revision==COMMIT else None),input_metadata_sha256={f:digest(p/f) for f in ('protocol.json','recordings.csv','settings.tsv')},renderer_report_sha256={b:digest(OUT/f'history/{b}-current/report.json') for b in backends},driver_sha256=digest(Path(__file__)))
     (OUT/'history/measurements.json').write_text(json.dumps(output,indent=2,allow_nan=False)+'\n')
     print(json.dumps({'records':len(result),'maximum_cpu_difference_fs':max(r['cpu_maximum_difference_fs'] for r in result),'failures':[r['name'] for r in result if r['cpu_status']!='passed']}))
 
@@ -245,26 +248,33 @@ def main():
     parser.add_argument('--captures',type=Path,default=Path('research/reference/808/captures'))
     parser.add_argument('--output',type=Path,default=Path('out/reference/808-grid'))
     parser.add_argument('--backend',choices=('coldfire','sharc'),help='render actual components before comparison')
-    parser.add_argument('--frozen-source',type=Path,default=Path('out/reference/808-grid/accepted-65aeaf7'))
+    parser.add_argument('--revision',default=COMMIT,help='explicit committed 808 implementation; defaults to the initial baseline')
+    parser.add_argument('--frozen-source',type=Path)
     args=parser.parse_args()
+    try:
+        from .reference_grid_common import _git, prepare_frozen, frozen_invocation
+    except ImportError:
+        from reference_grid_common import _git, prepare_frozen, frozen_invocation
+    revision=_git('rev-parse','--verify',args.revision+'^{commit}').decode().strip()
+    frozen_source=args.frozen_source or args.output/('accepted-'+revision[:7])
     if args.backend:
-        try:
-            from .reference_grid_common import prepare_frozen, frozen_invocation
-        except ImportError:
-            from reference_grid_common import prepare_frozen, frozen_invocation
         from x0x import cpu
-        metadata=prepare_frozen(args.frozen_source)
+        metadata=prepare_frozen(frozen_source,revision)
         args.output.mkdir(parents=True,exist_ok=True)
         (args.output/'frozen.json').write_text(json.dumps(metadata,indent=2)+'\n')
         (args.output/'source-inventory.json').write_text(json.dumps(metadata,indent=2)+'\n')
-        if cpu.ROOT.resolve()!=args.frozen_source.resolve():
+        if cpu.ROOT.resolve()!=frozen_source.resolve():
             import sys
-            raise SystemExit(frozen_invocation(__file__,sys.argv[1:],args.frozen_source))
-        from reference808_grid_render import render
+            forwarded=[*sys.argv[1:],'--revision',revision,'--frozen-source',str(frozen_source.resolve())]
+            raise SystemExit(frozen_invocation(__file__,forwarded,frozen_source))
+        try:
+            from .reference808_grid_render import render
+        except ImportError:
+            from reference808_grid_render import render
         render(args.backend,args.output.resolve(),args.captures.resolve(),metadata)
     else:
-        compare(args.captures,args.output)
-        compare_histories(args.captures,args.output)
+        compare(args.captures,args.output,revision)
+        compare_histories(args.captures,args.output,revision)
 
 
 if __name__=='__main__':main()

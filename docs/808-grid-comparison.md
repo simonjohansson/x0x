@@ -198,8 +198,13 @@ mise exec -- env PYTHONPATH=tools uv run --frozen --project vendor/digiemu \
   python -m x0x.reference808_grid
 ```
 
-`--output` selects a separate ignored experiment folder; `--frozen-source`
-selects the accepted archive location. Neither changes the accepted DSP revision.
+These commands default to the original `65aeaf7` baseline. For a later committed
+808 correction, pass `--revision <commit>` and a separate `--output` directory
+to every render/comparison command. Render and history receipts must match that
+resolved revision; failed numeric receipts are rejected. `--frozen-source` can
+select its archive location; otherwise it is derived from output/revision.
+Review the body/Tone/C47 chain and START policy when adopting a new revision;
+the renderer does not infer new engine semantics from a Git hash.
 The initial full experiment retains its original executed drivers and hashes.
 The tracked reproduction bootstrap was checked separately with fresh ColdFire
 component builds and all 81 setting prefixes (4,096 samples each), byte identical

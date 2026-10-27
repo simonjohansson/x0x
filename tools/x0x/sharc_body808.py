@@ -85,7 +85,8 @@ def component(folder=None) -> tuple[dict, bytes]:
 
     rendered = {}
     decay_cases = []
-    for raw in (0, 16384, 32512, 1, 16383, 16385, 32511):
+    for raw in (0, 16384, 32512, 1, 16383, 16385, 32511,
+                4096, 8191, 8192, 8193, 12288):
         frames = FRAMES if raw in (0, 16384, 32512) else 6144
         machine, result, error = render(raw, frames)
         measured = analysis.analyze(result, body808.SAMPLE_RATE)
@@ -115,6 +116,10 @@ def component(folder=None) -> tuple[dict, bytes]:
     live, live_samples, live_error = render(0, 6400, {3200: 32512})
     assert abs(live_samples[3200] - body808.reference(32, decay_raw=32512)[0]) > .01, \
         "live DECAY edit restarted the body"
+    lower_changes = {3200:8193, 8000:12288, 16000:24576}
+    lower_live, lower_samples, lower_error = render(4096, FRAMES, lower_changes)
+    lower_output = folder / "live_lower_decay.f32"
+    lower_output.write_bytes(struct.pack(f"<{len(lower_samples)}f", *lower_samples))
 
     tone_cases = []
     tone_runs = []
@@ -238,7 +243,7 @@ def component(folder=None) -> tuple[dict, bytes]:
                   project_revision=cpu.revision(cpu.ROOT),
                   elekloader_revision=cpu.revision(cpu.ROOT / "vendor/elekloader"),
                   emulator_revision=cpu.revision(cpu.ROOT / "vendor/digikit"),
-                  calls=policy.calls + live.calls + sum(r.calls for r in triangle_runs) + sum(r[0].calls for r in rendered.values())
+                  calls=policy.calls + live.calls + lower_live.calls + sum(r.calls for r in triangle_runs) + sum(r[0].calls for r in rendered.values())
                         + sum(r.calls for r in tone_runs),
                   code_bytes=len(code), state_bytes=STATE_BYTES, private_layout=layout,
                   source_sha256=hashlib.sha256(SOURCE.read_bytes()).hexdigest(),
@@ -249,6 +254,10 @@ def component(folder=None) -> tuple[dict, bytes]:
                   frequency_hz=frequency, decay_time_constant_s=decay,
                   decay_cases=decay_cases, live_decay_change=dict(sample=3200, before_raw=0, after_raw=32512,
                                                                maximum_error_fs=live_error),
+                  lower_live_decay_change=dict(initial_raw=4096, changes=lower_changes,
+                                               maximum_error_fs=lower_error,
+                                               samples_path=str(lower_output),
+                                               samples_sha256=hashlib.sha256(lower_output.read_bytes()).hexdigest()),
                   tone_cases=tone_cases, live_tone_change=dict(sample=3200, before_raw=0, after_raw=32512,
                                                              maximum_error_fs=live_tone_error),
                   body909=dict(frames=FRAMES, maximum_error_fs=triangle_error,
@@ -259,7 +268,7 @@ def component(folder=None) -> tuple[dict, bytes]:
                                samples_path=str(triangle_path),
                                samples_sha256=hashlib.sha256(triangle_path.read_bytes()).hexdigest(),
                                worst_instructions=max(r.worst_instructions for r in triangle_runs)),
-                  worst_instructions=max(policy.worst_instructions, live.worst_instructions, *(r.worst_instructions for r in triangle_runs),
+                  worst_instructions=max(policy.worst_instructions, live.worst_instructions, lower_live.worst_instructions, *(r.worst_instructions for r in triangle_runs),
                                          *(r[0].worst_instructions for r in rendered.values()),
                                          *(r.worst_instructions for r in tone_runs)),
                   c_reference=provenance,

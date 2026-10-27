@@ -70,12 +70,49 @@ x0x_808_body:
 .Lcontinue:
     move.l #0xb0, %d0 /* fractional, saturated, nearest-even */
     move.l %d0, %macsr
-    /* Three reference-training anchors; stock feedback/pot modeling remains open. */
+    /* Empirical lower-half quadratic tau; upper retention/anchors stay unchanged. */
     move.l 112(%sp), %d6
     cmpi.l #16384, %d6
     bge .Ldecay_high
     move.l #131072, %d0 /* low branch excludes 16384, keeping the product signed-positive */
     mulu.l %d0, %d6
+    /* tau=.0333+(.143-.0333)*x*x; no change to the audio/state recurrence. */
+    moveq #0, %d0
+    move.l %d0, %acc0
+    mac.l %d6, %d6, %acc0
+    movclr.l %acc0, %d6 /* x*x */
+    move.l #71511205, %d0
+    move.l %d0, %acc0
+    move.l #235578956, %d0
+    mac.l %d6, %d0, %acc0
+    movclr.l %acc0, %d2 /* tau in Q31 seconds */
+    move.l #307090162, %d0
+    mac.l %d6, %d0, %acc0
+    movclr.l %acc0, %d3 /* .143*x*x */
+    /* t_sigma=.143*x*x/tau, unsigned fractional division. */
+    moveq #0, %d6
+    moveq #31, %d1
+.Ldecay_divide:
+    add.l %d6, %d6
+    add.l %d3, %d3
+    bcs.s .Ldecay_subtract
+    cmp.l %d2, %d3
+    bcs.s .Ldecay_next
+.Ldecay_subtract:
+    sub.l %d2, %d3
+    addq.l #1, %d6
+.Ldecay_next:
+    subq.l #1, %d1
+    bne.s .Ldecay_divide
+    /* Convert damping position to retention position, second-order exp ratio. */
+    move.l #2147483647, %d0
+    sub.l %d6, %d0
+    mac.l %d6, %d0, %acc0
+    movclr.l %acc0, %d1
+    move.l #515329, %d0 /* (1/.0333-1/.143)/(2*48000), Q31 */
+    mac.l %d1, %d0, %acc0
+    movclr.l %acc0, %d0
+    sub.l %d0, %d6
     tst.l %d7
     beq.s .Lsteady_low
     move.l #2145824990, %d2

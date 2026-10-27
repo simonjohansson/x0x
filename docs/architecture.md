@@ -63,21 +63,16 @@ The approved controls are A **TNTUN=64**, B **DECAY=64**, C **ATTK=64** and
 F **MODEL=0**, with the other positions blank. Native track level controls
 volume. MODEL below 64 selects 808; 64 and above selects 909.
 
-The first audible increment is an uncalibrated 808 body: a 55 Hz damped sine
-with a fixed pitch and live DECAY feedback control. The provisional range is
-approximately 142 ms to 1 second, with 250 ms at the approved default. A
-[1 ms rectangular drive](808-excitation.md) now excites the provisional mode
-instead of setting an instantaneous amplitude. TNTUN
-now controls the [808 passive Tone RC stage](808-tone.md); its resistance mapping
-is provisional pending stock-pot calibration. Live Tone/Decay edits keep the
-ringing state; START currently restarts the body and clears the Tone history.
-The [C47 coupling stage](808-coupling.md) follows Tone with fixed internal level;
-native track level still controls volume. ATTK is ignored for 808.
-The [first 909 body](909-body.md) adds an unshaped
-triangle oscillator with provisional fixed pitch and live unloaded C8 RC Decay. Its full stock
-Tune/Decay/Attack behavior and diode shaping follow incrementally. Circuit
-excitation, stock 808 feedback/Decay mapping, the loaded output network and faithful
-retrigger behavior remain engine work.
+Both models are audible on both CPUs and all three devices' emulators. The
+[808 body](808-body.md) has shaped main/companion excitation, amplitude-dependent
+pitch sigh, live Decay, passive Tone and C47 coupling. The
+[909 body](909-body.md) has diode shaping, Tune CV, loaded C8/Q12 decay and finite
+reset. Its separate Attack path is still missing; ATTK is ignored by the 808.
+Live controls preserve ringing state, while START currently clears that voice's
+model state. Stock feedback/loading, exact control calibration and faithful
+residual-state retrigger remain engine work. The
+[full training baseline](full-reference-grid-baseline.md) records the measured
+differences; those diagnostics do not establish reference fidelity.
 
 The shared model defines the intended musical behavior. It does not translate
 one CPU's assembly into the other, and the audio renderer is not portable C.

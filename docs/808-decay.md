@@ -1,11 +1,13 @@
 # 808 Decay calibration from the training recordings
 
-These measurements describe the earlier calibration. The subsequent
+These measurements describe the earlier three-anchor calibration. The current
+[lower-half correction](808-decay-lower-half.md) changes the interpolation below
+default while preserving these anchors and the entire upper law. The subsequent
 [companion input](808-companion.md) keeps these pole losses but adds continuing
 forcing, so finite-window decay fits can differ from the bare pole time constant.
 Current waveform checks use the driven analytical oracle.
 
-The next existing #9/#2 step shortens the 808's excessive tails on both CPUs.
+That initial #9/#2 step shortened the 808's excessive tails on both CPUs.
 The old raw-body range was approximately 142 ms to 1 second, with a 250 ms
 default. At fixed reference Tone 128, the two-second positive-peak fits are
 29.160 ms, 143.013 ms and 365.962 ms for Decay 0/128/255. These are descriptive

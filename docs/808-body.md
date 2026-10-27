@@ -48,20 +48,23 @@ remain downstream.
 
 ## Provisional Decay mapping
 
-For the exact delivered raw word `d` in 0..32512, linearly interpolate
-retention between three anchors, with a join at the approved default 16384:
+For the exact delivered raw word `d` in 0..32512, preserve three anchors with
+a join at the approved default 16384:
 
 - `r_min = exp(-1/(48000*.0333))`;
 - `r_default = exp(-1/(48000*.143))`;
 - `r_max = exp(-1/(48000*.366))`.
 
-Use `d/16384` below the default, and `(d-16384)/16128` above it. The
-resulting raw-body amplitude time constant is `-1/(48000*log(r(d)))`.
+Below the default, use `tau=.0333+(.143-.0333)*(d/16384)^2`, then convert
+that time constant to retention. Above it, retain the original interpolation
+between default and maximum using `(d-16384)/16128`. The raw-body amplitude
+time constant is `-1/(48000*log(r(d)))`.
 These anchors bring the short/default/long output fits near the fixed-Tone
 training recordings; the unloaded coupling stage changes the short fit.
 This changes feedback loss, not a separate output envelope. It is a reference
 calibration, not stock VR6 feedback/pot modeling or full-curve qualification.
-See [the derivation and evidence](808-decay.md).
+See the [initial calibration](808-decay.md) and the measured
+[lower-half correction and retained regressions](808-decay-lower-half.md).
 
 Coefficients update once per delivered 32-sample block without clearing body
 state. Native smoothing/fractions, parameter locks and LFO delivery therefore

@@ -202,12 +202,46 @@ continue_body:
     I4=R15;
     R1=DM(I4,M5);
 render_body:
-    // shortcut: three training anchors, not the stock feedback network/pot curve.
+    // shortcut: empirical lower-half quadratic tau, not the stock feedback/pot curve.
     // Use c-1 to avoid float32 radius bias when c is close to one.
     // S03 equation7/section8.1: nominal 131.006 Hz for 6 ms, then 47.65 Hz.
     R2=0x3f010204; // 64/127, the approved default in the existing raw/32512 normalization.
     COMP(F11,F2);
     IF GE JUMP decay_high;
+    // tau=.0333+(.143-.0333)*x*x, x=raw/16384. Upper branch is unchanged.
+    R4=0x3ffe0000; // 127/64 converts the existing raw/32512 position to x.
+    F14=F11*F4;
+    F14=F14*F14;
+    R4=0x3de0aa65; // .1097 seconds
+    F4=F4*F14;
+    R5=0x3d086595; // .0333 seconds
+    F4=F4+F5;
+    R5=0x7f000000;
+    R5=R5-R4;
+    R12=0x40000000;
+    F15=F4*F5;
+    F15=F12-F15;
+    F5=F5*F15;
+    F15=F4*F5;
+    F15=F12-F15;
+    F5=F5*F15;
+    F15=F4*F5;
+    F15=F12-F15;
+    F5=F5*F15;
+    F15=F4*F5;
+    F15=F12-F15;
+    F5=F5*F15;
+    R4=0x3e126e98; // .143 seconds
+    F14=F14*F4;
+    F14=F14*F5; // damping interpolation position .143*x*x/tau
+    R4=0x3f800000;
+    F15=F4-F14;
+    F15=F15*F14;
+    R4=0x397ba02f; // (1/.0333-1/.143)/(2*48000)
+    F15=F15*F4;
+    F14=F14-F15; // second-order exp ratio, now retention interpolation position
+    R4=0x3f010204;
+    F11=F14*F4; // reuse every existing low coefficient table at that retention
     R4=DM(I0,M5);
     R4=PASS R4;
     IF EQ JUMP steady_low;

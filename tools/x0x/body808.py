@@ -25,11 +25,17 @@ RETENTION_DEFAULT = math.exp(-1 / (SAMPLE_RATE * TAU))
 
 
 def retention(decay_raw):
-    """Three training anchors; piecewise retention, not the stock VR6 circuit."""
+    """Empirical lower-half quadratic tau; unchanged upper retention law.
+
+    The full training grid supports this small control correction, not a stock
+    VR6 taper model. The three anchors and settled frequency stay unchanged.
+    """
     if type(decay_raw) is not int or not 0 <= decay_raw <= RAW_MAX:
         raise ValueError("Decay must be an exact native word in 0..32512")
     if decay_raw < DEFAULT_DECAY:
-        return RETENTION_MIN + (RETENTION_DEFAULT - RETENTION_MIN) * decay_raw / DEFAULT_DECAY
+        position = decay_raw / DEFAULT_DECAY
+        tau = .0333 + (TAU - .0333) * position * position
+        return math.exp(-1 / (SAMPLE_RATE * tau))
     return RETENTION_DEFAULT + (RETENTION_MAX - RETENTION_DEFAULT) * (decay_raw - DEFAULT_DECAY) / (RAW_MAX - DEFAULT_DECAY)
 
 

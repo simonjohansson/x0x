@@ -10,7 +10,7 @@ import struct
 import sys
 import time
 
-from . import cpu, firmware, sharc_body808 as body, body808, body909, tone808, leakage808, tune909, vca909
+from . import cpu, firmware, sharc_body808 as body, body808, body909, tone808, coupling808, leakage808, tune909, vca909
 from .sharc_layout import voice_artifact
 
 ROOT = cpu.ROOT
@@ -501,7 +501,8 @@ def full_os() -> dict:
                                 for p in base.values()), base
             # Read actual per-voice quadrature energy across a held native note.
             report["decay_audio"] = {}
-            for label, position, note in (("short", 0, 72), ("long", 127, 73)):
+            for label, position, note in (("short", 0, 72), ("lower-64", 32, 82),
+                                          ("lower-96", 48, 83), ("long", 127, 73)):
                 emu.midi_in(bytes([0x81, 70, 0, 0xB1, cc["1"], position]))
                 emu.run_until(frames=emu.status()["dsp_frames"] + 600, timeout_wall_s=120)
                 path = out / f"decay-{label}-native.wav"
@@ -521,7 +522,19 @@ def full_os() -> dict:
                     assert metadata[1] == 1 and all(math.isfinite(x) for x in xy), (metadata, xy)
                     energy = sum(x*x for x in xy)
                     assert energy > 0
-                    return dict(callbacks=metadata[0], energy=energy, decay_raw=native[1])
+                    snapshot = dict(callbacks=metadata[0], energy=energy, decay_raw=native[1])
+                    assert native[1] == position << 8, (label, native)
+                    if label.startswith("lower-"):
+                        def node(base):
+                            return struct.unpack("<f", bytes.fromhex(emu.dsp_peek(base+4*lane,4)["hex"]))[0]
+                        remaining = struct.unpack("<I",bytes.fromhex(emu.dsp_peek(0x200929c0+4*lane,4)["hex"]))[0]
+                        assert remaining == 0 and native[0] == 16384 and native[5] == 0, (label, remaining, native)
+                        previous_input, previous_output = struct.unpack("<2f",bytes.fromhex(
+                            emu.dsp_peek(0x20092940+8*lane,8)["hex"]))
+                        snapshot.update(x=xy[0],y=xy[1],main=node(0x20092a40),companion=node(0x20092a00),
+                            tone_capacitor=node(0x20092900),tone_raw=native[0],
+                            coupling_input=previous_input,raw_output=previous_output)
+                    return snapshot
                 early = body_snapshot()
                 emu.run_until(frames=emu.status()["dsp_frames"] + 500, timeout_wall_s=120)
                 late = body_snapshot()
@@ -533,9 +546,39 @@ def full_os() -> dict:
                 dt = (late["callbacks"] - early["callbacks"]) * 32 / 48000
                 ratio = late["energy"] / early["energy"]
                 assert dt > 0 and 0 < ratio < 1, (label, early, late)
+                oracle = {}
+                if label.startswith("lower-"):
+                    frames = 32*(late["callbacks"]-early["callbacks"])
+                    assert frames > 0 and early["decay_raw"] == late["decay_raw"], (label,early,late)
+                    samples, final = leakage808.continue_reference(complex(early["x"],early["y"]),
+                        early["main"],early["companion"],early["decay_raw"],frames)
+                    # Independent capacitor voltage/current continuation from the actual
+                    # callback snapshot, including Tone and C47; stock PCM stays separate.
+                    g=tone808.coefficient(early["tone_raw"])
+                    r=tone808.resistance(early["tone_raw"])
+                    h=1/(2*48000*tone808.C45)
+                    previous=early["x"]+early["main"]
+                    voltage=((1-g)*early["tone_capacitor"]-g*previous)/(1-2*g)
+                    current=(previous-voltage)/r
+                    coupling_voltage=early["coupling_input"]-early["raw_output"]
+                    coupling_current=early["raw_output"]/coupling808.VR4
+                    hc=1/(2*48000*coupling808.C47)
+                    for sample in samples:
+                        voltage=(voltage+h*current+h*sample/r)/(1+h/r)
+                        current=(sample-voltage)/r
+                        coupling_voltage=(coupling_voltage+hc*coupling_current+hc*voltage/coupling808.VR4)/(1+hc/coupling808.VR4)
+                        coupling_current=(voltage-coupling_voltage)/coupling808.VR4
+                    predicted_output=voltage-coupling_voltage
+                    errors=dict(raw_output_fs=abs(late["raw_output"]-predicted_output),
+                        tone_capacitor_fs=abs(late["tone_capacitor"]-(voltage+h*current)),
+                        body_state_fs=max(abs(late["x"]-final[0].real),abs(late["y"]-final[0].imag),
+                                          abs(late["main"]-final[1]),abs(late["companion"]-final[2])))
+                    assert all(math.isfinite(v) and v<=1e-5 for v in errors.values()), (label,errors)
+                    oracle=dict(prediction_samples=frames,predicted_raw_output_fs=predicted_output,
+                        reference_errors=errors,reference_scope="constant-control nonlinear body/Tone/C47 continuation; terminal raw callback sample, no alignment or gain correction")
                 first = sum(float(x)*float(x) for x in pcm[:9600])
                 tail = sum(float(x)*float(x) for x in pcm[19200:28800])
-                report["decay_audio"][label] = dict(target=position, slot=lane, early=early, late=late,
+                report["decay_audio"][label] = dict(**oracle, target=position, slot=lane, early=early, late=late,
                     raw_state_energy_ratio=ratio, measured_tau_s=-2*dt/math.log(ratio),
                     pcm_peak_fs=peak, native_late_early_energy_ratio=tail/first,
                     native_wav=str(path))

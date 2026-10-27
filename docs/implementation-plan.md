@@ -11,8 +11,12 @@ The three silent native milestones are complete. The current 808 has a
 reference-calibrated settled pole/Decay range, switched capacitor state,
 main/companion excitation, Q43 leakage, Tone RC and output coupling on both
 CPUs. See [808 leakage](808-leakage.md) for the current waveform evidence and
-retained default/long pitch-trajectory regressions. Full feedback, loading,
-control taper and faithful residual-state retrigger remain incomplete in #9/#79.
+retained default/long pitch-trajectory regressions. The [lower-half Decay correction](808-decay-lower-half.md) now improves the
+measured interior response on both CPU components, retaining the entire upper
+law and all anchors. Raw display32 regressions remain explicit; full feedback,
+loading, control taper and faithful residual-state retrigger remain incomplete
+in #9/#79. Native and paired full-grid qualification of this correction is
+recorded separately in that document.
 
 The 909 [diode shaper](909-shaping.md), [C9/IC12 Tune path](909-tune.md) and
 [loaded ENV1/Q12 VCA](909-vca.md) run on both CPUs and all three emulators.

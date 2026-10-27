@@ -1,8 +1,13 @@
 import csv
+import json
 from pathlib import Path
+import sys
 import tempfile
 import unittest
+from unittest import mock
 
+from x0x import reference808_grid as grid
+from x0x import reference_grid_common as common
 from x0x.reference808_grid import FRAMES, WINDOWS, grid_records, pitch_windows, unchanged_readbacks
 
 
@@ -56,3 +61,37 @@ class Full808GridTests(unittest.TestCase):
         self.assertEqual(WINDOWS[-1], ('whole12s', 0, 12))
         self.assertEqual([(a,b) for name,a,b in WINDOWS if name.startswith('tail')],
                          [(2,4), (4,8), (8,12)])
+
+    def test_explicit_revision_reaches_both_comparisons(self):
+        revision='b'*40
+        with mock.patch.object(sys,'argv',['reference808_grid','--revision','HEAD']), \
+             mock.patch.object(common,'_git',return_value=(revision+'\n').encode()), \
+             mock.patch.object(grid,'compare') as compare, \
+             mock.patch.object(grid,'compare_histories') as histories:
+            grid.main()
+        compare.assert_called_once_with(Path('research/reference/808/captures'),Path('out/reference/808-grid'),revision)
+        histories.assert_called_once_with(Path('research/reference/808/captures'),Path('out/reference/808-grid'),revision)
+
+    def test_wrong_revision_or_failed_numeric_receipt_rejected_before_audio(self):
+        with tempfile.TemporaryDirectory() as folder:
+            p=Path(folder)
+            for receipt,message in [({'commit':'old'},'render revision differs'),
+                                    ({'commit':'selected','status':'failed'},'numeric render is not qualified')]:
+                (p/'report.json').write_text(json.dumps(receipt))
+                with self.subTest(receipt=receipt),self.assertRaisesRegex(AssertionError,message):
+                    grid.load_backend(p,'selected')
+
+    def test_package_entry_can_render_without_direct_file_reentry(self):
+        from x0x import cpu
+        revision='b'*40
+        metadata={'commit':revision,'frozen_source_root':str(cpu.ROOT)}
+        with tempfile.TemporaryDirectory() as folder:
+            argv=['reference808_grid','--backend','coldfire','--revision','HEAD',
+                  '--frozen-source',str(cpu.ROOT),'--output',folder]
+            with mock.patch.object(sys,'argv',argv), \
+                 mock.patch.object(common,'_git',return_value=(revision+'\n').encode()), \
+                 mock.patch.object(common,'prepare_frozen',return_value=metadata), \
+                 mock.patch('x0x.reference808_grid_render.render') as render:
+                grid.main()
+            render.assert_called_once_with('coldfire',Path(folder).resolve(),
+                                           Path('research/reference/808/captures').resolve(),metadata)
