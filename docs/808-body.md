@@ -1,10 +1,11 @@
 # 808 body and Decay control
 
 This #9 increment is an uncalibrated damped sine, before the 808 excitation,
-pitch sigh, feedback/Decay mapping, Tone network and output coupling. The saved
-layout stays unchanged. DECAY now changes feedback retention on every block;
-TNTUN and ATTK do not yet shape this body. MODEL selects it in 808 mode;
-909 remains silent.
+pitch sigh, stock feedback/Decay mapping and output coupling. The saved layout
+stays unchanged. DECAY changes feedback retention on every block, and TNTUN now
+drives the [passive Tone RC stage](808-tone.md). ATTK is ignored in 808 mode;
+909 remains silent. The raw-body equations below describe the oscillator before
+that new output filter.
 
 ## Model and units
 
@@ -83,14 +84,16 @@ the next 128. This is private DSP RAM, not a saved-sound layout.
 Matching unshifted CPU samples differ by at most 3.968e-7 FS over 24,000 samples.
 Run `mise run test:808:body` for both components and the cross-CPU comparison.
 
-Current Decay checks cover raw 0/16384/32512, fractional 1/16385/32511 and
+Historical Decay-only checks cover raw 0/16384/32512, fractional 1/16385/32511 and
 live changes without START. Both implementations retain their state/output and
 context guards. Maximum analytical waveform error is 1.009e-6 FS on ColdFire
 and 8.23e-7 FS on SHARC. Matching endpoint/default renders differ by at most
 6.357e-7 FS. All use the unchanged 1e-5 FS limit, with no alignment or gain fit.
 ColdFire uses 252 code bytes and at most 503 instructions including its test
 wrapper; SHARC uses 606 code bytes and at most 662 instructions under the
-unchanged 1,000-instruction bound. DSP state extents stay unchanged.
+unchanged 1,000-instruction bound. Those runs predate Tone. Current component
+costs, the additional Tone state and composed-output errors are recorded in
+[808-tone.md](808-tone.md).
 
 ## Native integration
 
@@ -98,7 +101,7 @@ The existing native runners now execute the production 808 body and retain
 909 silence, control/lock/LFO delivery, MODEL latching, persistence and owned
 output checks. The old `:silent` command names remain compatibility aliases.
 
-| Device | First-body evidence | Full native regression |
+| Device | Historical first-body evidence | Historical full native regression |
 | --- | --- | --- |
 | DT OS 1.54 | Nonzero owned Q31 output and stereo PCM; peak 4526/32768 in `out/dt/silent/native-808.wav` | 21,783 callbacks; only the known parameter/page resets in #78 fail |
 | DN OS 1.44 | 9,174 nonzero 808 blocks; stereo PCM peak 6478/32768 in `out/dn/silent/808-native.wav` | 13,951 callbacks; all checks pass, including 4,777 silent 909 blocks |
@@ -114,7 +117,7 @@ velocity or saved LEVEL gain is applied by the body.
 Native endpoint edits now produce short and long 808 tails. Captures keep the
 same note, velocity and downstream settings; audio is not normalized.
 
-| Device | Decay proof | Remaining regression |
+| Device | Historical Decay proof | Regression at that increment |
 | --- | --- | --- |
 | DT | Actual ASM receives exact 0/32512; raw late/early energy ratios 0.01457/0.54881; captured downstream ratios 0.14332/0.65833 | Only the deferred #78 reset checks fail |
 | DN | Native knob endpoints reach exact 0/32512; raw late/early RMS ratios 0.018249/0.563319 and downstream ratios 0.012681/0.510993 | All checks pass across 16,591 callbacks |
@@ -131,8 +134,10 @@ Raw/direct and downstream measurements have different windows and host effects;
 compare short against long within each test, not the ratios across devices.
 
 #9's first body is integrated in all three emulators. The Decay response is
-provisional; stock feedback/pot mapping, excitation/pitch sigh, Tone/output
-coupling, calibrated scale and circuit-state retrigger behavior remain open.
+provisional; stock feedback/pot mapping, excitation/pitch sigh, output coupling,
+calibrated scale and circuit-state retrigger behavior remain open. Tone filtering
+is now implemented with a provisional resistance-linear control mapping; see
+[the current Tone evidence](808-tone.md).
 [#79](https://github.com/simonjohansson/x0x/issues/79) owns reference-implementation
 and schematic alignment; its [source/code audit](reference-alignment.md) records
 the current gaps and pinned source baselines. #2 compares the aligned engines

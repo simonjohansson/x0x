@@ -1,8 +1,9 @@
 # Reference implementations and circuit alignment
 
-First source/code audit for [#79](https://github.com/simonjohansson/x0x/issues/79),
-27 October 2026. Runtime code was inspected at `a05912e`; no DSP or saved-control
-behavior changes in this increment. This is an alignment inventory, not evidence
+Source/code audit for [#79](https://github.com/simonjohansson/x0x/issues/79),
+27 October 2026. The initial audit inspected runtime `a05912e`; the inventory
+below now includes the subsequent [Tone RC implementation](808-tone.md).
+Saved controls remain unchanged. This is an alignment inventory, not evidence
 that either engine reproduces original hardware or a reference VST.
 
 ## Selected source baselines
@@ -60,6 +61,7 @@ production DSP and preserve attribution if any implementation is adapted.
 
 Current production paths are
 [ColdFire ASM](../targets/coldfire/body808.s),
+[ColdFire Tone ASM](../targets/coldfire/tone808.s),
 [SHARC+ ASM](../targets/sharc/body808.s), the
 [analytical body oracle](../tools/x0x/body808.py), and device C adapters under
 [`machines/`](../machines/). The same ColdFire source serves DT and DN; DN2 calls
@@ -72,7 +74,7 @@ its SHARC payload directly through the SDK bridge.
 | Decay | S03 §6 Eq.6 and Fig.7; VR6 changes a frequency-dependent R164/R169/C43 feedback shelf returned through R170 | `retention()` and each ASM coefficient setup linearly interpolate radius versus delivered B | Audible and numerically checked, but not the stock shelf/pot response |
 | Initial pitch shift | S01 p.5 and S03 §8.1: Q41–Q43 switched resistance during attack | Rotation frequency stays fixed | Missing; retain the service-note/paper timing difference instead of silently choosing one |
 | Internal retrigger/pitch sigh | S03 §§8.1–8.2: C39/R161/D52 event and Q43 leakage behavior | No transient or nonlinear feedback state | Missing |
-| Tone | S01 p.9; S03 §9 Table1 and Eq.11 passive low-pass | TNTUN is declared/delivered; neither body uses it | Missing DSP stage and native knob/resistance mapping |
+| Tone | S01 p.9; S03 §9 Table1 and Eq.11 passive low-pass | TPT RC filter on both CPUs, checked against independent capacitor voltage/current integration; TNTUN changes it live | Nominal RC response implemented; bright-up resistance-linear knob mapping is provisional, C taper/direction calibration remains |
 | Coupling/output | S03 §9 Table1, level and high-pass stages; S01 p.9 output network | Fixed internal gain and native downstream processing | Analog filters absent; native track volume is not a replacement for the original coupling network |
 | Accent | S01 trigger logic and S03 §3 | Fixed body excitation; device AMP/velocity remains downstream | Intrinsic accent/excitation absent; do not add the native gain twice |
 | Same-voice retrigger | S03 §11/Fig.12: new excitation interacts with residual circuit state | START replaces the oscillator state | Provisional restart, not circuit-state retrigger behavior |
@@ -109,10 +111,12 @@ C45=0.1 µF. S03 Eq.11 gives
 `Req = R171 + (R172*VR5*l)/(R172+VR5*l)`
 
 and its Table1 gives `H(s)=1/(1+s*Req*C45)`. Resistance fraction `l` from 0 to 1
-gives endpoint cutoffs of approximately 7.23 kHz and 305 Hz. **This is not yet a
-native Tone mapping:** direction and the C taper need explicit treatment; a
-resistance-linear approximation must be labelled. A pure 55 Hz sine will show
-only a modest Tone difference until the excitation supplies richer content.
+gives endpoint cutoffs of approximately 7.23 kHz and 305 Hz. The implemented
+native mapping provisionally uses `l=1-raw/32512`, making higher TNTUN brighter.
+This is resistance-linear, not a calibrated stock C taper or verified physical
+knob direction. The [Tone checks](808-tone.md) establish the nominal RC response,
+including rich diagnostic input; a pure 55 Hz sine shows only a modest difference
+until excitation supplies richer content.
 
 Other boundaries remain visible: nominal values are not unit calibration;
 stock versus modified 909 controls must stay separate; and the 909 R495
@@ -120,10 +124,9 @@ annotation must accompany the selected nominal population.
 
 ## Next increments and remaining gates
 
-1. Establish the independent 808 Tone RC response from the confirmed values,
-   then implement that stage on both CPUs and connect TNTUN in the existing
-   mods. Test the filter with an impulse/step or rich diagnostic signal, not
-   only the nearly pure-sine body. This does not require a VST.
+1. Tone RC response and both CPU implementations are complete for the declared
+   nominal network and provisional knob mapping. Preserve the independent
+   step/rich-input checks while deriving the stock C taper/direction later.
 2. Replace the arbitrary oscillator reset with a source-derived finite trigger
    and add the internal transient, preserving circuit state on retrigger as
    each stage lands. Then replace provisional Decay radius control with the
@@ -138,4 +141,6 @@ annotation must accompany the selected nominal population.
 
 #79 remains open for the executable models, corrections and alignment report.
 #9/#25 remain the implementation owners. Host, component, native-emulator and
-physical/VST evidence stay separate; this audit adds no new audio qualification.
+physical/VST evidence stay separate. Tone component/native evidence is recorded
+in [808-tone.md](808-tone.md); the initial source audit itself added no audio
+qualification.

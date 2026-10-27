@@ -63,7 +63,7 @@ def full_os():
     report = dict(status="failed", scope="standard full-OS digiemu Session; native panel/encoder",
                   stock=stock, firmware_sha256=hashlib.sha256(image.read_bytes()).hexdigest(),
                   digiemu_revision=cpu.revision(ROOT / "vendor/digiemu"),
-                  unqualified=["strict-model qualification", "faithful 808 timbre and retrigger", "Tone response", "909 audio"])
+                  unqualified=["strict-model qualification", "faithful 808 timbre, retrigger and pot tapers", "909 audio"])
     state = dict(active=None, callbacks=0, starts=[], violations=[], observations=[], phase="", samples=[], decay_text=[],
                  body_nonzero=0, body_peak=0, silent_909=0, audio_capture=None)
     session = None
@@ -99,9 +99,9 @@ def full_os():
                 state["body_peak"] = max(state["body_peak"], peak)
                 state["body_nonzero"] += peak != 0
                 capture = state["audio_capture"]
-                if capture is not None and active["track"] == 0:
+                if capture is not None and active["track"] == capture.get("track", 0):
                     if active["fresh"]:
-                        assert capture["slot"] is None, "decay capture unexpectedly retriggered"
+                        assert capture["slot"] is None, "audio capture unexpectedly retriggered"
                         capture["slot"] = active["slot"]
                     if active["slot"] == capture["slot"]:
                         capture["words"].extend(struct.unpack(">32i", after[lo:hi]))
@@ -131,6 +131,22 @@ def full_os():
                 values = [struct.unpack(">6I",uc.mem_read(source + 36 + 24 * i,24)) for i in range(word(source + 32))]
                 state["samples"].append((state["phase"],[(v[0],v[1],v[4],v[5]) for v in values]))
         session.at(names["render_body"],checked(receive))
+        def tone_entered(_uc, at, _size, _data):
+            capture, active = state["audio_capture"], state["active"]
+            if capture is None or "tone_words" not in capture or active["track"] != capture["track"]:
+                return
+            if active["slot"] != capture["slot"] and not (capture["slot"] is None and active["fresh"]):
+                return
+            sp = uc.reg_read(UC_M68K_REG_A7)
+            if at == names["x0x_808_body"]:
+                capture["decay_words"].append(word(sp + 16))
+                return
+            saved, output, raw = struct.unpack(">3I", uc.mem_read(sp + 4, 12))
+            assert saved == names["tone_state"] + active["slot"] * 4, "wrong voice's Tone capacitor"
+            capture["tone_words"].append(raw)
+            capture["dry"].extend(struct.unpack(">32i", uc.mem_read(output, 128)))
+        session.at(names["x0x_808_tone"], checked(tone_entered))
+        session.at(names["x0x_808_body"], checked(tone_entered))
         def text(_uc, _at, _size, _data):
             if state["phase"] != "lock-edit": return
             sp = uc.reg_read(UC_M68K_REG_A7)
@@ -320,13 +336,55 @@ def full_os():
         report["mixed_tracks"] = sorted(mixed)
         assert {(0,0),(1,1)} <= mixed and stored() == track0, (mixed,stored(),track0)
         session.release(session.code("11")); session.release(session.code("9")); wait()
+        tap("STOP"); tap("STOP")
+        # A fresh third track has no LFO assignment from the earlier modulation check.
+        session.press(session.code("T3")); wait(600); session.release(session.code("T3")); wait()
+        tap("YES"); tap("RIGHT"); tap("YES"); controls()
+        assert stored(2) == [80 << 8,16384,16384,16384,0], stored(2)
+        tone_response, heads = {}, {}
+        for name, target, detents in (("dark", 0, -320), ("bright", 32512, 320)):
+            turn("A", detents)
+            assert stored(2)[1] == target, (name, stored(2))
+            wait(500)
+            quiet_begin = len(session.pcm); wait(100)
+            quiet = bytes(session.pcm[quiet_begin:])
+            report["tone_pre_capture_pcm16_peak"] = max(abs(v[0]) for v in struct.iter_unpack("<h", quiet))
+            assert not any(quiet), "Tone capture must start with silent native output"
+            capture = dict(track=2, slot=None, words=[], tone_words=[], decay_words=[], dry=[])
+            state["audio_capture"] = capture
+            begin = len(session.pcm)
+            session.press(session.code("9")); wait(800)
+            native = bytes(session.pcm[begin:])
+            state["audio_capture"] = None
+            session.release(session.code("9")); wait(300)
+            raw = capture["words"]
+            assert capture["tone_words"] and set(capture["tone_words"]) == {target}, capture["tone_words"]
+            assert capture["decay_words"] and set(capture["decay_words"]) == {16384}, capture["decay_words"]
+            assert len(raw) >= 8192 and len(capture["dry"]) == len(raw)
+            assert raw[1024:8192] != capture["dry"][1024:8192], "Tone ASM did not filter the body output"
+            assert native and any(native), "Tone endpoint produced no native PCM"
+            heads[name] = dict(filtered=raw[1024:8192], dry=capture["dry"][1024:8192])
+            tone_response[name] = dict(raw=target, decay_raw=16384, calls=len(capture["tone_words"]), raw_frames=len(raw),
+                                       native_frames=len(native)//4)
+            for kind, data, channels, width in (("raw", struct.pack(f"<{len(raw)}i", *raw), 1, 4),
+                                                ("native", native, 2, 2)):
+                path = FOLDER / f"808-tone-{name}-{kind}.wav"
+                with wave.open(str(path), "wb") as wav:
+                    wav.setparams((channels, width, 48000, 0, "NONE", "not compressed"))
+                    wav.writeframes(data)
+                tone_response[name][kind + "_path"] = str(path)
+        assert heads["dark"]["dry"] == heads["bright"]["dry"], "Tone comparison changed the underlying body"
+        difference = max(abs(a-b) for a,b in zip(heads["dark"]["filtered"], heads["bright"]["filtered"]))
+        assert difference > 0.001 * (1 << 31), "native Tone endpoints did not change the settled filtered output"
+        tone_response["max_difference_q31_after_sample_1024"] = difference
+        report["tone_response"] = tone_response
         assert not state["active"] and state["callbacks"] > 0 and state["body_nonzero"] > 0 and state["silent_909"] > 0
         report["render_audio"] = dict(nonzero_808_blocks=state["body_nonzero"], peak_q31=state["body_peak"],
                                       silent_909_blocks=state["silent_909"])
         report.update(status="passed", callbacks=state["callbacks"], starts=state["starts"],
                       checked=["native menu/defaults", "native first-page controls", "native encoder MODEL delivery",
                                "next-START MODEL latch", "real companion fresh/settled frame",
-                               "bounded nonzero 808 voice output", "native Decay changes raw and downstream decay time", "silent 909 voice output", "isolated downstream stereo PCM", "other voices preserved", "native p-lock and held-lock display", "native LFO delivery", "native save/reload", "mixed 808/909 tracks"])
+                               "bounded nonzero 808 voice output", "native Decay changes raw and downstream decay time", "native Tone endpoints reach actual ASM and change filtered output", "silent 909 voice output", "isolated downstream stereo PCM", "other voices preserved", "native p-lock and held-lock display", "native LFO delivery", "native save/reload", "mixed 808/909 tracks"])
     except (AssertionError, ValueError) as error:
         report["reason"] = str(error)
     finally:

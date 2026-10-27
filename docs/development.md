@@ -156,7 +156,8 @@ Digikit's instruction interpreter and the host/C tests ran inside the sandbox.
 ## Current first-body checks
 
 ```sh
-mise run test:808:body  # actual ColdFire and SHARC bodies, oracle and cross-CPU comparison
+mise run test:808:body  # actual body + Tone on both CPUs, oracle and cross-CPU comparison
+mise run test:808:coldfire:tone  # filter alone; composed checks also need the body output
 mise run test:dt        # actual DT audio; retains the known #78 reset failures
 mise run test:dn        # actual DN audio and native controls/locks/LFO/persistence
 mise run test:dn2       # coupled DN2 audio and native controls/locks/LFO/persistence
@@ -165,10 +166,12 @@ mise run test:dn2       # coupled DN2 audio and native controls/locks/LFO/persis
 The current native runners build the production 808 body and capture downstream
 PCM. 808 output must be finite and nonzero; the 909 branch remains zero and
 unrelated stock output is preserved. DECAY now changes the body feedback loss
-on each delivered block. Tone and 909 Attack do not yet shape the body. Existing `:silent` task/module names are retained
-as compatibility aliases; they now exercise the first-body mod. Direct body
-reports/samples live in `out/coldfire/body808` and `out/sharc/body808`; native
-captures remain under `out/{dt,dn,dn2}/silent`. See [808-body.md](808-body.md).
+on each delivered block. TNTUN drives the source-derived 808 Tone RC stage with
+a provisional stock-pot mapping; ATTK remains ignored in 808 mode. Existing
+`:silent` task/module names are retained as compatibility aliases. Direct
+reports/samples live in `out/coldfire/{body808,tone808}` and `out/sharc/body808`;
+native captures remain under `out/{dt,dn,dn2}/silent`. See [808-body.md](808-body.md)
+and [808-tone.md](808-tone.md) for current evidence and remaining circuit gaps.
 
 The silent milestone counts below describe the completed pre-audio versions.
 Current commands regenerate reports for the first-body implementation instead.

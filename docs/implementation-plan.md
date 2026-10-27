@@ -4,8 +4,10 @@ The silent-first priority set on 26 October 2026 is complete: all three native
 mod milestones are accepted, with the DT reset bug deferred to #78. In #9, the
 [first audible 808 body](808-body.md) now runs in all three emulators. It is an
 uncalibrated damped sine. Live Decay changes its feedback retention and is
-verified through native controls/audio on all three machines. Tone and further
-808 circuit detail follow while retaining these integrations.
+verified through native controls/audio on all three machines. The subsequent
+[source-derived Tone RC filter](808-tone.md) also passes both CPU and all three
+native integration checks, with provisional knob mapping. Further 808 circuit
+detail follows within these integrations.
 
 The product remains one mod per device containing 808 and 909 behind a saved
 per-sound/track MODEL selector. Different tracks/voices can select different
@@ -93,8 +95,9 @@ standard non-strict configuration, labelled accurately.
 ## Add sound without another integration project
 
 The first #9 increment supplies an analytically checked fixed 808 body on both
-CPUs and native audio captures from every device. Next add stock Decay feedback
-mapping and excitation, pitch/feedback and tone/output behavior as small commits.
+CPUs and native audio captures from every device. Live Decay and the passive
+Tone RC stage are implemented. Next add source-derived excitation, pitch/feedback,
+stock Decay mapping and output coupling as small commits.
 Each ready increment runs through the already-installed mod. #25 follows with
 909 body/tune, envelope and pulse/noise attack. Keep the same registration and
 saved controls throughout; both models must coexist, not become separate mods.
@@ -106,11 +109,14 @@ and correct the engines incrementally in #9/#25. It can proceed without VST
 captures. Compare the aligned implementations to the reference VST later in #2. The
 [first source/code audit](reference-alignment.md) pins the available reference
 code, selects schematic baselines and records the missing/provisional blocks.
-The next source-derived slice is the 808 Tone RC reference; executable-reference
-rendering and circuit corrections remain open.
+The first source-derived slice implements the 808 Tone RC network on both CPUs,
+checked against an independent capacitor voltage/current reference. Its native
+knob taper remains provisional. Finite excitation, the full feedback network and
+the other circuit rows remain open; third-party reference code has not been
+rendered yet.
 
-Each instrument has one independent high-precision model and two actual ASM
-implementations. Reuse the existing analyzers, fixtures and CPU runners. Compare
+Build each instrument increment around one independent high-precision model and
+two actual ASM implementations. Reuse the existing analyzers, fixtures and CPU runners. Compare
 each backend to that model and compare matching outputs across CPUs. Record
 bounds, fixed-point overflow/limit cycles, floating-point stability and state
 isolation as part of the engine issue. Initial research-based sound is explicitly

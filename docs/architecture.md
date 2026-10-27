@@ -66,10 +66,12 @@ volume. MODEL below 64 selects 808; 64 and above selects 909.
 The first audible increment is an uncalibrated 808 body: a 55 Hz damped sine
 with a fixed pitch and live DECAY feedback control. The provisional range is
 approximately 142 ms to 1 second, with 250 ms at the approved default. TNTUN
-and ATTK do not yet shape this body; live DECAY updates keep its ringing state.
-START currently restarts its phase and amplitude. The 909 branch remains
-silent until its implementation. Circuit excitation, tone, adjustable decay
-and faithful retrigger behavior follow in the engine work.
+now controls the [808 passive Tone RC stage](808-tone.md); its resistance mapping
+is provisional pending stock-pot calibration. Live Tone/Decay edits keep the
+ringing state; START currently restarts the body and clears the Tone history.
+ATTK is ignored for 808. The 909 branch remains silent until its implementation.
+Circuit excitation, stock feedback/Decay mapping, output coupling and faithful
+retrigger behavior follow in the engine work.
 
 The shared model defines the intended musical behavior. It does not translate
 one CPU's assembly into the other, and the audio renderer is not portable C.

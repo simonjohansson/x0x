@@ -9,7 +9,7 @@ from pathlib import Path
 import struct
 import sys
 
-from . import cpu, firmware, sharc_body808 as body
+from . import cpu, firmware, sharc_body808 as body, body808, tone808
 
 ROOT = cpu.ROOT
 FOLDER = ROOT / "out/dn2/silent"
@@ -522,6 +522,43 @@ def full_os() -> dict:
             assert (report["decay_audio"]["long"]["native_late_early_energy_ratio"] >
                     4 * report["decay_audio"]["short"]["native_late_early_energy_ratio"]), report["decay_audio"]
             emu.midi_in(bytes([0xB1, cc["1"], 64]))
+            tap("STOP"); tap("STOP")
+            report["tone_audio"] = {}
+            for label, position, note in (("dark", 0, 74), ("bright", 127, 75)):
+                emu.midi_in(bytes([0xB1, cc["0"], position, 0xB1, cc["1"], 64]))
+                emu.run_until(frames=emu.status()["dsp_frames"] + 600, timeout_wall_s=120)
+                path = out / f"tone-{label}-native.wav"
+                emu.call("pcm.tap", action="capture", path=str(path))
+                emu.midi_in(bytes([0x91, note, 100]))
+                emu.run_until(frames=emu.status()["dsp_frames"] + 150, timeout_wall_s=120)
+                ids = struct.unpack("<16H", bytes.fromhex(emu.dsp_peek(0x25C48C + 2*74,32)["hex"]))
+                pitches = struct.unpack("<16H", bytes.fromhex(emu.dsp_peek(0x25C48C + 2,32)["hex"]))
+                lanes=[i for i in range(16) if ids[i]==20 and pitches[i]==note<<8]
+                assert len(lanes)==1, (label,lanes)
+                lane=lanes[0]
+                native=struct.unpack("<40H",bytes.fromhex(
+                    emu.dsp_peek(0x25C48C+2*(0x6D+0x49*lane),80)["hex"]))
+                assert abs(native[0]-(position<<8))<=1 and native[1]==16384 and native[5]==0, native
+                x,y=struct.unpack("<2f",bytes.fromhex(emu.dsp_peek(0x20092080+8*lane,8)["hex"]))
+                capacitor=struct.unpack("<f",bytes.fromhex(emu.dsp_peek(0x20092100+4*lane,4)["hex"]))[0]
+                g=tone808.coefficient(native[0])
+                pole=body808.retention(native[1])*complex(
+                    math.cos(2*math.pi*55/48000),math.sin(2*math.pi*55/48000))
+                expected=(2*g/(1-(1-2*g)/pole)*complex(y,x)).imag
+                error=abs(capacitor-expected)
+                assert math.isfinite(capacitor) and error<=1e-5, (label,capacitor,expected,error)
+                emu.run_until(frames=emu.status()["dsp_frames"]+150,timeout_wall_s=120)
+                emu.call("pcm.tap",action="capture_stop")
+                pcm=hook_ab.read_wav(path)
+                peak=float(max(abs(pcm)))
+                assert all(math.isfinite(v) for v in pcm) and 0<peak<1, label
+                report["tone_audio"][label]=dict(target=position,slot=lane,tone_raw=native[0],
+                    decay_raw=native[1],coefficient=g,capacitor=capacitor,
+                    predicted_settled_capacitor=expected,state_error_fs=error,
+                    native_peak_fs=peak,native_wav=str(path))
+                emu.midi_in(bytes([0x81,note,0]))
+            assert report["tone_audio"]["bright"]["coefficient"] > 10*report["tone_audio"]["dark"]["coefficient"]
+            emu.midi_in(bytes([0xB1,cc["0"],64]))
             report["final_status"] = emu.status()
             final = report["final_status"]
             assert final["cf"]["ready"] and final["cf"]["error"] is None, final
@@ -533,7 +570,7 @@ def full_os() -> dict:
         report["traceback"] = traceback.format_exc()
     report["unqualified"] = [
         "persistence across emulator/device restart",
-        "808 circuit fidelity and Tone response",
+        "808 circuit fidelity and pot calibration",
         "909 audio and real-device timing",
     ]
     (out / "native-boot-report.json").write_text(json.dumps(report, indent=2) + "\n")
