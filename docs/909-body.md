@@ -52,7 +52,47 @@ existing 1e-5 FS bound; no gain fit, normalization or alignment is allowed.
 
 Run `mise run test` for host/C checks, `mise run test:909:body` for both actual
 ASM implementations and cross-CPU comparison, and `mise run test:{dt,dn,dn2}`
-separately for native installed-mod checks. Current runs are in progress;
-component/native results will be recorded here before this increment is accepted.
+separately for native installed-mod checks. The independent model is committed
+in `5cb8a73`, and actual ASM/C routing in `6b3e05e`.
+
+111 host tests and all independent C/UI suites pass. The actual 24000-sample
+renders give:
+
+| Check | ColdFire | SHARC+ |
+| --- | --- | --- |
+| Maximum reference error | 5.243e-7 FS | 4.673e-7 FS |
+| Measured frequency | 49.999997 Hz | 49.999997 Hz |
+| Fitted amplitude time constant | 0.249998572 s | 0.249999278 s |
+| Maximum instructions per 909 block | 711 including test wrapper | 734 |
+
+The two CPU outputs differ by at most 2.129e-7 FS. Both retain state/output,
+callee/context and retrigger/interleaving guards. The combined SHARC callback
+passes 4686 component calls with 914 code bytes, unchanged 320 state bytes and
+overall worst 827 instructions under the unchanged 1000-instruction bound.
+The 808 path and its Tone/Decay comparisons remain checked by that same suite.
+
+The actual ColdFire four-second run exposes a known fixed-point limit: the
+nearest-even envelope settles at 6022 Q31 LSBs, producing a peak residual of
+2.805e-6 FS. This is bounded below the existing 1e-5 FS numeric limit, not exact
+tail silence. Revisit the tail policy when implementing the stock VCA/envelope;
+do not infer a physical 909 noise floor from integer arithmetic.
+
+Native installed-mod checks retain the existing 808 Tone/Decay, controls,
+lock/LFO, persistence, MODEL latching and unrelated-stock-output checks.
+Component passes alone do not prove those native paths or downstream audio.
+
+| Device | First 909 native evidence | Full native regression |
+| --- | --- | --- |
+| DT 1.54 | 23200 raw samples at the actual C/ASM boundary match the oracle within 5.243e-7 FS; isolated post-START PCM peak 3306/32768; 123 callbacks contain nonzero 808 and 909 tracks together | 32108 callbacks complete; only deferred #78 parameter/page reset checks fail |
+| DN 1.44 | Native run in progress | Final isolated capture under investigation |
+| DN2 1.12 | Native run in progress | Combined controls/audio regression pending |
+
+DT's representative p-lock check obtains its exact expected value from the
+native held-step DECAY display and requires that word in the render callback,
+with the saved base unchanged. It does not assume a fixed result from relative
+encoder acceleration. The tested lock is raw 24064 and the base remains 16384.
+
+DT captures are `out/dt/silent/{raw,native}-909.wav`. Its firmware SHA256 is
+`df8bf16ac6521a4758b9892a8a5a9a520484e94a9b599f4ab45fa88f726f60d0`.
 
 VST references (#2) and physical-device testing are outside this increment.

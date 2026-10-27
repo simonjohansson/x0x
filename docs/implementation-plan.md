@@ -9,6 +9,11 @@ verified through native controls/audio on all three machines. The subsequent
 native integration checks, with provisional knob mapping. Further 808 circuit
 detail follows within these integrations.
 
+#25 now adds the first unshaped [909 triangle body](909-body.md) to those same
+mods. Its fixed pitch, envelope and START phase are provisional audition values;
+the source baseline establishes the triangle topology, not a faithful complete
+909. Shaping and the stock controls/envelopes follow as integrated increments.
+
 The product remains one mod per device containing 808 and 909 behind a saved
 per-sound/track MODEL selector. Different tracks/voices can select different
 models in the same build. Digitakt II is outside scope. C owns UI/plumbing;
@@ -30,7 +35,7 @@ every control, model stage, CPU implementation and matrix cell.
 | Done | [#40](https://github.com/simonjohansson/x0x/issues/40) | Digitone: select and exercise the silent combined mod in digiemu |
 | Done | [#7](https://github.com/simonjohansson/x0x/issues/7) | Digitone II: select and exercise the silent combined mod in Digikit |
 | In progress | [#9](https://github.com/simonjohansson/x0x/issues/9) | Implement the 808 on both CPUs and integrate each increment into working mods |
-| Then | [#25](https://github.com/simonjohansson/x0x/issues/25) | Implement the 909 on both CPUs alongside the 808 in those same mods |
+| In progress | [#25](https://github.com/simonjohansson/x0x/issues/25) | Implement the 909 on both CPUs alongside the 808 in those same mods |
 | Alongside engines | [#79](https://github.com/simonjohansson/x0x/issues/79) | Inspect reference implementations/schematics and align both engines before later VST comparison |
 | Deferred by user | [#78](https://github.com/simonjohansson/x0x/issues/78) | Digitakt native reset defaults; fix upstream in Elekloader and consume here |
 | Deferred by user | [#2](https://github.com/simonjohansson/x0x/issues/2) | Reference VST captures and fidelity comparisons for both models |
@@ -98,8 +103,9 @@ The first #9 increment supplies an analytically checked fixed 808 body on both
 CPUs and native audio captures from every device. Live Decay and the passive
 Tone RC stage are implemented. Next add source-derived excitation, pitch/feedback,
 stock Decay mapping and output coupling as small commits.
-Each ready increment runs through the already-installed mod. #25 follows with
-909 body/tune, envelope and pulse/noise attack. Keep the same registration and
+Each ready increment runs through the already-installed mod. #25 is underway
+with the unshaped triangle; diode shaping, body/tune, envelope and pulse/noise
+attack follow. Keep the same registration and
 saved controls throughout; both models must coexist, not become separate mods.
 
 [#79](https://github.com/simonjohansson/x0x/issues/79) makes the source-to-code

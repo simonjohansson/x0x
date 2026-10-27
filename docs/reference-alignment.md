@@ -2,7 +2,8 @@
 
 Source/code audit for [#79](https://github.com/simonjohansson/x0x/issues/79),
 27 October 2026. The initial audit inspected runtime `a05912e`; the inventory
-below now includes the subsequent [Tone RC implementation](808-tone.md).
+below includes the subsequent [Tone RC implementation](808-tone.md) and
+[first 909 triangle body](909-body.md).
 Saved controls remain unchanged. This is an alignment inventory, not evidence
 that either engine reproduces original hardware or a reference VST.
 
@@ -85,18 +86,19 @@ model and plumbing; they do not close the missing circuit rows above.
 
 ## 909 source-to-code inventory
 
-DT/DN explicitly call silence in the 909 branch; SHARC selects code 2 and jumps
-to `silent`. There is no hidden 909 renderer to calibrate yet. Parameter delivery
-and MODEL persistence are useful existing plumbing, not implemented sound.
+The first 909 slice adds an unshaped triangle on both CPUs. Its fixed 50 Hz,
+250 ms amplitude decay, gain and zero-crossing START are explicitly provisional;
+the sources establish the VCO topology, not those complete-circuit parameters.
+The stock pitch, shaper and envelope networks are still missing.
 
 | Block | Source target | Current implementation | Alignment status |
 | --- | --- | --- | --- |
-| VCO/shaper | S02 p.4/p.11; S05 p.3/p.12: triangle oscillator IC13, D10/D11 and R52 rounding | Silence | Missing |
-| Tune/pitch path | S02 ENV3/VR2/C9; S05 p.3 distinguishes stock Tune from added Pitch/Tune Depth | TNTUN routed for 909 | No pitch behavior; do not reinterpret stock Tune as chromatic transpose |
-| Tonal Decay/VCA | S02 ENV1→Q12, C8 and VR5; S05 original BD schematic | DECAY routed | No envelope/VCA; 808 feedback loss is not the 909 Decay model |
+| VCO/shaper | S02 p.4/p.11; S05 p.3/p.12: triangle oscillator IC13, D10/D11 and R52 rounding | Independent triangle model and separate CPU phase/fold implementations | Triangle foundation implemented; circuit VCO/control calibration and diode rounding missing |
+| Tune/pitch path | S02 ENV3/VR2/C9; S05 p.3 distinguishes stock Tune from added Pitch/Tune Depth | Fixed 50 Hz; TNTUN delivered but ignored in this slice | Stock pitch-envelope/time mapping missing; do not reinterpret stock Tune as chromatic transpose |
+| Tonal Decay/VCA | S02 ENV1→Q12, C8 and VR5; S05 original BD schematic | Provisional fixed exponential amplitude, DECAY delivered but not used yet | Stock envelope/VCA missing; 808 feedback loss is not the 909 Decay model |
 | Attack pulse/noise | S02 p.4/p.11, ENV2→Q6; S05 p.12, VR3 and C12 | ATTK routed | Pulse, filtered continuous noise and VCA absent; Attack is branch level, not ADSR rise time |
-| Trigger/accent/retrigger | S02 pp.4–5 and BD Q11 clamp; separate accent and approximately 2 ms/5 V trigger | Native START reaches selector | No circuit excitation, clamp-release or residual-state behavior |
-| Output sum/calibration | S02 p.4/p.11; S05 p.12 | Native track volume remains available | No tonal/attack sum or 909 internal scale yet |
+| Trigger/accent/retrigger | S02 pp.4–5 and BD Q11 clamp; separate accent and approximately 2 ms/5 V trigger | START restarts triangle phase/amplitude | Provisional restart, no circuit excitation/clamp-release or residual-state behavior |
+| Output sum/calibration | S02 p.4/p.11; S05 p.12 | Provisional 0.25 internal gain and native track volume | No calibrated tonal/attack sum or 909 internal scale yet |
 
 ## Resolved readings and explicit assumptions
 
@@ -131,7 +133,8 @@ annotation must accompany the selected nominal population.
    and add the internal transient, preserving circuit state on retrigger as
    each stage lands. Then replace provisional Decay radius control with the
    source-derived feedback network. Keep the distinctions in the table current.
-3. Start the 909 triangle/shaper slice in #25 using the schematic baseline;
+3. The first unshaped 909 triangle is underway in #25. Add diode shaping, then
+   derive the stock pitch/envelope/attack paths using the schematic baseline;
    use S44 as a secondary comparison, not an excuse to declare stock fidelity.
 4. Build reproducible executable reference calculations/harnesses and record
    matching fixtures before calling either engine source-aligned. Sources have

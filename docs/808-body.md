@@ -3,9 +3,9 @@
 This #9 increment is an uncalibrated damped sine, before the 808 excitation,
 pitch sigh, stock feedback/Decay mapping and output coupling. The saved layout
 stays unchanged. DECAY changes feedback retention on every block, and TNTUN now
-drives the [passive Tone RC stage](808-tone.md). ATTK is ignored in 808 mode;
-909 remains silent. The raw-body equations below describe the oscillator before
-that new output filter.
+drives the [passive Tone RC stage](808-tone.md). ATTK is ignored in 808 mode.
+The [first 909 body](909-body.md) follows separately. The raw-body equations below
+describe the 808 oscillator before the output filter.
 
 ## Model and units
 
@@ -97,9 +97,10 @@ costs, the additional Tone state and composed-output errors are recorded in
 
 ## Native integration
 
-The existing native runners now execute the production 808 body and retain
-909 silence, control/lock/LFO delivery, MODEL latching, persistence and owned
-output checks. The old `:silent` command names remain compatibility aliases.
+The native runners below executed the first production 808 body while 909 was
+still silent, retaining control/lock/LFO delivery, MODEL latching, persistence
+and owned output checks. The old `:silent` command names remain compatibility
+aliases. Current mixed-engine integration is recorded in [909-body.md](909-body.md).
 
 | Device | Historical first-body evidence | Historical full native regression |
 | --- | --- | --- |

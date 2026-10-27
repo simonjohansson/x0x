@@ -4,7 +4,8 @@ TNTUN now filters the provisional 808 body on DT, DN and DN2. This is one
 source-derived circuit stage in [#9](https://github.com/simonjohansson/x0x/issues/9)
 and [#79](https://github.com/simonjohansson/x0x/issues/79), not a claim that the
 whole engine is a faithful 808. The saved controls, IDs and MODEL policy are
-unchanged. ATTK remains ignored for 808; 909 still renders silence.
+unchanged. ATTK remains ignored for 808. The subsequent
+[909 triangle increment](909-body.md) replaces the previously silent branch.
 
 ## Circuit and control mapping
 
@@ -52,9 +53,11 @@ The [SHARC callback](../targets/sharc/body808.s) keeps its first 128 metadata
 bytes and next 128 body bytes, then adds sixteen float Tone states at offset
 256: 320 total private state bytes. A positive-float reciprocal estimate with
 four Newton refinements computes G without relying on an unmodeled RECIPS seed.
-The combined callback is 764 code bytes and at most 827 instructions under the
-unchanged 1000-instruction test bound. Its 3934 component callbacks retain
-output/state guards, context preservation, invalid-frame atomicity and 909 silence.
+At the Tone increment `58d0d55`, the combined callback was 764 code bytes and at
+most 827 instructions under the unchanged 1000-instruction test bound. Its 3934
+component callbacks retained output/state guards, context preservation,
+invalid-frame atomicity and then-unimplemented 909 silence. Current combined
+callback costs/results are recorded in [909-body.md](909-body.md).
 
 Every current prototype START clears the selected Tone history alongside the
 existing body restart. A live control edit without START does not. In particular,
@@ -65,6 +68,10 @@ owner's charge. Residual circuit-state retrigger behavior and logical ownership
 qualification remain in #9/#20/#79; no SDK transport or saved format was added.
 
 ## Verification
+
+The numerical/native results below are from the completed Tone increment,
+before 909 sound was added. [909-body.md](909-body.md) records the current
+combined-mod regression while retaining these 808 checks.
 
 Run `mise run test` for host/C checks and `mise run test:808:body` for actual
 ColdFire body, ColdFire Tone, combined SHARC body/Tone and cross-CPU comparison.

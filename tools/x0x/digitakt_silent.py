@@ -51,7 +51,7 @@ def component():
     linker.write_text("SECTIONS { . = 0x47000000; .text : { *(.text*) } .rodata : { *(.rodata*) } .data : { *(.data*) } .bss : { *(.bss*) *(COMMON) } }")
     prefix = os.environ.get("ELEKLOADER_CROSS", "m68k-elf-")
     objects = []
-    for source in (SOURCE, fakes, ROOT / "targets/coldfire/selector.s", ROOT / "targets/coldfire/silence.s", ROOT / "targets/coldfire/body808.s", ROOT / "targets/coldfire/tone808.s"):
+    for source in (SOURCE, fakes, ROOT / "targets/coldfire/selector.s", ROOT / "targets/coldfire/silence.s", ROOT / "targets/coldfire/body808.s", ROOT / "targets/coldfire/tone808.s", ROOT / "targets/coldfire/body909.s"):
         obj = FOLDER / (source.stem + ".o")
         cpu.command([prefix + "gcc", "-mcpu=54455", "-O2", "-ffreestanding", "-fno-builtin",
                      "-Wall", "-Wextra", "-Werror", "-I", ROOT / "vendor/elekloader/elekloader/sdk/include",
@@ -109,12 +109,16 @@ def component():
         for track in range(8):
             live = active[track] == 80
             raw = bytes(uc.mem_read(address("blocks") + track * 128, 128))
-            audible = live and expected[3 * track] and expected[3 * track + 1] == 0 and label != "invalid control"
+            audible = live and expected[3 * track] and label != "invalid control"
             # START can initialize or switch this lane in the current call.
             if live and starts & (1 << track) and label != "invalid control":
-                audible = (model0 if track == 0 else model7) < 16384
+                audible = True
             if audible:
-                assert any(struct.unpack(">32i", raw)), (label, track, "missing 808 body")
+                samples = struct.unpack(">32i", raw)
+                assert 0 < max(abs(x) for x in samples) < 0x40000000, (label, track, "missing/bounded body")
+                if starts & (1 << track) and (model0 if track == 0 else model7) >= 16384:
+                    from .body909 import reference
+                    assert max(abs(x/2**31-y) for x,y in zip(samples,reference(32))) <= 1e-5
             else:
                 assert raw == (bytes(128) if live else original[track * 128:(track + 1) * 128]), label
             assert int.from_bytes(uc.mem_read(address("reads") + 4 * track, 4), "big") == (0x27 if live else 0), label
@@ -174,7 +178,7 @@ def full_os():
                   stock=stock, firmware_sha256=hashlib.sha256(image.read_bytes()).hexdigest(),
                   digiemu_revision=cpu.revision(ROOT / "vendor/digiemu"),
                   companion_compatibility=compatibility,
-                  unqualified=["p-lock/LFO delivery", "save/reload", "strict-model qualification", "808 circuit fidelity/pot calibration", "909 audio"])
+                  unqualified=["p-lock/LFO delivery", "save/reload", "strict-model qualification", "808 circuit fidelity/pot calibration", "909 diode shaping/envelopes and control response"])
     session = None
     try:
         with (FOLDER / "native-boot.log").open("w") as log, contextlib.redirect_stdout(log):
@@ -187,7 +191,8 @@ def full_os():
             never_fake_set_posts(session.m, session.ev, session.profile.set_post)
         uc, midi = session.m.uc, MidiIn()
         state = dict(active=None, callbacks=0, selected_callbacks=0, violations=[], controls=[],
-                     body_peak=0, silent_909_callbacks=0,
+                     body_peak=0, body909_peak=0, body909_callbacks=0, mixed_audible_blocks=0,
+                     capture909=False, started909=False, samples909=[], lock_edit=False, lock_display=[],
                      decay_phase=None, decay_started=False, decay_samples=[], decay_words=[], tone_words=[])
         returns = set()
         def checked(fn):
@@ -215,9 +220,22 @@ def full_os():
                     assert peak < 0x40000000, "808 body exceeded fixed internal headroom"
                     if track == 0 and state["decay_phase"] and state["decay_started"]:
                         state["decay_samples"].extend(struct.unpack(">32i", after[lo:hi]))
+                elif initialized and model == 1:
+                    words = struct.unpack(">32i",after[lo:hi])
+                    peak = max(abs(x) for x in words)
+                    assert peak < 0x40000000, "909 body exceeded fixed internal headroom"
+                    state["body909_peak"] = max(state["body909_peak"],peak)
+                    state["body909_callbacks"] += 1
+                    if track == 0 and state["capture909"] and state["started909"]:
+                        state["samples909"].extend(words)
                 else:
-                    assert after[lo:hi] == bytes(128), "inactive/909 callback was not silent"
-                    state["silent_909_callbacks"] += int(initialized and model == 1)
+                    assert after[lo:hi] == bytes(128), "inactive callback was not silent"
+            audible_models = set()
+            for track,machine in enumerate(active["machines"]):
+                if machine == 80 and any(after[128*track:128*(track+1)]):
+                    initialized,model,_ = struct.unpack(">3I",uc.mem_read(names["selection"]+12*track,12))
+                    if initialized: audible_models.add(model)
+            state["mixed_audible_blocks"] += int(audible_models == {0,1})
             state["callbacks"] += 1
             state["selected_callbacks"] += int(80 in active["machines"])
             if active["machines"][0] == 80:
@@ -248,6 +266,15 @@ def full_os():
             if state["decay_started"]:
                 state["decay_words"].append(decay)
         session.at(names["x0x_808_body"], checked(body_entered))
+        def body909_entered(_uc, _at, _size, _data):
+            if not state["capture909"]:
+                return
+            sp = uc.reg_read(UC_M68K_REG_A7)
+            owner, _output, start = struct.unpack(">3I",uc.mem_read(sp+4,12))
+            if owner == names["body_state"] and start:
+                state["started909"] = True
+                state["samples909"] = []
+        session.at(names["x0x_909_body"],checked(body909_entered))
         def tone_entered(_uc, _at, _size, _data):
             if not state["decay_phase"] or not state["decay_started"]:
                 return
@@ -256,6 +283,13 @@ def full_os():
             if owner == names["tone_state"]:
                 state["tone_words"].append(tone)
         session.at(names["x0x_808_tone"], checked(tone_entered))
+        def shown_value(_uc, _at, _size, _data):
+            if state["lock_edit"]:
+                sp = uc.reg_read(UC_M68K_REG_A7)
+                parameter, value = struct.unpack(">2i",uc.mem_read(sp+4,8))
+                if parameter == 133:  # SRC B / DECAY, before borrowed graphics.
+                    state["lock_display"].append(value)
+        session.at(names["mp_value_text"],checked(shown_value))
         def wait(ms=80):
             session.run_ms(ms)
             assert not session.halted and not state["violations"], (session.halted, state["violations"])
@@ -314,7 +348,30 @@ def full_os():
         report["body_audio"] = dict(raw_peak_q31=state["body_peak"], downstream_pcm_peak=pcm_peak,
                                     capture=str(FOLDER / "native-808.wav"), scope="isolated native 808 note")
         send([0xb0, 21, 127]); report["pending"] = selected()
-        send([0x80, 60, 0]); send([0x90, 60, 100]); report["909"] = selected()
+        send([0x80, 60, 0])
+        state["capture909"] = True
+        send([0x90, 60, 100]); report["909"] = selected()
+        # Capture downstream PCM after START delivery; the raw capture retains onset.
+        pcm_start = len(session.pcm)
+        wait(400)
+        state["capture909"] = False
+        samples909 = [x/2**31 for x in state["samples909"]]
+        from .body909 import reference
+        assert len(samples909) >= 19200 and state["started909"]
+        error909 = max(abs(x-y) for x,y in zip(samples909,reference(len(samples909))))
+        assert error909 <= 1e-5, error909
+        pcm = bytes(session.pcm[pcm_start:])
+        pcm_peak = max(abs(x) for x in struct.unpack("<"+"h"*(len(pcm)//2),pcm))
+        assert 0 < pcm_peak < 32767 and state["body909_peak"] > 0
+        with wave.open(str(FOLDER / "native-909.wav"),"wb") as wav:
+            wav.setparams((2,2,session.audio_cfg["rate"],0,"NONE","not compressed"))
+            wav.writeframes(pcm)
+        audio.write_wav(FOLDER / "raw-909.wav",samples909,48000)
+        (FOLDER / "raw-909.json").write_text(json.dumps(samples909)+"\n")
+        report["body909_audio"] = dict(raw_peak_q31=state["body909_peak"],downstream_pcm_peak=pcm_peak,
+            frames=len(samples909),waveform_peak_error_fs=error909,
+            capture=str(FOLDER / "native-909.wav"),raw_capture=str(FOLDER / "raw-909.wav"),
+            scope="isolated native 909 PCM after START delivery; raw capture includes onset")
         screen("controls-909")
         assert report["808"] == [1, 0, 0] and report["pending"] == [1, 0, 0] and report["909"] == [1, 1, 0], report
         values = stored()[1]
@@ -339,21 +396,27 @@ def full_os():
         tap("STOP"); tap("STOP"); tap("RECORD")
         tap("1")
         session.press(session.code("1")); wait(80)
+        state["lock_edit"] = True
         try:
             for _ in range(4):
                 session.turn(session.encoder("B"), 8, after_ms=150)
         finally:
+            state["lock_edit"] = False
             session.release(session.code("1"))
         wait()
+        assert state["lock_display"], "native lock editor did not display DECAY"
+        locked_value = state["lock_display"][-1]
+        assert 16384 < locked_value <= 32512, state["lock_display"]
         screen("parameter-lock")
         report["lock_base"] = stored()[1][18]
         tap("RECORD")
         start = len(state["controls"])
         tap("PLAY"); wait(1500); tap("STOP")
         decay = sorted({words[1] for words in state["controls"][start:]})
-        report["parameter_lock"] = dict(base=report["lock_base"], expected=21504,
-                                        min=min(decay), max=max(decay), distinct=len(decay))
-        assert report["lock_base"] == 16384 and 21504 in decay, report
+        report["parameter_lock"] = dict(base=report["lock_base"], expected=locked_value,
+                                        min=min(decay), max=max(decay), distinct=len(decay),
+                                        expected_source="native held-step DECAY display")
+        assert report["lock_base"] == 16384 and locked_value in decay, report
         # The fresh factory project requires a native resave before quick reload.
         tap("GLOBAL"); tap("YES"); tap("DOWN"); tap("YES")
         tap("DOWN"); tap("YES"); tap("YES"); wait(2500)
@@ -380,6 +443,8 @@ def full_os():
         send([0xb1, 16, 64, 0xb1, 17, 64, 0xb1, 18, 64, 0xb1, 21, 0, 0x91, 60, 100])
         report["mixed_tracks"] = [selected(0), selected(1)]
         assert report["mixed_tracks"] == [[1, 1, 0], [1, 0, 0]], report
+        assert state["mixed_audible_blocks"] > 0, "808/909 never produced audio in the same callback"
+        report["mixed_audible_blocks"] = state["mixed_audible_blocks"]
         assert bytes(uc.mem_read(stored()[0], 162)) == first_sound, "second track changed the first sound"
         # Check the approved ID80 exception against stock and unrelated legacy IDs.
         context = uc.context_save()
@@ -490,14 +555,14 @@ def full_os():
         assert state["active"] is None and state["selected_callbacks"] > 0 and not state["violations"], state
         report.update(callbacks=state["callbacks"], selected_callbacks=state["selected_callbacks"],
                       checked=["native machine selection", "native UART control delivery", "next-START MODEL latch",
-                               "808 body reaches native PCM", "native Decay changes the actual ASM tail", "native Tone changes actual filtered ASM output", "909 blocks zero", "other track blocks preserved",
+                               "808 body reaches native PCM", "native Decay changes the actual ASM tail", "native Tone changes actual filtered ASM output", "909 unshaped body reaches native PCM", "other track blocks preserved",
                                "native LFO destination and modulation", "native sequencer parameter lock",
                                "x0x-only defaults helper scope"])
         restored = report["save_reload"]["restored"]
         if restored:
             report["checked"].append("native project save and pattern reload")
         report["checked"].append("native mixed 808/909 tracks")
-        report["unqualified"] = ["strict-model qualification", "808 circuit fidelity/pot calibration", "909 audio"] + ([] if restored else ["save/reload"])
+        report["unqualified"] = ["strict-model qualification", "808 circuit fidelity/pot calibration", "909 diode shaping/envelopes and control response"] + ([] if restored else ["save/reload"])
         report["failed_checks"] = [name for name in ("defaults", "parameter_reset", "page_reset")
                                    if report[name]["status"] == "failed"]
         report["status"] = "passed" if not report["failed_checks"] and restored else "failed"
