@@ -36,6 +36,11 @@ now pinned here. The unchanged-production candidate passes full and original
 late-MODEL scenarios; the normal pinned daemon passes the new full Tune run.
 The separate original-order late probe now also passes on the normal daemon,
 completing #80's root-repository gates; the public PR remains draft.
+The [private DN2 allocation](dn2-private-layout.md) now provides 8,128 usable
+code bytes and 5 KiB data within the existing reservation. All 29 component
+outputs remain byte identical; the full native and original-order late-MODEL
+scenarios pass on the normal emulator. This does not adopt the pulse/noise
+prototypes or close their fidelity gates.
 These native gates do not block other ready engine work. HTML is unchanged;
 training repetitions retain raw timing/gain, and held-out audio remains unused.
 
@@ -64,7 +69,7 @@ every control, model stage, CPU implementation and matrix cell.
 | In progress | [#25](https://github.com/simonjohansson/x0x/issues/25) | Implement the 909 on both CPUs alongside the 808 in those same mods |
 | Done | [#80](https://github.com/simonjohansson/x0x/issues/80) | Upstream Digikit mask fix published/pinned; unchanged-production full and original late-MODEL probes pass on the normal runtime |
 | Alongside engines | [#79](https://github.com/simonjohansson/x0x/issues/79) | Align both engines with sources and the full measured training surfaces |
-| Private capacity | [#81](https://github.com/simonjohansson/x0x/issues/81) | Rebalance the existing DN2 voice reservation for the planned larger DSP; no SDK/public-format change |
+| Done | [#81](https://github.com/simonjohansson/x0x/issues/81) | Private DN2 8 KiB code / 5 KiB data split; unchanged audio and full/late-MODEL native scenarios pass, without SDK/public-format changes |
 | Deferred by user | [#78](https://github.com/simonjohansson/x0x/issues/78) | Digitakt native reset defaults; fix upstream in Elekloader and consume here |
 | Full training grids complete for both engines; fidelity open | [#2](https://github.com/simonjohansson/x0x/issues/2) | Fixed-level reference corpora; both-model fidelity comparisons remain open |
 | After sound | [#20](https://github.com/simonjohansson/x0x/issues/20) | Combined-mod emulator regression and readiness review |

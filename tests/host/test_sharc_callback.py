@@ -24,12 +24,12 @@ class CallbackFixtureTests(unittest.TestCase):
         self.assertEqual(negative_immediate_shifts(good), [])
         self.assertEqual(negative_immediate_shifts(bad), [0])
 
-    def test_callback_layout_tracks_sdk_bounds_and_read_ahead_guard(self):
-        layout = dict(code_pc16=0xBC8400, code_bytes=6144,
-                      data_address=0x20092000, data_bytes=7168)
-        validate_layout(layout, bytes(6080), 0xBC8400)
-        for change, size, entry in [({}, 6082, 0xBC8400), ({}, 10, 0xBC8401),
-                                    ({"data_address": 0x20092004}, 10, 0xBC8400),
+    def test_callback_layout_tracks_private_bounds_and_read_ahead_guard(self):
+        layout = dict(code_pc16=0xBC8400, code_bytes=8192,
+                      data_address=0x20092800, data_bytes=5120)
+        validate_layout(layout, bytes(8128), 0xBC8400)
+        for change, size, entry in [({}, 8130, 0xBC8400), ({}, 10, 0xBC8401),
+                                    ({"data_address": 0x20092804}, 10, 0xBC8400),
                                     ({"data_bytes": 124}, 10, 0xBC8400)]:
             with self.subTest(change=change, size=size, entry=entry), self.assertRaises(AssertionError):
                 validate_layout({**layout, **change}, bytes(size), entry)

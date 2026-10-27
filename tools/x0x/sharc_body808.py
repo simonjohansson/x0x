@@ -9,6 +9,7 @@ import struct
 import sys
 
 from . import analysis, body808, body909, tune909, coupling808, cpu, tone808, sharc_callback as callback, sharc_selector as selector
+from .sharc_layout import voice_layout
 
 SOURCE = cpu.ROOT / "targets/sharc/body808.s"
 FOLDER = cpu.ROOT / "out/sharc/body808"
@@ -20,8 +21,7 @@ def component(folder=None) -> tuple[dict, bytes]:
     folder = Path(folder) if folder is not None else FOLDER
     folder.mkdir(parents=True, exist_ok=True)
     code, entry, _ = callback.build(folder, SOURCE)
-    from elekloader.sdk.sharc import machine_layout
-    layout = machine_layout("voice")
+    layout = voice_layout()
     callback.validate_layout(layout, code, entry)
     assert STATE_BYTES <= layout["data_bytes"]
     callback.decoded_instructions(code, entry)
@@ -240,7 +240,7 @@ def component(folder=None) -> tuple[dict, bytes]:
                   emulator_revision=cpu.revision(cpu.ROOT / "vendor/digikit"),
                   calls=policy.calls + live.calls + sum(r.calls for r in triangle_runs) + sum(r[0].calls for r in rendered.values())
                         + sum(r.calls for r in tone_runs),
-                  code_bytes=len(code), state_bytes=STATE_BYTES,
+                  code_bytes=len(code), state_bytes=STATE_BYTES, private_layout=layout,
                   source_sha256=hashlib.sha256(SOURCE.read_bytes()).hexdigest(),
                   image_sha256=hashlib.sha256(code).hexdigest(),
                   samples_path=str(output), samples_sha256=hashlib.sha256(output.read_bytes()).hexdigest(),

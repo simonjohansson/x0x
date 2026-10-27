@@ -17,6 +17,7 @@ import tempfile
 import time
 
 from . import cpu, sharc_callback as callback
+from .sharc_layout import voice_layout
 
 ROOT = cpu.ROOT
 SOURCE = ROOT / "targets/sharc/selector.s"
@@ -258,7 +259,7 @@ def compare(code: bytes, entry: int, inputs: list[dict], reference: list[dict]) 
 
 def mutations(folder: Path, inputs: list[dict], reference: list[dict]) -> list[dict]:
     early_store = """R3=LSHIFT R2 BY 3;
-    R6=0x20092000;
+    R6=0x20092800;
     R3=R3+R6;
     I4=R3;
     R0=DM(I4,M5);
@@ -298,7 +299,7 @@ def verify() -> dict:
         inputs = cases()
         reference, provenance = c_reference(folder, inputs)
         code, entry, selache = callback.build(folder, SOURCE)
-        layout = cpu.require_module("elekloader.sdk.sharc", "elekloader").machine_layout("voice")
+        layout = voice_layout()
         callback.validate_layout(layout, code, entry)
         header = callback.check_header(folder)
         decoded = callback.decoded_instructions(code, entry)
@@ -307,7 +308,7 @@ def verify() -> dict:
         report = cpu.provenance("sharc", code, SOURCE, "digikit")
         report.update(kind="combined-DN2-SHARC-selector-diagnostic", c_reference=provenance,
                       header_sha256=header, assembler_revision=cpu.revision(selache),
-                      sdk_layout=layout, state_bytes=callback.STATE_BYTES, slots=16,
+                      private_layout=layout, state_bytes=callback.STATE_BYTES, slots=16,
                       calls=runner.calls, initialized_callbacks=sum(row["notices"] for row in reference),
                       rejected_inputs=sum(not row["valid"] for row in reference),
                       kernel_stack_bytes=runner.high_water_bytes, adapter_call_frame_bytes=8,

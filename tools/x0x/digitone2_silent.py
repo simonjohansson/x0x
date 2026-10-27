@@ -11,6 +11,7 @@ import sys
 import time
 
 from . import cpu, firmware, sharc_body808 as body, body808, body909, tone808, leakage808, tune909, vca909
+from .sharc_layout import voice_artifact
 
 ROOT = cpu.ROOT
 FOLDER = ROOT / "out/dn2/silent"
@@ -23,7 +24,6 @@ def component() -> tuple[dict, bytes]:
 def build() -> dict:
     from elekloader import elemod, formats, link, sharc
     from elekloader.sdk import build as sdk
-    from elekloader.sdk.sharc import voice_artifact
 
     component_report, code = component()
     entries, revision = firmware.baseline()
@@ -148,7 +148,7 @@ def full_os() -> dict:
             emu.step(6_000_000)
             (out / "native-controls.png").write_bytes(emu.frame_png())
             report["selected_frame_hash"] = emu.frame_hash()
-            report["before_note"] = emu.dsp_peek(0x20092000, 128)
+            report["before_note"] = emu.dsp_peek(0x20092800, 128)
             emu.call("pcm.tap", action="capture", path=str(out / "native-808.wav"))
             emu.midi_in(bytes([0x90, 60, 100]))
             target = emu.status()["dsp_frames"] + 750
@@ -161,10 +161,10 @@ def full_os() -> dict:
                                       pcm_peak_fs=pcm_peak, sample_rate=48000,
                                       frames=len(pcm) // 2, scope="isolated native 808 note")
             assert 0 < pcm_peak < 1, "808 body did not reach bounded downstream PCM"
-            report["after_note"] = emu.dsp_peek(0x20092000, 128)
+            report["after_note"] = emu.dsp_peek(0x20092800, 128)
             report["callback_frame"] = emu.dsp_peek(0x20093D00, 20)
             report["callback_params"] = emu.dsp_peek(0x20093D14, 160)
-            counters=struct.unpack("<16I",bytes.fromhex(emu.dsp_peek(0x200921c0,64)["hex"]))
+            counters=struct.unpack("<16I",bytes.fromhex(emu.dsp_peek(0x200929c0,64)["hex"]))
             assert counters == (0,)*16, counters
             report["excitation_808"] = dict(pulse_samples=body808.PULSE_SAMPLES,initial_frequency_samples=body808.ATTACK_SAMPLES,counters_after_settled_note=list(counters),
                 scope="native initial counter consumed; separate 1 ms drive / 6 ms frequency timing is actual-ASM component proof")
@@ -190,11 +190,11 @@ def full_os() -> dict:
                     assert model in (1, 2), (key, model)
                     if model == 2:
                         phase, c8 = struct.unpack("<If", bytes.fromhex(
-                            emu.dsp_peek(0x20092080 + 8*slot, 8)["hex"]))
+                            emu.dsp_peek(0x20092880 + 8*slot, 8)["hex"]))
                         c9 = struct.unpack("<f", bytes.fromhex(
-                            emu.dsp_peek(0x20092200 + 4*slot, 4)["hex"]))[0]
+                            emu.dsp_peek(0x20092a00 + 4*slot, 4)["hex"]))[0]
                         remaining = struct.unpack("<I", bytes.fromhex(
-                            emu.dsp_peek(0x200921C0 + 4*slot, 4)["hex"]))[0]
+                            emu.dsp_peek(0x200929c0 + 4*slot, 4)["hex"]))[0]
                         assert math.isfinite(c8) and 0 <= c8 <= vca909.SOURCE_V*vca909.STATE_SCALE, (slot,c8)
                         assert math.isfinite(c9) and 0 <= c9 <= tune909.CHARGE_V/tune909.SUPPLY_V, (slot,c9)
                         assert remaining <= tune909.TRIGGER_SAMPLES, (slot,remaining)
@@ -246,7 +246,7 @@ def full_os() -> dict:
             emu.midi_in(bytes([0xB0, cc["5"], 127]))
             emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
             pending = struct.unpack(
-                "<32I", bytes.fromhex(emu.dsp_peek(0x20092000, 128)["hex"])
+                "<32I", bytes.fromhex(emu.dsp_peek(0x20092800, 128)["hex"])
             )
             report["pending_state"] = list(pending)
             assert not any(pending[2 * i + 1] == 2 for i in range(16)), pending
@@ -255,7 +255,7 @@ def full_os() -> dict:
             emu.midi_in(bytes([0x90, 60, 100]))
             emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
             changed = struct.unpack(
-                "<32I", bytes.fromhex(emu.dsp_peek(0x20092000, 128)["hex"])
+                "<32I", bytes.fromhex(emu.dsp_peek(0x20092800, 128)["hex"])
             )
             report["changed_state"] = list(changed)
             assert any(
@@ -322,7 +322,7 @@ def full_os() -> dict:
             emu.midi_in(bytes([0x90,63,100,0x91,62,100]))
             emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
             mixed = struct.unpack(
-                "<32I", bytes.fromhex(emu.dsp_peek(0x20092000, 128)["hex"])
+                "<32I", bytes.fromhex(emu.dsp_peek(0x20092800, 128)["hex"])
             )
             report["mixed_track_state"] = list(mixed)
             assert any(mixed[2*i] > 0 and mixed[2*i+1] == 1 and changed[2*i] == 0
@@ -360,7 +360,7 @@ def full_os() -> dict:
             assert all(math.isfinite(sample) for sample in stock_samples), report["stock_track_voice_outputs"]
             assert any(stock_samples), report["stock_track_voice_outputs"]
             stock_state = struct.unpack("<32I", bytes.fromhex(
-                emu.dsp_peek(0x20092000, 128)["hex"]))
+                emu.dsp_peek(0x20092800, 128)["hex"]))
             assert all(stock_state[2*i:2*i+2] == (0, 0) for i in stock_lanes), stock_state
             chord("TRK", "TRIG 2")
             chord("FUNC", "YES")
@@ -381,7 +381,7 @@ def full_os() -> dict:
             emu.midi_in(bytes([0x81, 62, 0, 0x91, 62, 100]))
             emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
             restored = struct.unpack("<32I", bytes.fromhex(
-                emu.dsp_peek(0x20092000, 128)["hex"]))
+                emu.dsp_peek(0x20092800, 128)["hex"]))
             restored_lanes = [i for i in range(16) if restored[2*i] and not stock_state[2*i]]
             report["temporary_pattern_reload"] = {
                 "state": list(restored),
@@ -436,7 +436,7 @@ def full_os() -> dict:
             pitches = struct.unpack("<16H", bytes.fromhex(
                 emu.dsp_peek(0x25C48C + 2, 32)["hex"]))
             state = struct.unpack("<32I", bytes.fromhex(
-                emu.dsp_peek(0x20092000, 128)["hex"]))
+                emu.dsp_peek(0x20092800, 128)["hex"]))
             reloaded_lanes = [i for i in range(16) if ids[i] == 20 and pitches[i] == 67 << 8]
             report["persistent_project_reload"] = {
                 "scope": "native project save/reload in this emulator session; no power cycle",
@@ -476,7 +476,7 @@ def full_os() -> dict:
             pitches = struct.unpack("<16H", bytes.fromhex(
                 emu.dsp_peek(0x25C48C + 2, 32)["hex"]))
             state = struct.unpack("<32I", bytes.fromhex(
-                emu.dsp_peek(0x20092000, 128)["hex"]))
+                emu.dsp_peek(0x20092800, 128)["hex"]))
             locked = {
                 str(i): list(struct.unpack("<40H", bytes.fromhex(
                     emu.dsp_peek(0x25C48C + 2*(0x6D + 0x49*i), 80)["hex"])))
@@ -514,8 +514,8 @@ def full_os() -> dict:
                 assert len(lanes) == 1, (label, lanes)
                 lane = lanes[0]
                 def body_snapshot():
-                    metadata = struct.unpack("<2I", bytes.fromhex(emu.dsp_peek(0x20092000 + 8*lane, 8)["hex"]))
-                    xy = struct.unpack("<2f", bytes.fromhex(emu.dsp_peek(0x20092080 + 8*lane, 8)["hex"]))
+                    metadata = struct.unpack("<2I", bytes.fromhex(emu.dsp_peek(0x20092800 + 8*lane, 8)["hex"]))
+                    xy = struct.unpack("<2f", bytes.fromhex(emu.dsp_peek(0x20092880 + 8*lane, 8)["hex"]))
                     native = struct.unpack("<40H", bytes.fromhex(
                         emu.dsp_peek(0x25C48C + 2*(0x6D + 0x49*lane), 80)["hex"]))
                     assert metadata[1] == 1 and all(math.isfinite(x) for x in xy), (metadata, xy)
@@ -561,20 +561,20 @@ def full_os() -> dict:
                 lane=lanes[0]
                 def tone_snapshot():
                     metadata=struct.unpack("<2I",bytes.fromhex(
-                        emu.dsp_peek(0x20092000+8*lane,8)["hex"]))
+                        emu.dsp_peek(0x20092800+8*lane,8)["hex"]))
                     native=struct.unpack("<40H",bytes.fromhex(
                         emu.dsp_peek(0x25C48C+2*(0x6D+0x49*lane),80)["hex"]))
                     x,y=struct.unpack("<2f",bytes.fromhex(
-                        emu.dsp_peek(0x20092080+8*lane,8)["hex"]))
+                        emu.dsp_peek(0x20092880+8*lane,8)["hex"]))
                     def node(base):
                         return struct.unpack("<f",bytes.fromhex(
                             emu.dsp_peek(base+4*lane,4)["hex"]))[0]
                     remaining=struct.unpack("<I",bytes.fromhex(
-                        emu.dsp_peek(0x200921C0+4*lane,4)["hex"]))[0]
+                        emu.dsp_peek(0x200929c0+4*lane,4)["hex"]))[0]
                     assert metadata[1]==1 and remaining==0, (metadata,remaining)
                     return dict(callbacks=metadata[0],native=native,x=x,y=y,
-                                companion=node(0x20092200),main=node(0x20092240),
-                                capacitor=node(0x20092100))
+                                companion=node(0x20092a00),main=node(0x20092a40),
+                                capacitor=node(0x20092900))
                 before=tone_snapshot()
                 native=before["native"]
                 assert abs(native[0]-(position<<8))<=1 and native[1]==16384 and native[5]==0, native
@@ -598,7 +598,7 @@ def full_os() -> dict:
                 expected=voltage+history*current
                 capacitor=after["capacitor"]
                 previous_input, previous_output = struct.unpack("<2f",bytes.fromhex(
-                    emu.dsp_peek(0x20092140+8*lane,8)["hex"]))
+                    emu.dsp_peek(0x20092940+8*lane,8)["hex"]))
                 tone_last = ((1-g)*capacitor-g*(after["x"]+after["main"]))/(1-2*g)
                 coupling_input_error = abs(previous_input-tone_last)
                 assert coupling_input_error <= 1e-5, (label,previous_input,tone_last)
@@ -662,14 +662,14 @@ def full_os() -> dict:
                         row=dict(offset_dsp_frames=current_frame-capture_start,dsp_frames=current_frame,matching_slots=lanes)
                         if len(lanes)==1:
                             slot=lanes[0]
-                            metadata=struct.unpack("<32I",bytes.fromhex(emu.dsp_peek(0x20092000,128)["hex"]))
-                            remaining=struct.unpack("<I",bytes.fromhex(emu.dsp_peek(0x200921C0+4*slot,4)["hex"]))[0]
+                            metadata=struct.unpack("<32I",bytes.fromhex(emu.dsp_peek(0x20092800,128)["hex"]))
+                            remaining=struct.unpack("<I",bytes.fromhex(emu.dsp_peek(0x200929c0+4*slot,4)["hex"]))[0]
                             row.update(slot=slot,model=metadata[2*slot+1],callbacks=metadata[2*slot],remaining=remaining)
                             if metadata[2*slot+1]==2 and remaining in (64,32) and row["dsp_frames"]<=capture_start+24:
                                 native=struct.unpack("<40H",bytes.fromhex(emu.dsp_peek(0x25C48C+2*(0x6D+0x49*slot),80)["hex"]))
                                 assert native[0]==tune_position*256 and native[1]==position*256,(label,native)
-                                phase,c8=struct.unpack("<If",bytes.fromhex(emu.dsp_peek(0x20092080+8*slot,8)["hex"]))
-                                c9=struct.unpack("<f",bytes.fromhex(emu.dsp_peek(0x20092200+4*slot,4)["hex"]))[0]
+                                phase,c8=struct.unpack("<If",bytes.fromhex(emu.dsp_peek(0x20092880+8*slot,8)["hex"]))
+                                c9=struct.unpack("<f",bytes.fromhex(emu.dsp_peek(0x20092a00+4*slot,4)["hex"]))[0]
                                 age=tune909.TRIGGER_SAMPLES-remaining
                                 _,predicted=body909.continue_reference(body909.INITIAL_STATE,native[1],native[0],age)
                                 phase_error=abs((phase/2**32-.25-predicted[0]+.5)%1-.5)
@@ -697,7 +697,7 @@ def full_os() -> dict:
                 assert len(lanes) == 1, (ids,pitches)
                 lane = lanes[0]
                 def oscillator_snapshot(require_audible):
-                    state = struct.unpack("<32I", bytes.fromhex(emu.dsp_peek(0x20092000,128)["hex"]))
+                    state = struct.unpack("<32I", bytes.fromhex(emu.dsp_peek(0x20092800,128)["hex"]))
                     assert state[2*lane+1] == 2, state
                     native = struct.unpack("<40H", bytes.fromhex(
                         emu.dsp_peek(0x25C48C + 2*(0x6D+0x49*lane),80)["hex"]))

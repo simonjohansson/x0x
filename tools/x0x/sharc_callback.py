@@ -12,10 +12,11 @@ import tempfile
 import time
 
 from x0x import cpu
+from x0x.sharc_layout import voice_layout
 
 ROOT = cpu.ROOT
 SOURCE = ROOT / "targets/sharc/callback.s"
-STATE, STATE_BYTES = 0x20092000, 16 * 8
+STATE, STATE_BYTES = voice_layout()["data_address"], 16 * 8
 INPUT, PARAM, OUTPUT = 0x20094000, 0x20094100, 0x20094404
 FRAME, OLD_FRAME, RETURN = 0x20095000, 0x20095100, 0xBC9FF0
 GUARD = 0xA5A5A5A5
@@ -270,7 +271,7 @@ def shift_regression(folder: Path) -> dict:
 
 def mutation_checks(folder: Path) -> list[dict]:
     changes = [("skipped-output", "R9=32;", "R9=31;"),
-               ("slot-state-overrun", "R6=0x20092000;", "R6=0x20092080;"),
+               ("slot-state-overrun", "R6=0x20092800;", "R6=0x20092880;"),
                ("callee-saved-register", "    R0=4;\n    R1=R4+R0;", "    M8=0;\n    R0=4;\n    R1=R4+R0;"),
                ("memory-mapped-control", "    R0=4;\n    R1=R4+R0;", "    R0=4;\n    DM(0x31400)=R0;\n    R1=R4+R0;"),
                ("low-ram-write", "    R0=4;\n    R1=R4+R0;", "    R0=4;\n    DM(0x200000)=R0;\n    R1=R4+R0;"),
@@ -304,8 +305,7 @@ def verify() -> dict:
     with tempfile.TemporaryDirectory(prefix="x0x-sharc-callback-") as tmp:
         folder = Path(tmp)
         code, entry, selache = build(folder)
-        sdk = cpu.require_module("elekloader.sdk.sharc", "elekloader")
-        layout = sdk.machine_layout("voice")
+        layout = voice_layout()
         validate_layout(layout, code, entry)
         header_sha = check_header(folder)
         records = decoded_instructions(code, entry)
@@ -339,7 +339,7 @@ def verify() -> dict:
         report = cpu.provenance("sharc", code, SOURCE, "digikit")
         report.update(kind="pr200-voice-callback", header_sha256=header_sha,
                       assembler_revision=cpu.revision(selache), input_bytes=20,
-                      sdk_layout=layout,
+                      private_layout=layout,
                       slots=16, state_bytes=STATE_BYTES, calls=runner.calls + isolated.calls + interleaved.calls,
                       decoded_instructions=records,
                       kernel_stack_bytes=max(runner.high_water_bytes, isolated.high_water_bytes, interleaved.high_water_bytes),

@@ -66,10 +66,10 @@ next_word:
     IF LT JUMP validate_word;
     R14=R0;                 // Last validated word was MODEL, parameter 5.
     R13=LSHIFT R2 BY 2;
-    R0=0x20092100;
+    R0=0x20092900;
     R13=R13+R0;
     R0=LSHIFT R2 BY 3;
-    R1=0x20092140;
+    R1=0x20092940;
     R0=R0+R1;
     I3=R0;
     R1=4;
@@ -77,7 +77,7 @@ next_word:
     I5=R0;
 
     R3=LSHIFT R2 BY 3;
-    R6=0x20092000;
+    R6=0x20092800;
     R3=R3+R6;
     I4=R3;
     R9=DM(I4,M5);
@@ -100,19 +100,19 @@ next_word:
     JUMP selected;
 starting:
     R0=LSHIFT R2 BY 2;
-    R1=0x200921c0;
+    R1=0x200929c0;
     R0=R0+R1;
     I4=R0;
     R0=0;
     DM(I4,M5)=R0;
     R0=LSHIFT R2 BY 2;
-    R1=0x20092200;
+    R1=0x20092a00;
     R0=R0+R1;
     I4=R0;
     R0=0;
     DM(I4,M5)=R0;
     R0=LSHIFT R2 BY 2;
-    R1=0x20092240;
+    R1=0x20092a40;
     R0=R0+R1;
     I4=R0;
     R0=0;
@@ -169,11 +169,11 @@ selected:
     R14=R3+R0;
     R0=4;
     R15=R14+R0;
-    R4=0x20092080;
+    R4=0x20092880;
     R4=R14-R4;
     R5=-1;
     R4=LSHIFT R4 BY R5;
-    R5=0x200921c0;
+    R5=0x200929c0;
     R4=R4+R5;
     I0=R4;
     R7=PASS R7;
@@ -278,12 +278,12 @@ decay_coefficients:
     F15=F15+F4;
     // Per-slot cached main-input gains; interpolation has midpoint curvature.
     R4=I0;
-    R5=0x200921c0;
+    R5=0x200929c0;
     R4=R4-R5;
     R5=LSHIFT R4 BY 1;
     R4=LSHIFT R4 BY 2;
     R4=R4+R5;
-    R5=0x20092280;
+    R5=0x20092a80;
     R4=R4+R5;
     I1=R4;
     R4=0x3f010204;
@@ -898,10 +898,10 @@ leakage_after_done:
     I13=R4;
 store_body:
     R4=I0;
-    R5=0x200921c0;
+    R5=0x200929c0;
     R4=R4-R5;
     R4=LSHIFT R4 BY 1;
-    R5=0x20092080;
+    R5=0x20092880;
     R4=R4+R5;
     I4=R4;
     DM(I4,M5)=R0;
@@ -931,7 +931,7 @@ body909:
     R3=LSHIFT R2 BY 5;
     R4=LSHIFT R2 BY 3;
     R3=R3+R4;
-    R4=0x20092400;
+    R4=0x20092c00;
     R3=R3+R4;
     I5=R3;
     I4=R15;
@@ -940,7 +940,7 @@ body909:
     R12=0x38010204;
     F6=F6*F12;
     R3=LSHIFT R2 BY 2;
-    R4=0x200921c0;
+    R4=0x200929c0;
     R3=R3+R4;
     I1=R3;
     R4=64;
@@ -949,7 +949,7 @@ body909:
     R3=LSHIFT R2 BY 4;
     R4=LSHIFT R2 BY 3;
     R3=R3+R4;
-    R4=0x20092280;
+    R4=0x20092a80;
     R3=R3+R4;
     I2=R3;
     R0=4;
@@ -959,7 +959,7 @@ body909:
     F11=FLOAT R11;
     R12=0x38010204;
     F11=F11*F12;
-    R0=0x20092080;
+    R0=0x20092880;
     R14=LSHIFT R2 BY 3;
     R14=R14+R0;
     R0=4;

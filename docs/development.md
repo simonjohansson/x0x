@@ -107,8 +107,8 @@ oracle within its declared two-LSB error bound, with measured error reported
 for each run. Eight reassembled defective programs must fail.
 
 The DN2 callback suite compiles static layout assertions against the pinned
-20-byte header, checks the SDK code/data bounds and executes the short-word C
-return. It exercises 16 persistent slots, START, fractional delivered controls,
+20-byte header, checks the [private x0x code/data bounds](dn2-private-layout.md)
+inside the unchanged SDK reservation and executes the short-word C return. It exercises 16 persistent slots, START, fractional delivered controls,
 interleaving, guarded input/output and modeled register/stack/accumulator state.
 Every guest write is checked, including low RAM and memory-mapped controls.
 Seven defective callbacks must fail. Instructions are independently decoded,

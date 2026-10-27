@@ -152,14 +152,15 @@ The one-mod selector design requires no multiple-registration extension. Keep
 one native identity while adding both kernels to its payload. The earlier
 multi-ID extension discussion is superseded and is not implementation work.
 
-Current voice allocation gives **6,080 usable author-code bytes** (6 KiB minus
-the 64-byte guard) and **7 KiB author data**, including all per-slot state.
-Treat expansion as solvable if needed, as requested, while recording actual
-usage. Increasing those ranges does **not** change the one-ID bridge, linker
-cardinality or five-page allocation. Conversely, supporting two IDs does not
-create memory or CPU time. Larger code/data ownership must be reviewed against
-the adjacent filter reservation and profile/loader limits; registration,
-capacity and render deadlines are three separate checks.
+The SDK's default split provides 6,080 usable code bytes / 7 KiB data. The
+qualified [x0x private allocation](dn2-private-layout.md) instead provides
+**8,128 usable author-code bytes** (8 KiB minus the same 64-byte guard) and
+**5 KiB author data**, including all per-slot state. Both partitions fit the
+same existing voice owner with the pinned adapter and adapter-state regions.
+No adjacent filter reservation, public SDK/default format, saved layout,
+one-ID bridge, linker cardinality or page allocation changes. Actual code/data
+usage and workload qualification remain separate; this allocation change does
+not establish realtime or reference-fidelity acceptance.
 
 ## Acceptance and unresolved decisions
 

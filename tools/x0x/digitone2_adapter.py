@@ -12,6 +12,7 @@ import sys
 import tempfile
 
 from . import cpu, sharc_callback
+from .sharc_layout import voice_layout
 
 ROOT = cpu.ROOT
 SOURCE = ROOT / "machines/digitone2/adapter.c"
@@ -130,19 +131,32 @@ def check_bridge_writes(writes, ranges, canonicalize) -> None:
             raise AssertionError("upstream bridge wrote unowned memory: " + str(write))
 
 
+def _bridge_window(code: bytes, entry: int) -> bytearray:
+    """Use the same private author partition as the installed producer."""
+    bridge_path = ROOT / "vendor/elekloader/elekloader/sdk/include/digitone-mk2/voice-bridge.json"
+    bridge = bytes.fromhex(json.loads(bridge_path.read_text())["hex"])
+    if len(bridge) != 2048:
+        raise AssertionError("the pinned voice bridge extent changed")
+    layout = voice_layout()
+    device = cpu.require_module("elekloader.devices.digitone_mk2", "elekloader")
+    guard = device.DEVICE.releases["1.12"].sharc["code_guard_bytes"]
+    code_bytes = layout["code_bytes"]
+    if not code or len(code) % 2 or len(code) + guard > code_bytes:
+        raise ValueError("bridge fixture code exceeds the private region or its guard")
+    prefix = len(bridge)
+    window = bytearray(16384)
+    window[:prefix] = bridge
+    window[prefix:prefix + code_bytes] = code + b"\1\0" * ((code_bytes - len(code)) // 2)
+    struct.pack_into("<II", window, 0x3e00, entry, 31)
+    return window
+
+
 def bridge_check(code: bytes, entry: int) -> dict:
     """Execute the pinned upstream bridge with synthetic native DSP frames."""
     cpu.require_module("tools.sharc_dev.sharc_run", "digikit")
     from tools.sharc_dev import sharcldr, sharc_run, sharc_trace as trace
 
-    bridge_path = ROOT / "vendor/elekloader/elekloader/sdk/include/digitone-mk2/voice-bridge.json"
-    bridge = bytes.fromhex(json.loads(bridge_path.read_text())["hex"])
-    if len(bridge) != 2048:
-        raise AssertionError("the pinned voice bridge extent changed")
-    window = bytearray(16384)
-    window[:len(bridge)] = bridge
-    window[2048:8192] = code + b"\1\0" * ((6144 - len(code)) // 2)
-    struct.pack_into("<II", window, 0x3e00, entry, 31)
+    window = _bridge_window(code, entry)
     frame_base, output_base, stack = 0x25c48c, 0x804acf90, 0x20095000
     payload = bytes(window) + bytes(4096) + bytes(16 * 128) + bytes(4)
     pieces = [(0x20090000, len(window)), (frame_base, 4096), (output_base, 16 * 128), (0, 4)]
@@ -152,7 +166,7 @@ def bridge_check(code: bytes, entry: int) -> dict:
                            payload_offset=offset, payload_len=size))
         offset += size
     memory = sharcldr.LoadedMemory.from_stream(payload, blocks)
-    state = {address: 0 for address in range(0x20092000, 0x20092080, 4)}
+    state = {address: 0 for address in range(0x20092800, 0x20092880, 4)}
     state.update({address: 0 for address in range(0x20093c00, 0x20094000, 4)})
     state.update({0x20093e00: entry, 0x20093e04: 31})
     expected_count = [0] * 16
@@ -189,7 +203,7 @@ def bridge_check(code: bytes, entry: int) -> dict:
             raise AssertionError("upstream bridge failed: " + str(result.halt.to_json()))
         worst = max(worst, result.instructions)
         from tools.sharc_dev.sharc_core.memory import _canonical_dm_address
-        allowed = [(0x20093c00, 0x20094000), (0x20092000 + slot * 8, 0x20092008 + slot * 8),
+        allowed = [(0x20093c00, 0x20094000), (0x20092800 + slot * 8, 0x20092808 + slot * 8),
                    (output, output + 128), (stack - 4, stack + 4)]
         check_bridge_writes(runner.watch_log, allowed,
                             lambda address: _canonical_dm_address(runner.state, address, 1, for_write=True))
@@ -201,7 +215,7 @@ def bridge_check(code: bytes, entry: int) -> dict:
             if read(address) != trace.Const(0xa5a5a5a5):
                 raise AssertionError("bridge changed a buffer/frame guard")
         for address, previous in state.items():
-            if 0x20092000 <= address < 0x20092080 and not 0x20092000 + slot * 8 <= address < 0x20092008 + slot * 8:
+            if 0x20092800 <= address < 0x20092880 and not 0x20092800 + slot * 8 <= address < 0x20092808 + slot * 8:
                 if read(address) != trace.Const(previous):
                     raise AssertionError("bridge changed an unrelated author slot")
         state = {address: read(address).value for address in state}
@@ -211,7 +225,7 @@ def bridge_check(code: bytes, entry: int) -> dict:
         if any(not isinstance(word, trace.Const) for word in words):
             raise AssertionError("bridge left unknown output")
         samples = [struct.unpack("<f", struct.pack("<I", word.value))[0] for word in words]
-        callback_count = state[0x20092000 + slot * 8]
+        callback_count = state[0x20092800 + slot * 8]
         flags = state[0x20093d0c]
         return samples, callback_count, flags, pitch, params, read
 
@@ -230,7 +244,7 @@ def bridge_check(code: bytes, entry: int) -> dict:
                 if samples != [expected] * 32 or flags != int(start):
                     raise AssertionError("bridge lost settled values or next-block START")
                 expected_count[slot] += 1
-                if count != expected_count[slot] or state[0x20092004 + slot * 8] != pitch:
+                if count != expected_count[slot] or state[0x20092804 + slot * 8] != pitch:
                     raise AssertionError("bridge delivered incorrect slot or pitch")
                 if [read(0x20093d14 + 4 * index).value for index in range(40)] != params:
                     raise AssertionError("bridge did not copy all forty packed parameter halfwords")
@@ -243,7 +257,7 @@ def bridge_check(code: bytes, entry: int) -> dict:
             raise AssertionError("nonmatching stock caller was not preserved")
     return dict(kind="actual-pinned-SHARC-bridge-with-synthetic-stock-frames", calls=len(observations) + 2,
                 temporary_test_machine=31, persistent_registration=False,
-                bridge_sha256=hashlib.sha256(bridge).hexdigest(), observations=observations,
+                bridge_sha256=hashlib.sha256(window[:2048]).hexdigest(), observations=observations,
                 worst_instructions=worst,
                 checked=["silent trigger edge", "START in next settled block", "all sixteen slots",
                          "all forty packed halfwords including undeclared data", "raw fractional pitch/controls",
@@ -264,8 +278,7 @@ def diagnose(host_only=False) -> dict:
             return report
         report["cross_compiled_C"] = cross_check(folder)
         code, entry, selache = sharc_callback.build(folder)
-        sdk = cpu.require_module("elekloader.sdk.sharc", "elekloader")
-        sharc_callback.validate_layout(sdk.machine_layout("voice"), code, entry)
+        sharc_callback.validate_layout(voice_layout(), code, entry)
         sharc_callback.decoded_instructions(code, entry)
         runner = sharc_callback.CallbackRunner(code, entry)
         counts = [0] * 16

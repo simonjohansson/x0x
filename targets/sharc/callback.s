@@ -18,7 +18,7 @@ sharc_voice_render.:
     I4=R1;
     R9=DM(I4,M5);
     R3=LSHIFT R2 BY 3;
-    R6=0x20092000;
+    R6=0x20092800;
     R3=R3+R6;
     I4=R3;
     R6=DM(I4,M5);
