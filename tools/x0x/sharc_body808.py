@@ -41,30 +41,64 @@ def component() -> tuple[dict, bytes]:
             if reference["notices"] and state[2 * row["slot"] + 1] == 2:
                 assert state[32 + 2 * row["slot"]:34 + 2 * row["slot"]] == [0, 0], row["label"]
 
-    stream = runner()
-    samples = []
-    for block in range(FRAMES // 32):
-        chunk, _ = stream.call_raw(selector.case("body", flags=int(block == 0)), True)
-        samples.extend(chunk)
-    reference = body808.reference(FRAMES)
-    maximum_error = max(abs(a - b) for a, b in zip(samples, reference, strict=True))
-    assert maximum_error < 1e-5, maximum_error
-    measured = analysis.analyze(samples, body808.SAMPLE_RATE)
-    frequency = measured["frequency"]["median_hz"]
-    decay = measured["decay_positive"]["time_constant_s"]
-    assert frequency is not None and abs(frequency - body808.FREQUENCY) < .02, frequency
-    assert decay is not None and abs(decay - body808.TAU) < .001, decay
+    def body_case(label, raw=16384, **kwargs):
+        row = selector.case(label, **kwargs)
+        row["params"][1] = raw
+        return row
 
-    retrigger, _ = stream.call_raw(selector.case("retrigger"), True)
+    def render(raw, frames, changes=None):
+        machine = runner()
+        result = []
+        current = raw
+        for block in range(frames // 32):
+            current = (changes or {}).get(block * 32, current)
+            chunk, _ = machine.call_raw(body_case("body", current, flags=int(block == 0)), True)
+            result.extend(chunk)
+        expected = body808.reference(frames, decay_raw=raw, changes=changes)
+        error = max(abs(a - b) for a, b in zip(result, expected, strict=True))
+        assert error < 1e-5, (raw, changes, error)
+        return machine, result, error
+
+    rendered = {}
+    decay_cases = []
+    for raw in (0, 16384, 32512, 1, 16385, 32511):
+        frames = FRAMES if raw in (0, 16384, 32512) else 6144
+        machine, result, error = render(raw, frames)
+        measured = analysis.analyze(result, body808.SAMPLE_RATE)
+        frequency = measured["frequency"]["median_hz"]
+        decay = measured["decay_positive"]["time_constant_s"]
+        assert frequency is not None and abs(frequency - body808.FREQUENCY) < .02, (raw, frequency)
+        assert decay is not None and abs(decay - body808.decay_tau(raw)) < .001, (raw, decay)
+        output = FOLDER / f"samples_{raw}.f32"
+        output.write_bytes(struct.pack(f"<{len(result)}f", *result))
+        decay_cases.append(dict(raw=raw, frames=frames, maximum_error_fs=error,
+                               frequency_hz=frequency, decay_time_constant_s=decay,
+                               expected_decay_time_constant_s=body808.decay_tau(raw),
+                               samples_path=str(output),
+                               samples_sha256=hashlib.sha256(output.read_bytes()).hexdigest()))
+        rendered[raw] = (machine, result, error)
+    assert all(decay_cases[i]["decay_time_constant_s"] < decay_cases[i + 1]["decay_time_constant_s"]
+               for i in range(2)), decay_cases
+    stream, samples, maximum_error = rendered[16384]
+    frequency, decay = decay_cases[1]["frequency_hz"], decay_cases[1]["decay_time_constant_s"]
+    live, live_samples, live_error = render(0, 6400, {3200: 32512})
+    assert abs(live_samples[3200] - body808.reference(32, decay_raw=32512)[0]) > .01, \
+        "live DECAY edit restarted the body"
+
+    retrigger, _ = stream.call_raw(body_case("retrigger"), True)
     assert retrigger == samples[:32], "same-model START must restart the provisional body"
-    pending, state = stream.call_raw(selector.case("pending-909", flags=0, model=32512), True)
+    pending, state = stream.call_raw(body_case("pending-909", flags=0, model=32512), True)
     assert pending == samples[32:64] and state[1] == 1, "MODEL changed before START"
-    silent, state = stream.call_raw(selector.case("switch-909", model=32512), True)
+    silent, state = stream.call_raw(body_case("switch-909", model=32512), True)
     assert silent == [0.0] * 32 and state[1] == 2 and state[32:34] == [0, 0]
-    other, state = stream.call_raw(selector.case("other-slot", slot=15), True)
+    other, state = stream.call_raw(body_case("other-slot", slot=15), True)
     assert other == samples[:32] and state[1] == 2 and state[32:34] == [0, 0]
-    returned, _ = stream.call_raw(selector.case("back-to-808"), True)
+    returned, _ = stream.call_raw(body_case("back-to-808"), True)
     assert returned == samples[:32], "model change left an old tail"
+    # Editing the other slot's Decay cannot change this slot's continuing body.
+    stream.call_raw(body_case("other-slot-decay", 32512, slot=15, flags=0), True)
+    continued, _ = stream.call_raw(body_case("first-slot-continued", flags=0), True)
+    assert continued == samples[32:64], "other slot's DECAY changed this body"
 
     output = FOLDER / "samples.f32"
     output.write_bytes(struct.pack(f"<{len(samples)}f", *samples))
@@ -72,20 +106,25 @@ def component() -> tuple[dict, bytes]:
                   project_revision=cpu.revision(cpu.ROOT),
                   elekloader_revision=cpu.revision(cpu.ROOT / "vendor/elekloader"),
                   emulator_revision=cpu.revision(cpu.ROOT / "vendor/digikit"),
-                  calls=policy.calls + stream.calls, code_bytes=len(code), state_bytes=STATE_BYTES,
+                  calls=policy.calls + live.calls + sum(r[0].calls for r in rendered.values()),
+                  code_bytes=len(code), state_bytes=STATE_BYTES,
                   source_sha256=hashlib.sha256(SOURCE.read_bytes()).hexdigest(),
                   image_sha256=hashlib.sha256(code).hexdigest(),
                   samples_path=str(output), samples_sha256=hashlib.sha256(output.read_bytes()).hexdigest(),
                   frames=FRAMES, sample_rate=body808.SAMPLE_RATE,
                   maximum_error_fs=maximum_error, maximum_error_limit_fs=1e-5,
                   frequency_hz=frequency, decay_time_constant_s=decay,
-                  worst_instructions=max(policy.worst_instructions, stream.worst_instructions),
+                  decay_cases=decay_cases, live_decay_change=dict(sample=3200, before_raw=0, after_raw=32512,
+                                                               maximum_error_fs=live_error),
+                  worst_instructions=max(policy.worst_instructions, live.worst_instructions,
+                                         *(r[0].worst_instructions for r in rendered.values())),
                   instruction_bound=selector.BOUND, c_reference=provenance,
-                  checked=["analytic fixed-frequency damped-sine body", "all 16 independent slots",
+                  checked=["analytic fixed-frequency damped-sine body", "provisional DECAY curve and fractions",
+                           "continuous live DECAY edit", "all 16 independent slots",
                            "START-only MODEL latch", "provisional same-model retrigger",
                            "model-change body clear", "909 silence", "invalid-input atomicity",
                            "state/output guards", "SDK context preservation"],
-                  unqualified=["808 circuit fidelity", "Tone/Decay control response", "native OS integration",
+                  unqualified=["808 circuit fidelity", "stock Decay/Tone circuit response", "native OS integration",
                                "VST or hardware comparison", "real-device timing"])
     (FOLDER / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     return report, code

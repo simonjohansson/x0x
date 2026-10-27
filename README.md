@@ -18,8 +18,9 @@ Start with the [architecture](docs/architecture.md),
 [kick-drum research](docs/kick-drum-research.md) and
 [implementation plan](docs/implementation-plan.md). All three silent milestones
 are accepted. The [first 808 body](docs/808-body.md) now makes sound in every
-emulator: a fixed, uncalibrated 55 Hz decaying sine. Tone/Decay response and the
-remaining circuit stages follow in #9; 909 mode remains silent until #25.
+emulator: an uncalibrated 55 Hz decaying sine with live DECAY feedback control.
+Tone and the remaining circuit stages follow in #9; 909 mode remains silent
+until #25.
 The Digitakt reset bug is deferred to #78. Digitakt II is outside the active scope.
 
 Downloaded source material is kept locally in `research/`. Its two tracked

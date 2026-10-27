@@ -8,7 +8,7 @@ static int32_t body_state[8][2];
 extern int x0x_selector(uint32_t bank[8][3], uint32_t notice[4],
                         const uint32_t input[4]);
 extern void x0x_silence(int32_t output[32]);
-extern void x0x_808_body(int32_t state[2], int32_t output[32], uint32_t start);
+extern void x0x_808_body(int32_t state[2], int32_t output[32], uint32_t start, uint32_t decay_raw);
 
 void x0x_dt_render(int32_t *blocks)
 {
@@ -31,7 +31,7 @@ void x0x_dt_render(int32_t *blocks)
         if (x0x_selector(selection, notice, input) == 1) {
             if (notice[3]) body_state[track][0] = body_state[track][1] = 0;
             if (notice[0] == 0) {
-                x0x_808_body(body_state[track], blocks + 32 * track, input[2]);
+                x0x_808_body(body_state[track], blocks + 32 * track, input[2], (uint32_t)values[1]);
                 continue;
             }
         }

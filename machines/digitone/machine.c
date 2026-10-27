@@ -9,7 +9,7 @@ static uint32_t selection[8][3];
 static int32_t body[8][2];
 extern int x0x_selector(uint32_t bank[8][3], uint32_t notice[4], const uint32_t input[4]);
 extern void x0x_silence(int32_t output[32]);
-extern void x0x_808_body(int32_t state[2], int32_t output[32], uint32_t start);
+extern void x0x_808_body(int32_t state[2], int32_t output[32], uint32_t start, uint32_t decay_raw);
 
 void x0x_dn_begin(void)
 {
@@ -30,9 +30,10 @@ void x0x_dn_end(void) { x0x_dn_frame_end(&frame); }
 static void render_body(void *context, const struct x0x_dn_input *input)
 {
     (void)context;
-    /* shortcut: fixed provisional 808 body; controls and circuit calibration follow in #9. */
+    /* shortcut: provisional body/Decay curve; Tone and circuit calibration follow in #9. */
     if (selection[input->slot][1] == 0)
-        x0x_808_body(body[input->slot], input->output, !!(input->flags & X0X_DN_NATIVE_START));
+        x0x_808_body(body[input->slot], input->output, !!(input->flags & X0X_DN_NATIVE_START),
+                     input->value[1].position.numerator);
     else
         x0x_silence(input->output);
 }

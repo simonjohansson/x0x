@@ -31,9 +31,9 @@ int x0x_selector(uint32_t bank[8][3], uint32_t notice[4], const uint32_t input[4
     return 1;
 }
 
-void x0x_808_body(int32_t state[2], int32_t output[32], uint32_t start)
+void x0x_808_body(int32_t state[2], int32_t output[32], uint32_t start, uint32_t decay_raw)
 {
-    assert(state && start == 1);
+    assert(state && start == 1 && decay_raw == 12345);
     ++body_calls;
     for (unsigned i = 0; i < 32; ++i) output[i] = 17;
 }
@@ -62,6 +62,7 @@ int main(void)
     for (unsigned i = 0; i < 256; ++i) blocks[i] = (int32_t)i + 1;
     fw_render_machine[0] = fw_render_machine[7] = 80;
     fw_voice_start = 1u << 7;
+    values[0][1] = 12345;
     values[0][5] = 16383;
     values[7][5] = 16384;
     x0x_dt_render(blocks);

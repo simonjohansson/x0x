@@ -64,8 +64,9 @@ F **MODEL=0**, with the other positions blank. Native track level controls
 volume. MODEL below 64 selects 808; 64 and above selects 909.
 
 The first audible increment is an uncalibrated 808 body: a 55 Hz damped sine
-with a 250 ms time constant. Its pitch and decay are currently fixed; TNTUN,
-DECAY and ATTK have connected control paths but do not yet shape this body.
+with a fixed pitch and live DECAY feedback control. The provisional range is
+approximately 142 ms to 1 second, with 250 ms at the approved default. TNTUN
+and ATTK do not yet shape this body; live DECAY updates keep its ringing state.
 START currently restarts its phase and amplitude. The 909 branch remains
 silent until its implementation. Circuit excitation, tone, adjustable decay
 and faithful retrigger behavior follow in the engine work.

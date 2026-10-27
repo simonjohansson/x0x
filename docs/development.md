@@ -164,8 +164,8 @@ mise run test:dn2       # coupled DN2 audio and native controls/locks/LFO/persis
 
 The current native runners build the production 808 body and capture downstream
 PCM. 808 output must be finite and nonzero; the 909 branch remains zero and
-unrelated stock output is preserved. Tone/Decay controls are delivered but do
-not yet shape the fixed body. Existing `:silent` task/module names are retained
+unrelated stock output is preserved. DECAY now changes the body feedback loss
+on each delivered block. Tone and 909 Attack do not yet shape the body. Existing `:silent` task/module names are retained
 as compatibility aliases; they now exercise the first-body mod. Direct body
 reports/samples live in `out/coldfire/body808` and `out/sharc/body808`; native
 captures remain under `out/{dt,dn,dn2}/silent`. See [808-body.md](808-body.md).

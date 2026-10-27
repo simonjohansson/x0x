@@ -122,6 +122,13 @@ selected:
     R0=1;
     COMP(R6,R0);
     IF NE JUMP silent;
+    R0=4;
+    R0=R15+R0;
+    I4=R0;
+    R11=DM(I4,M5);
+    F11=FLOAT R11;
+    R12=0x38010204;
+    F11=F11*F12;
     R0=124;
     R14=R3+R0;
     R0=4;
@@ -138,10 +145,16 @@ continue_body:
     I4=R15;
     R1=DM(I4,M5);
 render_body:
+    // shortcut: provisional linear feedback-radius Decay curve until circuit modeling.
     // Use c-1 to avoid float32 radius bias when c is close to one.
-    // c=exp(-1/(48000*.25))*cos(2*pi*55/48000); s uses the matching sine.
-    R2=0xb8e519db;
-    R3=0x3bebe416;
+    R2=0x39041a19;
+    F2=F2*F11;
+    R3=0xb9351f1f;
+    F2=F2+F3;
+    R3=0x35737a1f;
+    F3=F3*F11;
+    R4=0x3bebe041;
+    F3=F3+F4;
     R9=32;
     R10=4;
 body_sample:

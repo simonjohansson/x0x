@@ -16,7 +16,7 @@ const uint8_t fw_params[134 * 60] __attribute__((aligned(4))) = {
     RECORD(119, 27), RECORD(120, 28), RECORD(121, 29), RECORD(124, 32)
 };
 static uint32_t calls, input_seen[4], zeroes;
-static uint32_t body_calls, body_start;
+static uint32_t body_calls, body_start, body_decay;
 static int32_t *body_state, body_before[2];
 int32_t dnm_knob(int32_t slot, int32_t knob) { (void)slot; (void)knob; assert(0); return 0; }
 void dnm_knob_range(int32_t knob, int32_t *lo, int32_t *hi) { (void)knob; (void)lo; (void)hi; assert(0); }
@@ -33,9 +33,9 @@ int x0x_selector(uint32_t bank[8][3], uint32_t notice[4], const uint32_t input[4
     return state[0] ? 1 : 4;
 }
 void x0x_silence(int32_t output[32]) { ++zeroes; memset(output, 0, 128); }
-void x0x_808_body(int32_t state[2], int32_t output[32], uint32_t start)
+void x0x_808_body(int32_t state[2], int32_t output[32], uint32_t start, uint32_t decay_raw)
 {
-    ++body_calls; body_start = start; body_state = state;
+    ++body_calls; body_start = start; body_state = state; body_decay = decay_raw;
     memcpy(body_before, state, sizeof body_before);
     if (start) { state[0] = 100; state[1] = 200; }
     for (unsigned k = 0; k < 32; ++k) output[k] = ++state[0];
@@ -73,11 +73,14 @@ int main(void)
     x0x_dn_begin(); x0x_dn_capture(words); x0x_dn_ready(0);
     m->render(3, guarded + 1, &voice);
     assert(body_calls == 1 && body_start == 1 && body_before[0] == 0 && body_before[1] == 0);
+    assert(body_decay == 6789); /* Preserve the delivered fractional position. */
     assert(guarded[1] == 101 && guarded[32] == 132);
     int32_t *slot3 = body_state;
     voice.fresh = 0;
+    words[3 * 79 + 28] = 32767;
     m->render(3, guarded + 1, &voice);
     assert(body_calls == 2 && body_start == 0 && body_before[0] == 132);
+    assert(body_decay == 32512); /* Bound native modulation above the UI maximum. */
     assert(guarded[1] == 133 && guarded[32] == 164);
     /* A pending 909 edit keeps the 808 until START, then clears that voice. */
     words[3 * 79 + 32] = 32512;
