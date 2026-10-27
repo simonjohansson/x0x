@@ -1,0 +1,141 @@
+# Reference implementations and circuit alignment
+
+First source/code audit for [#79](https://github.com/simonjohansson/x0x/issues/79),
+27 October 2026. Runtime code was inspected at `a05912e`; no DSP or saved-control
+behavior changes in this increment. This is an alignment inventory, not evidence
+that either engine reproduces original hardware or a reference VST.
+
+## Selected source baselines
+
+Source IDs, retrieval URLs, hashes and local archive paths are recorded in
+[`research/manifest.json`](../research/manifest.json). Downloaded PDFs/code stay
+ignored; the manifest can reconstruct the source set after a fresh clone.
+
+| Instrument | Source baseline | How it is used |
+| --- | --- | --- |
+| 808 | Roland service notes S01, printed pp.4–5 and p.9 BD schematic | Component identities, wiring, stock controls and trigger behavior |
+| 808 | Werner/Abel/Smith 2014 S03, §§3–9; Werner dissertation S04 as a cross-check | Published circuit equations and stated approximations, not an assumption that our oscillator already implements them |
+| 808 | Original Plaits `AnalogBassDrum`, S43 with S45/S46 | Readable implementation reference for excitation, resonator, transient and tone stages; stock parameter mapping still needs independent derivation |
+| 909 | Roland service notes S02, pp.4–5, waveform sheet p.9, BD schematic p.11 | Nominal stock circuit; the snare explanation on p.6 is not the BD model |
+| 909 | Whittle S05, pp.2–3 and original schematic p.12 | Circuit explanation and distinction between stock controls and modifications |
+| 909-like comparison only | Plaits `SyntheticBassDrum`, S44 | An implementation candidate to study, not the stock-909 authority |
+
+For the 909 baseline, use the original schematic's drawn component population,
+including nominal R495=150 kΩ, and retain its serial/surface-mount annotation.
+This selects a nominal model for subsequent derivation; it does not assert that
+every production revision has identical components. Do not mix alternate
+populations silently when implementing the attack branch.
+
+## Reference code provenance and limits
+
+The four Plaits sources are pinned to original-author repository revision
+[`f4cfa7697095a28d292bff758beb51deb49b5a86`](https://github.com/pichenettes/eurorack/tree/f4cfa7697095a28d292bff758beb51deb49b5a86),
+with their in-file MIT notices retained. The matching `stmlib` dependency is
+`e3bd7c9cc00e4364166f9905c0509b6ffd0535ec`. These are research snapshots, not a
+new production dependency. They have been inspected, not compiled or rendered
+as an executable reference in this repo.
+
+- [AnalogBassDrum](https://github.com/pichenettes/eurorack/blob/f4cfa7697095a28d292bff758beb51deb49b5a86/plaits/dsp/drums/analog_bass_drum.h)
+  describes itself as a revisited 808 model. It includes finite excitation,
+  diode shaping, FM/retrigger pulses, a resonator and tone filtering. Sustain,
+  free frequency, FM amounts and its own control curves are extensions or
+  approximations; copying its parameters would not establish stock behavior.
+- [SyntheticBassDrum](https://github.com/pichenettes/eurorack/blob/f4cfa7697095a28d292bff758beb51deb49b5a86/plaits/dsp/drums/synthetic_bass_drum.h)
+  calls itself an oscillator/FM/envelope model and describes its 909 resemblance
+  as incidental. It uses a distorted sinusoid, pitch/body/transient envelopes,
+  a VCA approximation and noise/click paths. It is not a circuit-exact 909 port.
+- [Engine wiring](https://github.com/pichenettes/eurorack/blob/f4cfa7697095a28d292bff758beb51deb49b5a86/plaits/dsp/engine/bass_drum_engine.cc)
+  and [DSP definitions](https://github.com/pichenettes/eurorack/blob/f4cfa7697095a28d292bff758beb51deb49b5a86/plaits/dsp/dsp.h)
+  distinguish the drum classes' 48 kHz constants from the Plaits hardware-clock
+  tuning compensation. A host reference should call the classes with explicit
+  settings rather than inherit an unrelated hardware note correction.
+
+A future executable harness must pin required dependencies, initialize the whole
+object deterministically and seed noise explicitly. In particular, S44's
+`Init()` does not assign its two transient-envelope fields; a heap/uninitialized
+object would not be a reproducible reference. Keep comparison code outside
+production DSP and preserve attribution if any implementation is adapted.
+
+## 808 source-to-code inventory
+
+Current production paths are
+[ColdFire ASM](../targets/coldfire/body808.s),
+[SHARC+ ASM](../targets/sharc/body808.s), the
+[analytical body oracle](../tools/x0x/body808.py), and device C adapters under
+[`machines/`](../machines/). The same ColdFire source serves DT and DN; DN2 calls
+its SHARC payload directly through the SDK bridge.
+
+| Block | Source target | Current implementation | Alignment status |
+| --- | --- | --- | --- |
+| Trigger/excitation | S01 p.4/p.9; S03 §§3–4, approximately 1 ms accent-dependent pulse and R162/R163/C40/D53 shaping | Each START sets oscillator x/y to 0/0.25 | Missing pulse duration, shaping state, asymmetric edge and diode behavior |
+| Resonator | S03 §5 Eq.5 and §7 Eq.7; S01 p.9 bridged-T around IC12/C41/C42/R165–R167 | `x0x_808_body` / SHARC `body_sample`: two-state damped rotation at fixed 55 Hz | Provisional isolated mode; circuit numerator, forcing inputs and full topology absent |
+| Decay | S03 §6 Eq.6 and Fig.7; VR6 changes a frequency-dependent R164/R169/C43 feedback shelf returned through R170 | `retention()` and each ASM coefficient setup linearly interpolate radius versus delivered B | Audible and numerically checked, but not the stock shelf/pot response |
+| Initial pitch shift | S01 p.5 and S03 §8.1: Q41–Q43 switched resistance during attack | Rotation frequency stays fixed | Missing; retain the service-note/paper timing difference instead of silently choosing one |
+| Internal retrigger/pitch sigh | S03 §§8.1–8.2: C39/R161/D52 event and Q43 leakage behavior | No transient or nonlinear feedback state | Missing |
+| Tone | S01 p.9; S03 §9 Table1 and Eq.11 passive low-pass | TNTUN is declared/delivered; neither body uses it | Missing DSP stage and native knob/resistance mapping |
+| Coupling/output | S03 §9 Table1, level and high-pass stages; S01 p.9 output network | Fixed internal gain and native downstream processing | Analog filters absent; native track volume is not a replacement for the original coupling network |
+| Accent | S01 trigger logic and S03 §3 | Fixed body excitation; device AMP/velocity remains downstream | Intrinsic accent/excitation absent; do not add the native gain twice |
+| Same-voice retrigger | S03 §11/Fig.12: new excitation interacts with residual circuit state | START replaces the oscillator state | Provisional restart, not circuit-state retrigger behavior |
+
+MODEL/state ownership, exact Decay delivery, output guards, host controls and
+native integration already have tests. Those tests prove our declared simplified
+model and plumbing; they do not close the missing circuit rows above.
+
+## 909 source-to-code inventory
+
+DT/DN explicitly call silence in the 909 branch; SHARC selects code 2 and jumps
+to `silent`. There is no hidden 909 renderer to calibrate yet. Parameter delivery
+and MODEL persistence are useful existing plumbing, not implemented sound.
+
+| Block | Source target | Current implementation | Alignment status |
+| --- | --- | --- | --- |
+| VCO/shaper | S02 p.4/p.11; S05 p.3/p.12: triangle oscillator IC13, D10/D11 and R52 rounding | Silence | Missing |
+| Tune/pitch path | S02 ENV3/VR2/C9; S05 p.3 distinguishes stock Tune from added Pitch/Tune Depth | TNTUN routed for 909 | No pitch behavior; do not reinterpret stock Tune as chromatic transpose |
+| Tonal Decay/VCA | S02 ENV1→Q12, C8 and VR5; S05 original BD schematic | DECAY routed | No envelope/VCA; 808 feedback loss is not the 909 Decay model |
+| Attack pulse/noise | S02 p.4/p.11, ENV2→Q6; S05 p.12, VR3 and C12 | ATTK routed | Pulse, filtered continuous noise and VCA absent; Attack is branch level, not ADSR rise time |
+| Trigger/accent/retrigger | S02 pp.4–5 and BD Q11 clamp; separate accent and approximately 2 ms/5 V trigger | Native START reaches selector | No circuit excitation, clamp-release or residual-state behavior |
+| Output sum/calibration | S02 p.4/p.11; S05 p.12 | Native track volume remains available | No tonal/attack sum or 909 internal scale yet |
+
+## Resolved readings and explicit assumptions
+
+A visual check of S01 p.9 confirms **R164=47 kΩ**, rather than the dissertation
+Table4.2's conflicting 4.7 kΩ. The same schematic identifies **VR4 Level,
+VR5 Tone and VR6 Decay**; S03 Table1's level-control VR6 identifier is a typo.
+Use the original schematic when implementing those rows.
+
+For Tone, S01 p.9 gives R171=220 Ω, R172=10 kΩ, VR5=10 kΩ marked C, and
+C45=0.1 µF. S03 Eq.11 gives
+
+`Req = R171 + (R172*VR5*l)/(R172+VR5*l)`
+
+and its Table1 gives `H(s)=1/(1+s*Req*C45)`. Resistance fraction `l` from 0 to 1
+gives endpoint cutoffs of approximately 7.23 kHz and 305 Hz. **This is not yet a
+native Tone mapping:** direction and the C taper need explicit treatment; a
+resistance-linear approximation must be labelled. A pure 55 Hz sine will show
+only a modest Tone difference until the excitation supplies richer content.
+
+Other boundaries remain visible: nominal values are not unit calibration;
+stock versus modified 909 controls must stay separate; and the 909 R495
+annotation must accompany the selected nominal population.
+
+## Next increments and remaining gates
+
+1. Establish the independent 808 Tone RC response from the confirmed values,
+   then implement that stage on both CPUs and connect TNTUN in the existing
+   mods. Test the filter with an impulse/step or rich diagnostic signal, not
+   only the nearly pure-sine body. This does not require a VST.
+2. Replace the arbitrary oscillator reset with a source-derived finite trigger
+   and add the internal transient, preserving circuit state on retrigger as
+   each stage lands. Then replace provisional Decay radius control with the
+   source-derived feedback network. Keep the distinctions in the table current.
+3. Start the 909 triangle/shaper slice in #25 using the schematic baseline;
+   use S44 as a secondary comparison, not an excuse to declare stock fidelity.
+4. Build reproducible executable reference calculations/harnesses and record
+   matching fixtures before calling either engine source-aligned. Sources have
+   been inspected; no third-party reference output has been measured yet.
+5. Compare those aligned engine revisions to VST captures later in #2. Missing
+   VST access does not block the source audit, analytical models or ASM work.
+
+#79 remains open for the executable models, corrections and alignment report.
+#9/#25 remain the implementation owners. Host, component, native-emulator and
+physical/VST evidence stay separate; this audit adds no new audio qualification.

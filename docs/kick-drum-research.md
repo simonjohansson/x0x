@@ -684,6 +684,12 @@ device/CPU labels and explicit blocking relationships. Shared work may carry
 both engine labels. UI, DSP, reference, test and integration work remain
 identifiable independently. Digitakt II has no active cell or delivery dependency.
 
+The [source/code alignment audit](reference-alignment.md) records the current
+#79 baseline: archived MIT Plaits code is useful for inspecting an 808 model,
+while its synthetic drum is only 909-like and does not replace the original
+909 schematic. This inspected-code evidence does not imply a compiled reference,
+measured comparison or faithful circuit implementation.
+
 ## 8. Open questions and research limits
 
 - Which installed VST versions give controllable, reproducible stock-oriented

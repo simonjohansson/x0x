@@ -134,5 +134,7 @@ compare short against long within each test, not the ratios across devices.
 provisional; stock feedback/pot mapping, excitation/pitch sigh, Tone/output
 coupling, calibrated scale and circuit-state retrigger behavior remain open.
 [#79](https://github.com/simonjohansson/x0x/issues/79) owns reference-implementation
-and schematic alignment; #2 compares the aligned implementations to a VST later. #2 reference captures and
-physical-device timing remain outside this increment.
+and schematic alignment; its [source/code audit](reference-alignment.md) records
+the current gaps and pinned source baselines. #2 compares the aligned engines
+to a VST later. Reference captures and physical-device timing remain outside
+this increment.

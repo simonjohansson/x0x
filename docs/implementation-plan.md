@@ -2,7 +2,7 @@
 
 The silent-first priority set on 26 October 2026 is complete: all three native
 mod milestones are accepted, with the DT reset bug deferred to #78. In #9, the
-[first audible 808 body](808-body.md) now runs in all three emulators. It is a
+[first audible 808 body](808-body.md) now runs in all three emulators. It is an
 uncalibrated damped sine. Live Decay changes its feedback retention and is
 verified through native controls/audio on all three machines. Tone and further
 808 circuit detail follow while retaining these integrations.
@@ -17,9 +17,9 @@ the behavior and circuit details.
 ## The working backlog
 
 Eight consolidated issues replaced the previous 66; #78 records the deferred DT
-reset bug and #79 owns the requested reference-model/schematic alignment. Small increments are commits and checklist steps inside these issues,
-rather than a ticket for every control,
-model stage, CPU implementation and matrix cell.
+reset bug and #79 owns reference-model/schematic alignment. Small increments
+are commits and checklist steps inside these issues, rather than a ticket for
+every control, model stage, CPU implementation and matrix cell.
 
 | Order | Issue | Deliverable |
 | --- | --- | --- |
@@ -103,7 +103,11 @@ saved controls throughout; both models must coexist, not become separate mods.
 alignment explicit: inspect published reference implementations and primary
 schematics, choose each stock circuit baseline, audit provisional/missing stages,
 and correct the engines incrementally in #9/#25. It can proceed without VST
-captures. Compare the aligned implementations to the reference VST later in #2.
+captures. Compare the aligned implementations to the reference VST later in #2. The
+[first source/code audit](reference-alignment.md) pins the available reference
+code, selects schematic baselines and records the missing/provisional blocks.
+The next source-derived slice is the 808 Tone RC reference; executable-reference
+rendering and circuit corrections remain open.
 
 Each instrument has one independent high-precision model and two actual ASM
 implementations. Reuse the existing analyzers, fixtures and CPU runners. Compare
