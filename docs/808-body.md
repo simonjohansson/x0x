@@ -9,6 +9,8 @@ initial five-setting software-reference measurements; see [pitch calibration](80
 This is a provisional calibration, not complete circuit alignment. The saved layout
 stays unchanged. DECAY changes feedback retention on every block, and TNTUN now
 drives the [passive Tone RC stage](808-tone.md). ATTK is ignored in 808 mode.
+The [continuing-pitch investigation](808-pitch-sigh-investigation.md) identifies
+Q43 as the late-error source and records the corrections rejected before porting.
 The [first 909 body](909-body.md) follows separately. The [reference-informed Decay increment](808-decay.md) shortens the
 previously excessive tails. The raw-body equations below
 describe the 808 oscillator before Tone and the [C47 coupling filter](808-coupling.md).

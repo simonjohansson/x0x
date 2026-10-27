@@ -18,6 +18,11 @@ loading, control taper and faithful residual-state retrigger remain incomplete
 in #9/#79. Native and paired full-grid qualification of this correction is
 recorded separately in that document.
 
+The [continuing-pitch investigation](808-pitch-sigh-investigation.md) attributes
+the remaining long-kick error to Q43. Its isolated source corrections were
+rejected before porting; the accepted audio remains `853bb77`. Continue existing
+808 Tone-taper/output-loading work while retaining the open pitch error.
+
 The 909 [diode shaper](909-shaping.md), [C9/IC12 Tune path](909-tune.md) and
 [loaded ENV1/Q12 VCA](909-vca.md) run on both CPUs and all three emulators.
 Tune changes the initial sweep; settled pitch is separately training-calibrated
