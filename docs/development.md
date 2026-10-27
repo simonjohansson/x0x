@@ -11,7 +11,7 @@ queue. Historical #75 and matrix links are superseded provenance.
 The scaffold has independent host, C adapter and assembled CPU tests.
 The synthetic probe is test equipment, not an 808/909 implementation or a VST
 reference. The current 808 body uses actual ASM and an independent analytical
-oracle; the full 808 circuit and 909 remain unimplemented. Native pages, packaging
+oracle; the complete 808 and 909 circuits remain unimplemented. Native pages, packaging
 and full-OS coverage are recorded per device below.
 
 The product is one combined x0x mod per device, containing both engines behind
@@ -178,7 +178,11 @@ reports/samples live in `out/coldfire/{body808,tone808}` and `out/sharc/body808`
 native captures remain under `out/{dt,dn,dn2}/silent`. See [808-body.md](808-body.md)
 and [808-tone.md](808-tone.md) for historical 808 evidence; [808-coupling.md](808-coupling.md)
 records the current chain. [909-body.md](909-body.md) records
-the triangle increment and its remaining circuit gaps.
+the triangle, unloaded RC Decay increment and remaining circuit gaps. Current
+909 Decay endpoints pass on DT/DN/DN2. DN's full verdict still fails solely on a
+one-PCM16-count baseline before the bright 808 Tone capture (#20); the runner
+retains that failed check while completing independent checks. No threshold or
+waveform tolerance is relaxed.
 DN2's passing scenario uses its verified saved-909 T1 for the isolated capture;
 the separate late T2 MODEL transition is unqualified and tracked in #80.
 

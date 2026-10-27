@@ -20,7 +20,8 @@ Start with the [architecture](docs/architecture.md),
 are accepted. The [first 808 body](docs/808-body.md) now makes sound in every
 emulator: an uncalibrated 55 Hz decaying sine with live DECAY feedback control
 and [Tone](docs/808-tone.md) and [C47 coupling](docs/808-coupling.md) RC stages. The first
-[909 triangle body](docs/909-body.md) also makes sound in all three emulators. Both engines
+[909 triangle body](docs/909-body.md) also makes sound in all three emulators;
+its Decay control uses an unloaded RC approximation with a provisional pot mapping. Both engines
 remain provisional; remaining circuit stages follow in #9/#25/#79.
 The Digitakt reset bug is deferred to #78. Digitakt II is outside the active scope.
 A separate late DN2 MODEL transition is being investigated in #80.

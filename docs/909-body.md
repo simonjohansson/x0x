@@ -177,6 +177,34 @@ adding a fitted amplitude threshold. The four-second default tail and one-LSB
 seeded residues at all three Decay settings reach exact zero. Stock VCA/tail
 and physical retrigger behavior remain open.
 
+### Current native Decay evidence (27 October 2026)
+
+| Device | New 909 Decay evidence | Native regression |
+| --- | --- | --- |
+| DT 1.54 | Exact raw 0/16384/32512 delivery; short/long raw errors 1.253e-7 / 8.503e-7 FS; downstream peaks 3113/4489 PCM16 counts | 39199 callbacks; controls, locks/LFO, reload, mixed models and prior 808 stages pass. Only known #78 resets fail |
+| DN 1.44 | Exact 0/16384/32512 delivery; raw errors 1.253e-7 / 5.240e-7 / 8.503e-7 FS and native peaks 5712/7594/7777 PCM16 counts; 909 capture sequence starts at exact silence | 100788 callbacks complete; all functional audio/control/lock/LFO/reload/mixed checks pass. Overall verdict remains **failed** solely on `tone_bright_exact_zero_baseline`: one PCM16 count before the bright 808 Tone capture, retained in #20 |
+| DN2 1.12 | Native raw 0/16384/32512 give fitted tau 0.015509996 / 0.181809423 / 0.345510003 s; downstream peaks 0.011861 / 0.019780 / 0.020467 FS | Tested scenario passes 31879 DSP frames, stock coexistence, controls/locks/LFO, project reload, mixed models and 808 Tone/Decay/coupling. No halt/missing blocks; #80 remains separate |
+
+The DN2 absolute amplitude check is restricted to captures with a known constant
+Decay history. Generic live-control/phase snapshots cannot infer that history
+from the current knob value. Its raw callback proof remains the actual-ASM
+component comparison, separate from stock-processed buffers and native PCM.
+
+Current firmware SHA256:
+
+- DT: `5b2ec3a2f15ef20d138bc8747a4a034075508db6b17a6b46cc43fc2152cd10a8`.
+- DN: `0eb802ef5cdfcfb75e7f4b8855894516da8c5199628a3b7ec94ff2e4ce1619a4`.
+- DN2: `bc41a76aeff3119921741a1d2e2329821974f3547131022c2b01637b049b2ac0`.
+
+New native captures are `out/{dt,dn,dn2}/silent/909-decay-{short,long}-native.wav`;
+DN2's default is `native-909.wav`. No capture is normalized. The DN bright-Tone
+baseline remains one count for all sixty 100 ms windows. That failed
+check is retained in #20 and `out/dn/silent/909-decay-6s-baseline-failure.json`.
+Longer waiting and the 909 fixed-point cleanup do not resolve it. Independent
+909 endpoint checks pass, but the overall native verdict remains failed and
+complete downstream capture isolation stays unqualified; no baseline subtraction
+or tolerance change is used.
+
 ## Unresolved native transition
 
 [#80](https://github.com/simonjohansson/x0x/issues/80) tracks a separate failure:

@@ -174,7 +174,7 @@ def full_os() -> dict:
                 for i in range(16)
                 if state[2 * i] > 0
             }
-            def check_outputs(outputs, selections, required_models=()):
+            def check_outputs(outputs, selections, required_models=(), decay_raw=None):
                 audible = set()
                 verified_909 = {}
                 for key, value in outputs.items():
@@ -191,12 +191,13 @@ def full_os() -> dict:
                         # Same-model START retains the callback count; recover this body's age from phase.
                         elapsed = (((phase-0x40000000) // 4) *
                                    pow(body909.PHASE_STEP // 4, -1, 2**30)) % 2**30
-                        expected = body909.GAIN * math.exp(-elapsed/(body909.SAMPLE_RATE*body909.TAU))
-                        error = abs(amplitude-expected)
-                        assert error <= 1e-5, (key, error)
-                        verified_909[key] = dict(phase=phase, amplitude=amplitude,
-                            samples_since_start=elapsed, expected_amplitude=expected,
-                            amplitude_error_fs=error)
+                        verified_909[key] = dict(phase=phase, amplitude=amplitude, samples_since_start=elapsed)
+                        # Absolute decay from age is meaningful only with a known constant control history.
+                        if decay_raw is not None:
+                            expected = body909.GAIN * math.exp(-elapsed/(body909.SAMPLE_RATE*body909.decay_tau(decay_raw)))
+                            error = abs(amplitude-expected)
+                            assert error <= 1e-5, (key, error)
+                            verified_909[key].update(expected_amplitude=expected, amplitude_error_fs=error)
                     if any(samples):
                         audible.add(model)
                 assert set(required_models) <= audible, (required_models, audible)
@@ -589,40 +590,48 @@ def full_os() -> dict:
             emu.midi_in(bytes([0xB1,cc["0"],64]))
             tap("STOP"); tap("STOP")
             emu.run_until(frames=emu.status()["dsp_frames"] + 3000, timeout_wall_s=120)
-            path = out / "native-909.wav"
-            emu.call("pcm.tap", action="capture", path=str(path))
-            # T1 retains the saved 909 selection checked by the project reload above.
-            emu.midi_in(bytes([0x90, 76, 100]))
-            emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
-            ids = struct.unpack("<16H", bytes.fromhex(emu.dsp_peek(0x25C48C + 2*74, 32)["hex"]))
-            pitches = struct.unpack("<16H", bytes.fromhex(emu.dsp_peek(0x25C48C + 2, 32)["hex"]))
-            lanes = [i for i in range(16) if ids[i] == 20 and pitches[i] == 76 << 8]
-            assert len(lanes) == 1, (ids, pitches)
-            lane = lanes[0]
-            def triangle_snapshot():
-                state = struct.unpack("<32I", bytes.fromhex(emu.dsp_peek(0x20092000, 128)["hex"]))
-                assert state[2*lane+1] == 2, state
-                downstream = emu.dsp_peek(output_base + 128*lane, 128)
-                checked = check_outputs({str(lane): downstream}, state, (2,))
-                return dict(callbacks=state[2*lane], downstream_voice_buffer=downstream,
-                            **checked["body909_state"][str(lane)])
-            early = triangle_snapshot()
-            emu.run_until(frames=emu.status()["dsp_frames"] + 650, timeout_wall_s=120)
-            late = triangle_snapshot()
-            emu.call("pcm.tap", action="capture_stop")
-            pcm = hook_ab.read_wav(path)
-            assert len(pcm) >= 48000 and all(math.isfinite(v) for v in pcm)
-            peak = float(max(abs(pcm)))
-            assert 0 < peak < 1, peak
-            frames = 32 * (late["callbacks"] - early["callbacks"])
-            assert frames > 0 and late["phase"] == (early["phase"] + frames*body909.PHASE_STEP) & 0xffffffff
-            ratio = late["amplitude"] / early["amplitude"]
-            tau = -frames / body909.SAMPLE_RATE / math.log(ratio)
-            assert abs(tau-body909.TAU) <= .001, tau
-            report["body909_audio"] = dict(slot=lane, early=early, late=late, measured_tau_s=tau,
-                native_peak_fs=peak, native_wav=str(path), frames=len(pcm)//2,
-                scope="native 909 note after STOP/note-off settling; owned phase/envelope state and downstream voice buffer checked separately")
-            emu.midi_in(bytes([0x80, 76, 0]))
+            report["decay_909"] = {}
+            # Saved T1 is already 909; this does not exercise or work around #80's late MODEL edit.
+            for label, position, note in (("default",64,76),("short",0,77),("long",127,78)):
+                emu.midi_in(bytes([0xB0,cc["1"],position]))
+                emu.run_until(frames=emu.status()["dsp_frames"] + 600, timeout_wall_s=120)
+                path = out / ("native-909.wav" if label == "default" else f"909-decay-{label}-native.wav")
+                emu.call("pcm.tap", action="capture", path=str(path))
+                emu.midi_in(bytes([0x90,note,100]))
+                emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
+                ids = struct.unpack("<16H", bytes.fromhex(emu.dsp_peek(0x25C48C + 2*74, 32)["hex"]))
+                pitches = struct.unpack("<16H", bytes.fromhex(emu.dsp_peek(0x25C48C + 2, 32)["hex"]))
+                lanes = [i for i in range(16) if ids[i] == 20 and pitches[i] == note << 8]
+                assert len(lanes) == 1, (ids,pitches)
+                lane = lanes[0]
+                def triangle_snapshot():
+                    state = struct.unpack("<32I", bytes.fromhex(emu.dsp_peek(0x20092000,128)["hex"]))
+                    assert state[2*lane+1] == 2, state
+                    native = struct.unpack("<40H", bytes.fromhex(
+                        emu.dsp_peek(0x25C48C + 2*(0x6D+0x49*lane),80)["hex"]))
+                    assert native[1] == position*256, (label,native)
+                    downstream = emu.dsp_peek(output_base+128*lane,128)
+                    checked = check_outputs({str(lane):downstream},state,(2,),decay_raw=native[1])
+                    return dict(callbacks=state[2*lane],decay_raw=native[1],downstream_voice_buffer=downstream,
+                                **checked["body909_state"][str(lane)])
+                early = triangle_snapshot()
+                emu.run_until(frames=emu.status()["dsp_frames"] + 650, timeout_wall_s=120)
+                late = triangle_snapshot()
+                emu.call("pcm.tap",action="capture_stop")
+                pcm = hook_ab.read_wav(path)
+                assert len(pcm) >= 48000 and all(math.isfinite(v) for v in pcm)
+                peak = float(max(abs(pcm)))
+                assert 0 < peak < 1, peak
+                frames = 32*(late["callbacks"]-early["callbacks"])
+                assert frames > 0 and late["phase"] == (early["phase"]+frames*body909.PHASE_STEP) & 0xffffffff
+                tau = -frames/body909.SAMPLE_RATE/math.log(late["amplitude"]/early["amplitude"])
+                assert abs(tau-body909.decay_tau(position*256)) <= .001, (label,tau)
+                report["decay_909"][label] = dict(slot=lane,early=early,late=late,measured_tau_s=tau,
+                    expected_tau_s=body909.decay_tau(position*256),native_peak_fs=peak,native_wav=str(path),frames=len(pcm)//2,
+                    scope="constant native Decay; owned phase/envelope and stock-processed voice buffer/PCM checked separately")
+                emu.midi_in(bytes([0x80,note,0]))
+                emu.run_until(frames=emu.status()["dsp_frames"] + 1600, timeout_wall_s=120)
+            report["body909_audio"] = report["decay_909"]["default"]
             report["final_status"] = emu.status()
             final = report["final_status"]
             assert final["cf"]["ready"] and final["cf"]["error"] is None, final
@@ -636,7 +645,7 @@ def full_os() -> dict:
         "persistence across emulator/device restart",
         "late post-STOP T2 MODEL MIDI delivery/START selection (separate unresolved probe)",
         "808 circuit fidelity and pot calibration",
-        "909 shaping/envelope/control fidelity and real-device timing",
+        "909 shaping, Tune/Attack, full VCA/Decay taper and real-device timing",
     ]
     (out / "native-boot-report.json").write_text(json.dumps(report, indent=2) + "\n")
     return report

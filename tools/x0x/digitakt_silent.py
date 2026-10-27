@@ -119,7 +119,7 @@ def component():
                 assert 0 < max(abs(x) for x in samples) < 0x40000000, (label, track, "missing/bounded body")
                 if starts & (1 << track) and (model0 if track == 0 else model7) >= 16384:
                     from .body909 import reference
-                    assert max(abs(x/2**31-y) for x,y in zip(samples,reference(32))) <= 1e-5
+                    assert max(abs(x/2**31-y) for x,y in zip(samples,reference(32, 12345))) <= 1e-5
             else:
                 assert raw == (bytes(128) if live else original[track * 128:(track + 1) * 128]), label
             assert int.from_bytes(uc.mem_read(address("reads") + 4 * track, 4), "big") == (0x27 if live else 0), label
@@ -179,7 +179,7 @@ def full_os():
                   stock=stock, firmware_sha256=hashlib.sha256(image.read_bytes()).hexdigest(),
                   digiemu_revision=cpu.revision(ROOT / "vendor/digiemu"),
                   companion_compatibility=compatibility,
-                  unqualified=["p-lock/LFO delivery", "save/reload", "strict-model qualification", "808 circuit fidelity/pot calibration", "909 diode shaping/envelopes and control response"])
+                  unqualified=["p-lock/LFO delivery", "save/reload", "strict-model qualification", "808 circuit fidelity/pot calibration", "909 diode shaping, Tune/Attack, complete VCA and Decay taper"])
     session = None
     try:
         with (FOLDER / "native-boot.log").open("w") as log, contextlib.redirect_stdout(log):
@@ -194,7 +194,7 @@ def full_os():
         word = lambda at: int.from_bytes(uc.mem_read(at,4),"big")
         state = dict(active=None, callbacks=0, selected_callbacks=0, violations=[], controls=[],
                      body_peak=0, body909_peak=0, body909_callbacks=0, mixed_audible_blocks=0,
-                     capture909=False, started909=False, samples909=[], lock_edit=False, lock_display=[],
+                     capture909=False, started909=False, samples909=[], words909=[], lock_edit=False, lock_display=[],
                      decay_phase=None, decay_started=False, decay_samples=[], decay_words=[], tone_words=[])
         state.update(coupling_blocks=0, coupling_error=0.0, coupling_difference=0)
         returns = set()
@@ -284,10 +284,13 @@ def full_os():
             if not state["capture909"]:
                 return
             sp = uc.reg_read(UC_M68K_REG_A7)
-            owner, _output, start = struct.unpack(">3I",uc.mem_read(sp+4,12))
+            owner, _output, start, decay = struct.unpack(">4I",uc.mem_read(sp+4,16))
             if owner == names["body_state"] and start:
                 state["started909"] = True
                 state["samples909"] = []
+                state["words909"] = []
+            if owner == names["body_state"] and state["started909"]:
+                state["words909"].append(decay)
         session.at(names["x0x_909_body"],checked(body909_entered))
         def coupling_entered(_uc, _at, _size, _data):
             active = state["active"]
@@ -400,7 +403,7 @@ def full_os():
         from .body909 import reference
         assert len(samples909) >= 19200 and state["started909"]
         error909 = max(abs(x-y) for x,y in zip(samples909,reference(len(samples909))))
-        assert error909 <= 1e-5, error909
+        assert error909 <= 1e-5 and set(state["words909"]) == {16384}, error909
         pcm = bytes(session.pcm[pcm_start:])
         pcm_peak = max(abs(x) for x in struct.unpack("<"+"h"*(len(pcm)//2),pcm))
         assert 0 < pcm_peak < 32767 and state["body909_peak"] > 0
@@ -417,6 +420,29 @@ def full_os():
         assert report["808"] == [1, 0, 0] and report["pending"] == [1, 0, 0] and report["909"] == [1, 1, 0], report
         values = stored()[1]
         assert [values[i] for i in (17, 18, 19, 22)] == [16384, 16384, 16384, 32512]
+        report["decay_909"] = {}
+        for label, position in (("short",0),("long",127)):
+            send([0x80,60,0]); wait(1200)
+            send([0xb0,17,position]); wait(300)
+            state["started909"] = False
+            state["capture909"] = True
+            begin = len(session.pcm)
+            send([0x90,60,100]); wait(600)
+            state["capture909"] = False
+            samples = [v/2**31 for v in state["samples909"]]
+            assert len(samples) >= 28800 and set(state["words909"]) == {position*256}, label
+            error = max(abs(a-b) for a,b in zip(samples,reference(len(samples),position*256)))
+            assert error <= 1e-5, (label,error)
+            pcm = bytes(session.pcm[begin:])
+            peak = max(abs(v[0]) for v in struct.iter_unpack("<h",pcm))
+            assert 0 < peak < 32767, (label,peak)
+            path = FOLDER / f"909-decay-{label}-native.wav"
+            with wave.open(str(path),"wb") as wav:
+                wav.setparams((2,2,session.audio_cfg["rate"],0,"NONE","not compressed")); wav.writeframes(pcm)
+            audio.write_wav(FOLDER / f"909-decay-{label}-raw.wav",samples,48000)
+            report["decay_909"][label] = dict(raw=position*256,frames=len(samples),maximum_error_fs=error,
+                native_peak_pcm16=peak,native_wav=str(path))
+        send([0x80,60,0,0xb0,17,64])
         # Use the native destination list and depth control, not injected LFO state.
         tap("LFO")
         for _ in range(150):
@@ -596,7 +622,7 @@ def full_os():
         assert state["active"] is None and state["selected_callbacks"] > 0 and not state["violations"], state
         report.update(callbacks=state["callbacks"], selected_callbacks=state["selected_callbacks"],
                       checked=["native machine selection", "native UART control delivery", "next-START MODEL latch",
-                               "808 body reaches native PCM", "native Decay changes the actual ASM tail", "native Tone changes actual filtered ASM output", "909 unshaped body reaches native PCM", "other track blocks preserved",
+                               "808 body reaches native PCM", "native Decay changes the actual ASM tail", "native Tone changes actual filtered ASM output", "909 unshaped body and native Decay endpoints reach PCM", "other track blocks preserved",
                                "native LFO destination and modulation", "native sequencer parameter lock",
                                "x0x-only defaults helper scope"])
         restored = report["save_reload"]["restored"]
@@ -608,7 +634,7 @@ def full_os():
             maximum_entry_recurrence_error_fs=state["coupling_error"],
             maximum_input_output_difference_q31=state["coupling_difference"],
             scope="actual coupling after Tone, owned state and START reset")
-        report["unqualified"] = ["strict-model qualification", "808 circuit fidelity/pot calibration", "909 diode shaping/envelopes and control response"] + ([] if restored else ["save/reload"])
+        report["unqualified"] = ["strict-model qualification", "808 circuit fidelity/pot calibration", "909 diode shaping, Tune/Attack, complete VCA and Decay taper"] + ([] if restored else ["save/reload"])
         report["failed_checks"] = [name for name in ("defaults", "parameter_reset", "page_reset")
                                    if report[name]["status"] == "failed"]
         report["status"] = "passed" if not report["failed_checks"] and restored else "failed"

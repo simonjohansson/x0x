@@ -12,15 +12,20 @@ devices, fixed internally at full level; native track level still controls
 volume. Further circuit detail follows.
 
 #25 now adds the first unshaped [909 triangle body](909-body.md) to those same
-mods. Its fixed pitch, envelope and START phase are provisional audition values;
-the source baseline establishes the triangle topology, not a faithful complete
-909. Shaping and the stock controls/envelopes follow as integrated increments.
+mods. Its fixed pitch and START phase remain provisional audition values;
+live Decay now uses unloaded C8/VR5/R58 with a provisional resistance-linear taper.
+The source baseline establishes the triangle topology, not a faithful complete
+909. Shaping and the remaining stock control/envelope circuits follow as integrated increments.
 Actual 909 audio is captured on all three devices. A separate late DN2 T2
 MODEL edit did not reach a 909 START; [#80](https://github.com/simonjohansson/x0x/issues/80)
 owns that native transition. Probes show the immediate CC does not survive into
 T2's stored MODEL, and the selector correctly follows the delivered 808 value.
 Tracing native CC handling versus STOP cleanup is still needed. The successful
-saved-909 T1 capture does not close this failed path.
+saved-909 T1 capture does not close this failed path. A one-PCM16-count DN
+baseline between captures is separately retained as a failed acceptance check
+in #20; all native 909 Decay endpoint checks pass. The DN full-run verdict stays
+failed on that bright-808-Tone baseline, while DT retains only #78 and DN2's
+tested scenario passes. These failures do not block independent engine work.
 
 The product remains one mod per device containing 808 and 909 behind a saved
 per-sound/track MODEL selector. Different tracks/voices can select different
@@ -115,7 +120,8 @@ Tone and C47 coupling RC stages are implemented. Next add source-derived
 excitation, pitch/feedback, stock Decay mapping and the complete loaded output
 network as small commits.
 Each ready increment runs through the already-installed mod. #25 is underway
-with the unshaped triangle; diode shaping, body/tune, envelope and pulse/noise
+with the unshaped triangle and live unloaded RC Decay; diode shaping, body/tune,
+complete VCA/envelope and pulse/noise
 attack follow. Keep the same registration and
 saved controls throughout; both models must coexist, not become separate mods.
 

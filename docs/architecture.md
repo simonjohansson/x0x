@@ -72,7 +72,7 @@ ringing state; START currently restarts the body and clears the Tone history.
 The [C47 coupling stage](808-coupling.md) follows Tone with fixed internal level;
 native track level still controls volume. ATTK is ignored for 808.
 The [first 909 body](909-body.md) adds an unshaped
-triangle oscillator with provisional fixed pitch and amplitude decay. Its stock
+triangle oscillator with provisional fixed pitch and live unloaded C8 RC Decay. Its full stock
 Tune/Decay/Attack behavior and diode shaping follow incrementally. Circuit
 excitation, stock 808 feedback/Decay mapping, the loaded output network and faithful
 retrigger behavior remain engine work.

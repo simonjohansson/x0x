@@ -60,15 +60,15 @@ def full_os():
 
     image, stock = build()
     names = {k: int(v, 0) for k, v in json.loads(Path(str(image) + ".map.json").read_text()).items()}
-    report = dict(status="failed", scope="standard full-OS digiemu Session; native panel/encoder",
+    report = dict(status="failed", failed_checks=[], capture_baselines={}, scope="standard full-OS digiemu Session; native panel/encoder",
                   stock=stock, firmware_sha256=hashlib.sha256(image.read_bytes()).hexdigest(),
                   digiemu_revision=cpu.revision(ROOT / "vendor/digiemu"),
                   unqualified=["strict-model qualification", "faithful 808 timbre, retrigger and pot tapers",
                                "complete loaded 808 output network including C49/buffer and C50",
-                               "909 shaping, pitch envelope and Tune/Decay/Attack response"])
+                               "909 shaping, pitch envelope and Tune/Attack response, complete VCA and Decay taper"])
     state = dict(active=None, callbacks=0, starts=[], violations=[], observations=[], phase="", samples=[], decay_text=[],
                  body_nonzero=0, body_peak=0, triangle_nonzero=0, triangle_peak=0,
-                 triangle_error=0.0, triangle_samples=[None] * 8, audio_capture=None,
+                 triangle_error=0.0, triangle_samples=[None] * 8, triangle_attenuation=[0.0] * 8, audio_capture=None,
                  coupling_blocks=0, coupling_error=0.0, coupling_difference=0)
     session = None
     try:
@@ -122,9 +122,12 @@ def full_os():
                 assert active.get("triangle"), "909 did not enter its actual ASM renderer"
                 offset = 0 if active["fresh"] else state["triangle_samples"][active["slot"]]
                 assert offset is not None, "909 continuation has no observed START"
-                expected = [body909.GAIN * math.exp(-(n+1)/(body909.SAMPLE_RATE * body909.TAU))
-                            * body909.triangle(body909.FREQUENCY*(n+1)/body909.SAMPLE_RATE)
-                            for n in range(offset, offset+32)]
+                attenuation = 0.0 if active["fresh"] else state["triangle_attenuation"][active["slot"]]
+                loss = -1 / (body909.SAMPLE_RATE * body909.decay_tau(active["decay909"]))
+                expected = [body909.GAIN * math.exp(attenuation+(j+1)*loss)
+                            * body909.triangle(body909.FREQUENCY*(offset+j+1)/body909.SAMPLE_RATE)
+                            for j in range(32)]
+                state["triangle_attenuation"][active["slot"]] = attenuation+32*loss
                 error = max(abs(actual / 2**31 - wanted) for actual, wanted in zip(words, expected))
                 assert error <= 1e-5, ("909 native output differs from the triangle reference", error)
                 state["triangle_samples"][active["slot"]] = offset + 32
@@ -163,10 +166,14 @@ def full_os():
             active = state["active"]
             assert active is not None, "909 ASM ran outside the machine callback"
             sp = uc.reg_read(UC_M68K_REG_A7)
-            saved, output, start = struct.unpack(">3I", uc.mem_read(sp + 4, 12))
+            saved, output, start, decay = struct.unpack(">4I", uc.mem_read(sp + 4, 16))
             assert saved == names["body"] + active["slot"] * 8 and output == names["fw_voices"] + active["slot"] * 128
             assert start == active["fresh"], "909 lost the native START flag"
             active["triangle"] = True
+            active["decay909"] = decay
+            capture = state["audio_capture"]
+            if capture is not None and active["track"] == capture.get("track", 0) and capture.get("model") == 1 and (active["fresh"] or active["slot"] == capture["slot"]):
+                capture["decay_words"].append(decay)
         session.at(names["x0x_909_body"], checked(triangle_entered))
         def coupling_entered(_uc, _at, _size, _data):
             active = state["active"]
@@ -413,13 +420,23 @@ def full_os():
             turn("A", detents)
             assert stored(2)[1] == target, (name, stored(2))
             wait(500)
-            for quiet_wait in range(20):
+            quiet_peaks = []
+            # Retain exact silence and report the settling history without blocking independent checks.
+            for quiet_wait in range(60):
                 quiet_begin = len(session.pcm); wait(100)
                 quiet = bytes(session.pcm[quiet_begin:])
+                quiet_peaks.append(max(abs(v[0]) for v in struct.iter_unpack("<h", quiet)))
                 if not any(quiet): break
-            report["tone_pre_capture_pcm16_peak"] = max(abs(v[0]) for v in struct.iter_unpack("<h", quiet))
+            report["tone_pre_capture_peak_trace"] = quiet_peaks
+            report["tone_pre_capture_pcm16_peak"] = quiet_peaks[-1]
+            if any(quiet):
+                report["tone_pre_capture_body_state"] = list(struct.unpack(">16i",uc.mem_read(names["body"],64)))
+                report["tone_pre_capture_selection"] = list(struct.unpack(">24I",uc.mem_read(names["selection"],96)))
             report["tone_pre_capture_wait_ms"] = (quiet_wait+1)*100
-            assert not any(quiet), "Tone capture must start with silent native output"
+            report["capture_baselines"]["tone_"+name] = dict(peak_pcm16=quiet_peaks[-1],
+                wait_ms=(quiet_wait+1)*100, peak_trace=quiet_peaks)
+            if any(quiet):
+                report["failed_checks"].append("tone_"+name+"_exact_zero_baseline")
             capture = dict(track=2, slot=None, words=[], tone_words=[], decay_words=[], dry=[])
             state["audio_capture"] = capture
             begin = len(session.pcm)
@@ -457,28 +474,44 @@ def full_os():
         assert stored(3)[4] == 32512
         wait(500)
         quiet_begin = len(session.pcm); wait(100)
-        assert not any(session.pcm[quiet_begin:]), "909 capture must begin with silent native output"
-        capture = dict(track=3, model=1, slot=None, words=[])
-        state["audio_capture"] = capture
-        begin = len(session.pcm)
-        session.press(session.code("9")); wait(800)
-        native = bytes(session.pcm[begin:])
-        state["audio_capture"] = None
-        session.release(session.code("9")); wait(300)
-        raw = capture["words"]
-        assert len(raw) >= 36000 and any(raw), "909 raw triangle capture is missing"
-        pcm_peak = max(abs(v[0]) for v in struct.iter_unpack("<h", native))
-        assert 0 < pcm_peak < 32767, "909 must reach native PCM without clipping"
-        audio909 = dict(raw_frames=len(raw), native_frames=len(native)//4, peak_pcm16=pcm_peak,
-                        controls=stored(3), normalization="none", source="isolated native 909 note")
-        for kind, data, channels, width in (("raw", struct.pack(f"<{len(raw)}i", *raw), 1, 4),
-                                            ("native", native, 2, 2)):
-            path = FOLDER / f"909-{kind}.wav"
-            with wave.open(str(path), "wb") as wav:
-                wav.setparams((channels, width, 48000, 0, "NONE", "not compressed"))
-                wav.writeframes(data)
-            audio909[kind + "_path"] = str(path)
-        report["audio_909"] = audio909
+        quiet = bytes(session.pcm[quiet_begin:])
+        baseline909 = max(abs(v[0]) for v in struct.iter_unpack("<h",quiet))
+        report["capture_baselines"]["909"] = dict(peak_pcm16=baseline909, wait_ms=100)
+        if any(quiet):
+            report["failed_checks"].append("909_exact_zero_baseline")
+        report["decay_909"] = {}
+        for label, detents, raw in (("default", 0, 16384), ("short", -320, 0), ("long", 320, 32512)):
+            if detents:
+                turn("B", detents)
+            assert stored(3)[2] == raw, stored(3)
+            capture = dict(track=3, model=1, slot=None, words=[], decay_words=[])
+            state["audio_capture"] = capture
+            begin = len(session.pcm)
+            session.press(session.code("9")); wait(800)
+            native = bytes(session.pcm[begin:])
+            state["audio_capture"] = None
+            session.release(session.code("9")); wait(1200)
+            words = capture["words"]
+            assert len(words) >= 36000 and any(words), "909 raw triangle capture is missing"
+            assert set(capture["decay_words"]) == {raw}, (label, capture["decay_words"])
+            samples = [v/2**31 for v in words]
+            error = max(abs(a-b) for a,b in zip(samples,body909.reference(len(samples),raw)))
+            assert error <= 1e-5, (label,error)
+            pcm_peak = max(abs(v[0]) for v in struct.iter_unpack("<h", native))
+            assert 0 < pcm_peak < 32767, "909 must reach native PCM without clipping"
+            audio909 = dict(raw_frames=len(words), native_frames=len(native)//4, peak_pcm16=pcm_peak,
+                            decay_raw=raw, expected_tau_s=body909.decay_tau(raw), maximum_error_fs=error,
+                            controls=stored(3), normalization="none", source="native 909 note",
+                            pre_capture_pcm16_peak=baseline909)
+            for kind, data, channels, width in (("raw", struct.pack(f"<{len(words)}i", *words), 1, 4),
+                                                ("native", native, 2, 2)):
+                path = FOLDER / (f"909-{kind}.wav" if label == "default" else f"909-decay-{label}-{kind}.wav")
+                with wave.open(str(path), "wb") as wav:
+                    wav.setparams((channels, width, 48000, 0, "NONE", "not compressed"))
+                    wav.writeframes(data)
+                audio909[kind + "_path"] = str(path)
+            report["decay_909"][label] = audio909
+        report["audio_909"] = report["decay_909"]["default"]
         assert not state["active"] and state["callbacks"] > 0 and state["body_nonzero"] > 0 and state["triangle_nonzero"] > 0
         report["render_audio"] = dict(nonzero_808_blocks=state["body_nonzero"], peak_q31=state["body_peak"],
                                       nonzero_909_blocks=state["triangle_nonzero"], peak_909_q31=state["triangle_peak"],
@@ -487,10 +520,12 @@ def full_os():
         report["coupling_808"] = dict(blocks=state["coupling_blocks"], maximum_entry_recurrence_error_fs=state["coupling_error"],
                                        maximum_input_output_difference_q31=state["coupling_difference"],
                                        output_bound_fs=0.5, scope="actual native call, per-voice state, START reset and entry-state recurrence")
-        report.update(status="passed", callbacks=state["callbacks"], starts=state["starts"],
+        report.update(status="passed" if not report["failed_checks"] else "failed", callbacks=state["callbacks"], starts=state["starts"],
                       checked=["native menu/defaults", "native first-page controls", "native encoder MODEL delivery",
                                "next-START MODEL latch", "real companion fresh/settled frame",
-                               "bounded nonzero 808 voice output", "native Decay changes raw and downstream decay time", "native Tone endpoints reach actual ASM and change filtered output", "808 coupling ASM after Tone with per-voice state and START reset", "909 ASM routing and analytic triangle output", "isolated downstream stereo PCM for both models", "other voices preserved", "native p-lock and held-lock display", "native LFO delivery", "native save/reload", "mixed 808/909 tracks"])
+                               "bounded nonzero 808 voice output", "native Decay changes raw and downstream decay time", "native Tone endpoints reach actual ASM and change filtered output", "808 coupling ASM after Tone with per-voice state and START reset", "909 ASM routing and analytic triangle output with native Decay endpoints", "downstream stereo PCM for both models with recorded pre-capture baselines", "other voices preserved", "native p-lock and held-lock display", "native LFO delivery", "native save/reload", "mixed 808/909 tracks"])
+        if report["failed_checks"]:
+            report["unqualified"].append("exact-zero native pre-capture baseline / complete downstream capture isolation")
     except (AssertionError, ValueError) as error:
         report["reason"] = str(error)
     finally:
