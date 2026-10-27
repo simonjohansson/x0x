@@ -1,4 +1,4 @@
-"""Direct PR200 voice-callback instruction tests, independent of native UI."""
+"""Direct SDK voice-callback instruction tests, independent of native UI."""
 from __future__ import annotations
 
 import copy
@@ -28,7 +28,7 @@ def input_words(slot: int, pitch: int, flags: int, params: list[int]) -> dict[in
     if isinstance(pitch, bool) or not isinstance(pitch, int) or not 0 <= pitch <= 0xFFFF:
         raise ValueError("pitch must be an unsigned 8.8 word")
     if isinstance(flags, bool) or not isinstance(flags, int) or flags not in (0, 1):
-        raise ValueError("only PR200 START or zero flags are defined")
+        raise ValueError("only SDK START or zero flags are defined")
     if len(params) != 40 or any(type(x) is not int or not 0 <= x <= 32512 for x in params):
         raise ValueError("40 unsigned 8.8 parameter words in 0..32512 are required")
     words = dict(zip(range(INPUT, INPUT + 20, 4), [OUTPUT, slot, pitch, flags, PARAM]))

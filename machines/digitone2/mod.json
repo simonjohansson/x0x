@@ -9,7 +9,7 @@
   "sources": ["page.c"],
   "sharc": {"artifact": "voice.sharc.json"},
   "requires": ["core", "machines-dn2"],
-  "resources": {"core": "0.1"},
+  "resources": {"core": "0.2"},
   "contribute": [
     {"to": "mk2_voice_synths", "data": "00000000", "relocs": [[0, "abs32", "sym:x0x_dn2_synth", 0]]},
     {"to": "mk2_voice_pages", "data": "00000000", "relocs": [[0, "abs32", "sym:x0x_dn2_voice_pages", 0]]}

@@ -56,7 +56,7 @@ static void deliver(struct x0x_dn2_controls *state, struct dn2_voice_input *inpu
 
 static void declarations(void)
 {
-    assert(x0x_dn2_synth.id == 20 && x0x_dn2_synth.clone == 0);
+    assert(x0x_dn2_synth.id == 20);
     assert(!strcmp(x0x_dn2_synth.name, "X0X KICKS"));
     assert(!strcmp(x0x_dn2_synth.label, "KICKS"));
     assert(x0x_dn2_voice_pages.id == 20 && x0x_dn2_voice_pages.count == 1);

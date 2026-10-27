@@ -40,9 +40,26 @@ The dependency revisions are Git submodule pins, not floating branches:
 
 | Dependency | Pin | Purpose |
 | --- | --- | --- |
-| Elekloader | `2ab5f424c4721e4277d2112a5ae755d9938f50d6` (PR 200) | Firmware profiles, build/patch tools and matching DN2 voice interface |
+| Elekloader | `b893c9317936633d7a32829b618c2867ee99277c` (upstream main, 27 October 2026) | Firmware profiles, build/patch tools and matching DN2 voice interface |
 | digiemu | `f57c2f237e84b8ff91bc3adb2a2931bccf9928e9` | Digitakt/Digitone ColdFire instruction and later firmware tests |
 | Digikit | `d0a4d76d533d7181ea5eee548ca68edaa8d49c35` | Digitone II SHARC instruction and later firmware tests |
+
+The 27 October upstream refresh replaces the PR200-only baseline. DN2's
+`mk2_synth` no longer has a clone field and requires Core 0.2; its fixed FM TONE
+host preserves x0x's approved ID20, names, saved slots/defaults and MODEL policy.
+The voice header/bridge and DT companion sources are unchanged. The existing
+scoped DT defaults patch still applies without fuzz.
+
+Firmware identity checks, 134 host tests and C/UI suites pass. The current SDK
+SHARC component passes 9,012 calls with identical DSP code/output. Full native
+emulator runs complete on all three: DT 39,298 callbacks with only known #78
+resets failing; DN 100,784 callbacks and current exact-zero baselines passing;
+DN2 31,878 DSP frames with no reported halt/missing blocks. Historical #20 and
+separate #80 remain unresolved/unqualified. DT/DN firmware bytes are identical
+to the companion-pulse build; DN2's new firmware SHA256 is
+`b5d22fe0981c3f66e327990996875dbb4a2cf79c789687651d2dfe041f0f7fa7`.
+Local source/qualification summaries are in `out/sdk-upstream/`. This SDK
+refresh changes no DSP algorithm and adds no new reference-fidelity claim.
 
 Selache is built at Digikit's pinned revision
 `2b26d3b75c53063575bc5c820fa0d38879335187` under its ignored `out/tools/`.

@@ -193,7 +193,8 @@ commands and the distinctions between host, component, native-routine and
 full-OS evidence. Historical issue links there are provenance, not the current
 work queue.
 
-Use mise, pinned Elekloader PR #200, digiemu for DT/DN and Digikit for DN2.
+Use mise, the upstream Elekloader revision pinned in `firmware/manifest.json`,
+digiemu for DT/DN and Digikit for DN2. The earlier PR #200 pin is superseded.
 Only the [latest supported firmware](../firmware/README.md) is in scope.
 Commit small increments directly to main and push, with evidence on the owning
 issue. Do not close a milestone on partial proof or widen tolerances to conceal
@@ -332,3 +333,16 @@ about 7%. Retain those regressions. Next implement the existing main pulse-shape
 and proper bridge input on both CPUs, then compare again. Do not add another
 research-only checkpoint or fit away the missing input physics. HTML and
 held-out audio remain untouched; full fidelity and combined acceptance stay open.
+
+## Qualified upstream SDK — 27 October 2026
+
+The user replaced the PR200-only requirement with upstream Elekloader. The
+submodule and firmware manifest now pin `b893c9317936633d7a32829b618c2867ee99277c`
+(upstream main, verified current at refresh). DN2 uses the current descriptor
+and Core 0.2 while retaining its approved saved contract. Firmware verification,
+134 host/C checks, the actual SHARC suite and all three native emulator scenarios
+ran; DN/DN2 pass, while DT retains only deferred #78 resets. #20/#80 retain their
+separate gates. See [SDK evidence](development.md#setup). The continuation loop
+uses the manifest's validated upstream pin; it must not restore PR200. Next is
+the existing #9 main pulse-shaper/forcing step, with no DSP or HTML change in
+this dependency refresh.

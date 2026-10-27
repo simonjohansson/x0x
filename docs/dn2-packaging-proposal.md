@@ -22,11 +22,20 @@ on different allocated voices in one firmware image. This uses the pinned
 single-registration path and puts both kernels in one SHARC payload. Start
 with the 808 implementation, retaining this packaging direction for the 909.
 
-The approved contract uses **ID 20**, the name, clone, slots/defaults and switching
+The approved contract uses **ID 20**, the name, FM TONE host type, slots/defaults and switching
 policy below. IDs 18/19 were earlier review candidates only and were never
 adopted; there is no existing production format to migrate.
 
-## What the pinned implementation actually permits
+## Current upstream SDK
+
+The 27 October 2026 refresh pins upstream main at
+`b893c9317936633d7a32829b618c2867ee99277c`. Its `mk2_synth` descriptor no longer
+has a `clone` field: all custom SHARC synths use FM TONE as their stock host.
+x0x retains that same host behavior and requires Core 0.2. ID 20, names,
+parameter slots/defaults and MODEL/START policy are unchanged. Current runtime
+qualification is recorded in [development](development.md).
+
+## Original PR200 implementation audit — historical
 
 Inspected Elekloader PR #200 head
 `2ab5f424c4721e4277d2112a5ae755d9938f50d6`, DN2 OS **1.12** only:
@@ -74,9 +83,9 @@ while checking missing registrations.
 ## Approved layout
 
 Approved **ID 20**, name **`X0X KICKS`**, short label **`KICKS`**,
-clone/default type **0 (FM TONE)** and one SYN page. Clone 0 selects stock
-defaults, permissions and positional MIDI mapping; it does not make the kick
-use FM DSP. Native assignment and stock-track coexistence pass in #7; audible
+host type **0 (FM TONE)** and one SYN page. Upstream now fixes that host
+without a descriptor field. It supplies stock defaults, permissions and
+positional MIDI mapping; the kick still renders in the custom SHARC kernel. Native assignment and stock-track coexistence pass in #7; audible
 AMP/filter behavior remains qualification work once the kick engines exist.
 
 | SYN1 knob | Sound slot / callback parameter | Static label and meaning | Integer default |
@@ -100,7 +109,7 @@ tuned bass engine. `TNTUN` is an explicit five-character compromise: `TONE/TUNE`
 exceeds the SDK label limit, and the current page API supplies static labels.
 Check ID conflicts against every selected mod before approval; no global
 allocator establishes that ID 20 is universally free. MIDI numbers must be
-verified from the chosen clone's actual slot mappings, not invented here.
+verified from FM TONE's actual slot mappings, not invented here.
 
 Approved combined-selector policy:
 
@@ -154,7 +163,7 @@ capacity and render deadlines are three separate checks.
 
 ## Acceptance and unresolved decisions
 
-The single-synth direction, exact ID/name/clone, slots/defaults, selector encoding
+The single-synth direction, exact ID/name/host type, slots/defaults, selector encoding
 and tail-switch policy are approved. Strength research remains open; no strength
 control is declared.
 Then test incrementally: C declarations and exact raw conversions; SHARC dispatch,
@@ -165,7 +174,7 @@ timbre comparisons and physical deadline qualification separate. Current tests
 execute host C traces and the actual bridge with synthetic DSP frames; they do
 not establish native persistence or allocator behavior.
 
-## Inspected sources
+## Original inspected sources — historical
 
 All upstream links below are pinned to PR #200 head, not a moving branch:
 
