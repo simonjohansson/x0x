@@ -15,7 +15,8 @@ class Runner:
     BASE, OUTPUT, STATES = 0x40000400, 0x40010004, 0x40011004
     SNAPSHOT, STACK, STOP = 0x40018004, 0x40020000, 0x40030000
 
-    def __init__(self, image):
+    def __init__(self, image, state_words=2):
+        self.state_words = state_words
         harness = cpu.require_module("emu.harness", "digiemu")
         from unicorn import UC_HOOK_CODE, UC_HOOK_MEM_WRITE
         from unicorn import m68k_const
@@ -27,7 +28,7 @@ class Runner:
         self.uc.mem_write(self.BASE, image)
         self.uc.mem_write(self.STATES - 4, b"\xa5" * 136)
         for voice in range(8):
-            self.uc.mem_write(self.STATES + 16 * voice, bytes(8))
+            self.uc.mem_write(self.STATES + 16 * voice, bytes(state_words * 4))
         self.steps = 0
         self.invalid = []
         self.allowed = []
@@ -59,7 +60,7 @@ class Runner:
             uc.reg_write(reg, value)
         uc.reg_write(register("A7"), self.STACK)
         self.steps, self.invalid = 0, []
-        self.allowed = [(state, state + 8), (self.OUTPUT, self.OUTPUT + 128),
+        self.allowed = [(state, state + 4*self.state_words), (self.OUTPUT, self.OUTPUT + 128),
                         (self.SNAPSHOT, self.SNAPSHOT + 36), (self.STACK - 96, self.STACK)]
         uc.emu_start(self.BASE, self.STOP, timeout=10_000_000)
         assert not self.invalid, self.invalid
@@ -74,7 +75,7 @@ class Runner:
         assert struct.unpack(">8I", snapshot[4:36]) == EMAC_SEED, "EMAC context changed"
         after = bytes(uc.mem_read(self.STATES - 4, 136))
         at = state - (self.STATES - 4)
-        assert before[:at] == after[:at] and before[at + 8:] == after[at + 8:], "other voice/guard changed"
+        assert before[:at] == after[:at] and before[at + 4*self.state_words:] == after[at + 4*self.state_words:], "other voice/guard changed"
         output = bytes(uc.mem_read(self.OUTPUT - 4, 136))
         assert output[:4] == output[-4:] == b"\xa5" * 4, "output guard changed"
         return list(struct.unpack(">32i", output[4:-4]))
@@ -107,11 +108,12 @@ def run(folder=None):
     cases, default_words, worst = [], [], 0
     frames = body808.SAMPLE_RATE // 2
     for raw in (0, 1, 16384, 16385, 32511, 32512):
-        runner = Runner(image)
+        runner = Runner(image, state_words=3)
         assert runner.render(decay_raw=raw) == [0] * 32, "untriggered zero state is not silent"
         words = []
         for block in range(frames // 32):
             words.extend(runner.render(start=int(block == 0), decay_raw=raw))
+            assert struct.unpack(">I",runner.uc.mem_read(runner.STATES+8,4))[0] == max(48-(block+1)*32,0)
             worst = max(worst, runner.steps)
         samples = [word / 2**31 for word in words]
         expected = body808.reference(len(samples), raw)
@@ -134,11 +136,11 @@ def run(folder=None):
         if raw == 16384:
             default_words, default_samples, default_measures = words, samples, measures
             default_case = cases[-1]
-    interleaved = Runner(image)
+    interleaved = Runner(image, state_words=3)
     for block in range(20):
         interleaved.render(7, int(block % 5 == 0), 32512)
         assert interleaved.render(0, int(block == 0)) == default_words[32 * block:32 * (block + 1)]
-    runner, live, raw = Runner(image), [], 16384
+    runner, live, raw = Runner(image, state_words=3), [], 16384
     changes = {8000: 32512, 16000: 0}
     for sample in range(0, frames, 32):
         raw = changes.get(sample, raw)

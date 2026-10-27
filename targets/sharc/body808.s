@@ -1,6 +1,6 @@
 // First provisional 808 resonator/Tone and unshaped 909 triangle bodies.
 // Per slot: {callback count since model change, selected code}; 0=inactive, 1=808, 2=909.
-// SDK input is in R4. Metadata at L2 base; body +128, Tone +256, coupling pairs +320.
+// SDK input R4. Metadata L2; body +128, Tone +256, coupling +320, pulse counters +448.
 .SECTION/SW callback_code;
 .GLOBAL sharc_voice_render.;
 sharc_voice_render.:
@@ -99,6 +99,12 @@ next_word:
     IF EQ JUMP silent;      // No initialized behavior before the first START.
     JUMP selected;
 starting:
+    R0=LSHIFT R2 BY 2;
+    R1=0x200921c0;
+    R0=R0+R1;
+    I4=R0;
+    R0=0;
+    DM(I4,M5)=R0;
     // shortcut: reset Tone on START until residual-state retrigger and logical ownership are qualified.
     I4=R13;
     R0=0;
@@ -151,11 +157,20 @@ selected:
     R14=R3+R0;
     R0=4;
     R15=R14+R0;
+    R4=0x20092080;
+    R4=R14-R4;
+    R5=-1;
+    R4=LSHIFT R4 BY R5;
+    R5=0x200921c0;
+    R4=R4+R5;
+    I0=R4;
     R7=PASS R7;
     IF EQ JUMP continue_body;
-    // shortcut: fixed excitation on every START until the 808 trigger circuit is modeled.
+    // shortcut: 1 ms rectangular drive; edge shaping, physical forcing/gain and residual retrigger follow.
     R0=0;
-    R1=0x3e800000;
+    R1=0;
+    R4=48;
+    DM(I0,M5)=R4;
     JUMP render_body;
 continue_body:
     I4=R14;
@@ -203,7 +218,6 @@ render_body:
     F11=F4*F6;
     I4=R13;
     R12=DM(I4,M5);
-    I0=R14;
     I1=R15;
     I2=R13;
     // Unloaded C47=.47uF into fixed wide-open VR4=100k; full output loading remains open.
@@ -214,6 +228,14 @@ render_body:
     R9=32;
     R13=4;
 body_sample:
+    R4=DM(I0,M5);
+    R4=PASS R4;
+    IF EQ JUMP no_pulse;
+    R4=R4-1;
+    DM(I0,M5)=R4;
+    R4=0x3baaaaab;
+    F1=F1+F4;
+no_pulse:
     F4=F2*F0;
     F5=F3*F1;
     F4=F4+F5;
@@ -237,7 +259,10 @@ body_sample:
     R8=R8+R13;
     R9=R9-1;
     IF NE JUMP body_sample;
-    DM(I0,M5)=R0;
+    R4=I1;
+    R4=R4-R13;
+    I4=R4;
+    DM(I4,M5)=R0;
     DM(I1,M5)=R1;
     DM(I2,M5)=R12;
     DM(I3,M5)=R7;

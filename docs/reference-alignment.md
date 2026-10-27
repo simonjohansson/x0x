@@ -3,7 +3,7 @@
 Source/code audit for [#79](https://github.com/simonjohansson/x0x/issues/79),
 27 October 2026. The initial audit inspected runtime `a05912e`; the inventory
 below includes the subsequent [Tone RC implementation](808-tone.md),
-[isolated C47 coupling](808-coupling.md) and
+[isolated C47 coupling](808-coupling.md), [finite excitation](808-excitation.md) and
 [first 909 triangle body](909-body.md).
 Saved controls remain unchanged. This is an alignment inventory, not evidence
 that either engine reproduces original hardware or a reference VST.
@@ -74,14 +74,14 @@ its SHARC payload directly through the SDK bridge.
 
 | Block | Source target | Current implementation | Alignment status |
 | --- | --- | --- | --- |
-| Trigger/excitation | S01 p.4/p.9; S03 §§3–4, approximately 1 ms accent-dependent pulse and R162/R163/C40/D53 shaping | Each START sets oscillator x/y to 0/0.25 | Missing pulse duration, shaping state, asymmetric edge and diode behavior |
-| Resonator | S03 §5 Eq.5 and §7 Eq.7; S01 p.9 bridged-T around IC12/C41/C42/R165–R167 | `x0x_808_body` / SHARC `body_sample`: two-state damped rotation at fixed 55 Hz | Provisional isolated mode; circuit numerator, forcing inputs and full topology absent |
+| Trigger/excitation | S01 p.4/p.9; S03 §§3–4, approximately 1 ms accent-dependent pulse and R162/R163/C40/D53 shaping | START clears x/y and drives the provisional mode for 48 samples, with independent convolution and both ASM implementations | Nominal 1 ms rectangle implemented; shaping/diode, physical forcing/gain and accent remain missing |
+| Resonator | S03 §5 Eq.5 and §7 Eq.7; S01 p.9 bridged-T around IC12/C41/C42/R165–R167 | `x0x_808_body` / SHARC `body_sample`: two-state damped rotation at fixed 55 Hz with a finite rectangular drive | Provisional isolated mode/forcing; circuit numerator, physical input transfer and full topology absent |
 | Decay | S03 §6 Eq.6 and Fig.7; VR6 changes a frequency-dependent R164/R169/C43 feedback shelf returned through R170 | `retention()` and each ASM coefficient setup linearly interpolate radius versus delivered B | Audible and numerically checked, but not the stock shelf/pot response |
 | Initial pitch shift | S01 p.5 and S03 §8.1: Q41–Q43 switched resistance during attack | Rotation frequency stays fixed | Missing; retain the service-note/paper timing difference instead of silently choosing one |
 | Internal retrigger/pitch sigh | S03 §§8.1–8.2: C39/R161/D52 event and Q43 leakage behavior | No transient or nonlinear feedback state | Missing |
 | Tone | S01 p.9; S03 §9 Table1 and Eq.11 passive low-pass | TPT RC filter on both CPUs, checked against independent capacitor voltage/current integration; TNTUN changes it live | Nominal RC response implemented; bright-up resistance-linear knob mapping is provisional, C taper/direction calibration remains |
 | Coupling/output | S03 §9 Table1 (VR4 correction); S01 p.9; S04 §1.7 | Isolated C47=.47µF / VR4=100k HP at fixed full level, after isolated Tone | C47 RC implemented; full loading, C49/R176/R177, transistor buffer and C50 remain missing. Native level remains downstream |
-| Accent | S01 trigger logic and S03 §3 | Fixed body excitation; device AMP/velocity remains downstream | Intrinsic accent/excitation absent; do not add the native gain twice |
+| Accent | S01 trigger logic and S03 §3 | Fixed integrated rectangular drive; device AMP/velocity remains downstream | Intrinsic accent/excitation absent; do not add the native gain twice |
 | Same-voice retrigger | S03 §11/Fig.12: new excitation interacts with residual circuit state | START replaces the oscillator state | Provisional restart, not circuit-state retrigger behavior |
 
 MODEL/state ownership, exact Decay delivery, output guards, host controls and
@@ -141,9 +141,9 @@ numerator/resistor naming describes the unloaded node exactly.
 1. Tone RC response and both CPU implementations are complete for the declared
    nominal network and provisional knob mapping. Preserve the independent
    step/rich-input checks while deriving the stock C taper/direction later.
-2. Replace the arbitrary oscillator reset with a source-derived finite trigger
-   and add the internal transient, preserving circuit state on retrigger as
-   each stage lands. Then replace provisional Decay radius control with the
+2. The nominal finite trigger duration is implemented. Derive the pulse-shaper
+   edge/diode and physical input transfer, then add the internal transient and
+   deliberate residual-state retrigger as each stage lands. Then replace provisional Decay radius control with the
    source-derived feedback network. Keep the distinctions in the table current.
 3. The first unshaped 909 triangle runs on both CPUs and all three devices in
    #25, now with live unloaded RC Decay and the separate late DN2 transition retained

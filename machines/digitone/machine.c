@@ -6,12 +6,12 @@ static struct x0x_dn_frame frame;
 static struct x0x_dn_adapter adapter;
 /* Existing private ColdFire selector ABI, shared with Digitakt. */
 static uint32_t selection[8][3];
-static int32_t body[8][2];
+static int32_t body[8][3];
 static int32_t tone_state[8];
 static int32_t coupling_state[8][2];
 extern int x0x_selector(uint32_t bank[8][3], uint32_t notice[4], const uint32_t input[4]);
 extern void x0x_silence(int32_t output[32]);
-extern void x0x_808_body(int32_t state[2], int32_t output[32], uint32_t start, uint32_t decay_raw);
+extern void x0x_808_body(int32_t state[3], int32_t output[32], uint32_t start, uint32_t decay_raw);
 extern void x0x_808_tone(int32_t *state, int32_t output[32], uint32_t tone_raw);
 extern void x0x_808_coupling(int32_t state[2], int32_t output[32]);
 extern void x0x_909_body(int32_t state[2], int32_t output[32], uint32_t start, uint32_t decay_raw);
@@ -23,7 +23,7 @@ void x0x_dn_begin(void)
         if ((FW_VOICE_PARAM(slot, 0) >> 8) == X0X_ID)
             continue;
         selection[slot][0] = selection[slot][1] = selection[slot][2] = 0;
-        body[slot][0] = body[slot][1] = 0;
+        body[slot][0] = body[slot][1] = body[slot][2] = 0;
         tone_state[slot] = 0;
         coupling_state[slot][0] = coupling_state[slot][1] = 0;
         x0x_dn_forget(&adapter, (int32_t)slot);
@@ -74,7 +74,7 @@ static void x0x_dn_machine_render(int32_t slot, int32_t *block, const struct dnm
     valid &= x0x_dn_frame_model(&frame, slot, 124, &raw, &model);
     if (adapter.slot[slot].active && adapter.slot[slot].track != (uint32_t)voice->track) {
         selection[slot][0] = selection[slot][1] = selection[slot][2] = 0;
-        body[slot][0] = body[slot][1] = 0;
+        body[slot][0] = body[slot][1] = body[slot][2] = 0;
         tone_state[slot] = 0;
         coupling_state[slot][0] = coupling_state[slot][1] = 0;
     }
@@ -82,7 +82,7 @@ static void x0x_dn_machine_render(int32_t slot, int32_t *block, const struct dnm
     if (x0x_selector(selection, notice, input) == 1) {
         enum x0x_instrument instrument = notice[0] ? X0X_909 : X0X_808;
         if (notice[3]) {
-            body[slot][0] = body[slot][1] = 0;
+            body[slot][0] = body[slot][1] = body[slot][2] = 0;
             tone_state[slot] = 0;
             coupling_state[slot][0] = coupling_state[slot][1] = 0;
         }

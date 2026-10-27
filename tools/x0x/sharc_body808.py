@@ -11,7 +11,7 @@ from . import analysis, body808, body909, coupling808, cpu, tone808, sharc_callb
 
 SOURCE = cpu.ROOT / "targets/sharc/body808.s"
 FOLDER = cpu.ROOT / "out/sharc/body808"
-STATE_BYTES = 448
+STATE_BYTES = 512
 FRAMES = 24000
 
 
@@ -27,7 +27,7 @@ def component() -> tuple[dict, bytes]:
     def runner():
         return selector.SelectorRunner(code, entry, state_bytes=STATE_BYTES,
                                        extra_slot_state_offset=128, tone_state_offset=256,
-                                       coupling_state_offset=320)
+                                       coupling_state_offset=320, pulse_state_offset=448)
 
     policy = runner()
     inputs = selector.cases()
@@ -71,7 +71,8 @@ def component() -> tuple[dict, bytes]:
         for block in range(frames // 32):
             current = (changes or {}).get(block * 32, current)
             current_tone = (tone_changes or {}).get(block * 32, current_tone)
-            chunk, _ = machine.call_raw(body_case("body", current, current_tone, flags=int(block == 0)), True)
+            chunk, state = machine.call_raw(body_case("body", current, current_tone, flags=int(block == 0)), True)
+            assert state[112] == max(48-(block+1)*32,0), "pulse must last exactly 48 samples"
             result.extend(chunk)
         expected = coupling808.filter_reference(tone808.filter_reference(
             body808.reference(frames, decay_raw=raw, changes=changes),
@@ -214,7 +215,7 @@ def component() -> tuple[dict, bytes]:
                   c_reference=provenance,
                   checked=["analytic fixed-frequency damped-sine body", "provisional DECAY curve and fractions",
                            "continuous live DECAY edit", "source-derived Tone RC and continuous edits",
-                           "unloaded C47 coupling after Tone", "provisional full-chain reset on every START", "all 16 independent slots",
+                           "unloaded C47 coupling after Tone", "48-sample excitation across callbacks", "provisional full-chain reset on every START", "all 16 independent slots",
                            "START-only MODEL latch", "provisional same-model retrigger",
                            "model-change body clear", "909 triangle, unloaded RC Decay with live edits and independent mixed models", "invalid-input atomicity",
                            "state/output guards", "SDK context preservation"],

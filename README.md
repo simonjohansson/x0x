@@ -18,7 +18,7 @@ Start with the [architecture](docs/architecture.md),
 [kick-drum research](docs/kick-drum-research.md) and
 [implementation plan](docs/implementation-plan.md). All three silent milestones
 are accepted. The [first 808 body](docs/808-body.md) now makes sound in every
-emulator: an uncalibrated 55 Hz decaying sine with live DECAY feedback control
+emulator: an uncalibrated 55 Hz mode with [1 ms excitation](docs/808-excitation.md), live DECAY feedback control
 and [Tone](docs/808-tone.md) and [C47 coupling](docs/808-coupling.md) RC stages. The first
 [909 triangle body](docs/909-body.md) also makes sound in all three emulators;
 its Decay control uses an unloaded RC approximation with a provisional pot mapping. Both engines

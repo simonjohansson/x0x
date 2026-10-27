@@ -1,5 +1,9 @@
 # 808 passive Tone stage
 
+The measurements below predate [finite rectangular excitation](808-excitation.md).
+The network equations are unchanged; current composed/native evidence is kept
+with that increment rather than treating older body captures as current proof.
+
 TNTUN now filters the provisional 808 body on DT, DN and DN2. This is one
 source-derived circuit stage in [#9](https://github.com/simonjohansson/x0x/issues/9)
 and [#79](https://github.com/simonjohansson/x0x/issues/79), not a claim that the

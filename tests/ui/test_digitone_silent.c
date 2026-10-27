@@ -17,7 +17,7 @@ const uint8_t fw_params[134 * 60] __attribute__((aligned(4))) = {
 };
 static uint32_t calls, input_seen[4], zeroes;
 static uint32_t body_calls, body_start, body_decay;
-static int32_t *body_state, body_before[2];
+static int32_t *body_state, body_before[3];
 static uint32_t tone_calls, tone_raw;
 static int32_t *tone_state, tone_before;
 static uint32_t coupling_calls;
@@ -39,11 +39,12 @@ int x0x_selector(uint32_t bank[8][3], uint32_t notice[4], const uint32_t input[4
     return state[0] ? 1 : 4;
 }
 void x0x_silence(int32_t output[32]) { ++zeroes; memset(output, 0, 128); }
-void x0x_808_body(int32_t state[2], int32_t output[32], uint32_t start, uint32_t decay_raw)
+void x0x_808_body(int32_t state[3], int32_t output[32], uint32_t start, uint32_t decay_raw)
 {
     ++body_calls; body_start = start; body_state = state; body_decay = decay_raw;
     memcpy(body_before, state, sizeof body_before);
     if (start) { state[0] = 100; state[1] = 200; }
+    state[2] = 16;
     for (unsigned k = 0; k < 32; ++k) output[k] = ++state[0];
 }
 void x0x_808_tone(int32_t *state, int32_t output[32], uint32_t raw)
@@ -101,7 +102,7 @@ int main(void)
     x0x_dn_begin(); x0x_dn_capture(words); x0x_dn_ready(0);
     m->render(3, guarded + 1, &voice);
     assert(body_calls == 1 && body_start == 1 && body_before[0] == 0 && body_before[1] == 0);
-    assert(body_decay == 6789); /* Preserve the delivered fractional position. */
+    assert(body_before[2] == 0 && body_decay == 6789); /* Preserve the delivered fractional position. */
     assert(tone_calls == 1 && tone_raw == 12345 && tone_before == 0);
     assert(coupling_calls == 1 && coupling_before[0] == 0 && coupling_before[1] == 0);
     assert(guarded[1] == 101 && guarded[32] == 132);
@@ -113,7 +114,7 @@ int main(void)
     words[3 * 79 + 28] = 32767;
     m->render(3, guarded + 1, &voice);
     assert(body_calls == 2 && body_start == 0 && body_before[0] == 132);
-    assert(body_decay == 32512); /* Bound native modulation above the UI maximum. */
+    assert(body_before[2] == 16 && body_decay == 32512); /* Bound native modulation above the UI maximum. */
     assert(tone_calls == 2 && tone_raw == 32512 && tone_before == 1);
     assert(coupling_calls == 2 && coupling_before[0] == 1 && coupling_before[1] == 2);
     assert(guarded[1] == 133 && guarded[32] == 164);
@@ -124,7 +125,7 @@ int main(void)
     voice.fresh = 1;
     m->render(3, guarded + 1, &voice);
     assert(body_calls == 3 && zeroes == 1 && calls909 == 2 && state909 == slot3);
-    assert(decay909 == 32512 && start909 == 1 && before909[0] == 0 && before909[1] == 0);
+    assert(slot3[2] == 0 && decay909 == 32512 && start909 == 1 && before909[0] == 0 && before909[1] == 0);
     assert(tone_calls == 3 && *tone3 == 0);
     assert(coupling_calls == 3 && coupling3[0] == 0 && coupling3[1] == 0);
     voice.fresh = 0;
@@ -152,7 +153,7 @@ int main(void)
     assert(coupling_calls == 7 && coupling_before[0] == 0 && coupling_before[1] == 0);
     FW_VOICE_PARAM(3, 0) = 0;
     x0x_dn_begin();
-    assert(slot3[0] == 0 && slot3[1] == 0);
+    assert(slot3[0] == 0 && slot3[1] == 0 && slot3[2] == 0);
     assert(*tone3 == 0);
     assert(coupling3[0] == 0 && coupling3[1] == 0);
     assert(guarded[0] == 12345 && guarded[33] == 12345);

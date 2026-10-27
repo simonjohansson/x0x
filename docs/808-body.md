@@ -1,7 +1,9 @@
-# 808 body and Decay control
+# 808 body, finite excitation and Decay control
 
-This #9 increment is an uncalibrated damped sine, before the 808 excitation,
-pitch sigh, stock feedback/Decay mapping and the complete loaded output network. The saved layout
+The #9 prototype now drives an uncalibrated damped mode with a
+[nominal 1 ms rectangular excitation](808-excitation.md). Pulse-edge shaping,
+pitch sigh, stock feedback/Decay mapping and the complete loaded output network
+remain missing. The saved layout
 stays unchanged. DECAY changes feedback retention on every block, and TNTUN now
 drives the [passive Tone RC stage](808-tone.md). ATTK is ignored in 808 mode.
 The [first 909 body](909-body.md) follows separately. The raw-body equations below
@@ -9,22 +11,23 @@ describe the 808 oscillator before Tone and the [C47 coupling filter](808-coupli
 
 ## Model and units
 
-At 48,000 samples/second with default DECAY=64, the independent reference is
+At 48,000 samples/second, START clears x/y and injects `u=0.25/48` into y
+before each rotation for exactly 48 samples. Both ASM implementations compute:
 
-`output[n] = 0.25 * exp(-(n+1)/(48000*0.25)) * sin(2*pi*55*(n+1)/48000)`.
+- `x_next = c*x + s*(y+u)` and output `x_next`;
+- `y_next = c*(y+u) - s*x`.
 
-For other positions, the feedback retention below replaces the fixed damping.
-Timed Decay changes integrate `log(r)` over the delivered samples while keeping
-phase continuous. This oracle uses direct sine and exponential evaluations,
-not the ASM rotation recurrence.
+The fixed internal drive sum is 0.25; there is no per-hit normalization. At the
+default DECAY=64, `c=exp(-1/12000)*cos(2*pi*55/48000)` and
+`s=exp(-1/12000)*sin(2*pi*55/48000)`. Other Decay values use the existing live
+feedback retention. The independent oracle convolves analytical impulse
+responses with the finite drive, integrating log retention over timed changes.
+It does not copy the ASM recurrence. [Source boundary, equations and current
+checks](808-excitation.md) distinguish the duration-only trigger approximation
+from the still-missing pulse shaper and full bridged-T forcing.
 
-A START at sample zero initializes x=0, y=0.25. Both ASM implementations advance
-one damped rotation per output sample, using the old x and y on both right sides:
-
-- `x_next = c*x + s*y`, and output `x_next`;
-- `y_next = c*y - s*x`;
-- `c = exp(-1/12000)*cos(2*pi*55/48000)`;
-- `s = exp(-1/12000)*sin(2*pi*55/48000)`.
+The earlier formula `0.25*exp(-(n+1)/12000)*sin(2*pi*55*(n+1)/48000)` describes
+the historical instantaneous-state prototype, before finite excitation.
 
 The body stays at 55 Hz with a fixed internal peak below 0.25 digital full scale.
 The subsequent coupling stage has a separately derived half-scale transient bound.
@@ -53,7 +56,7 @@ native raw value. DN forwards the existing bounded exact-position numerator,
 so an above-UI native endpoint is safely bounded to 32512. DN2 reads callback
 parameter 1 directly in SHARC ASM. No saved layout or control was added.
 
-START currently restarts phase and amplitude. Residual circuit-state excitation
+START currently clears the body and restarts the full 48-sample drive. Residual circuit-state excitation
 and same-voice retrigger behavior remain later #9 work. A MODEL change clears
 only that voice's old body. No additional saved values or public SDK API are used.
 
@@ -135,7 +138,7 @@ Raw/direct and downstream measurements have different windows and host effects;
 compare short against long within each test, not the ratios across devices.
 
 #9's first body is integrated in all three emulators. The Decay response is
-provisional; stock feedback/pot mapping, excitation/pitch sigh, output coupling,
+provisional; stock feedback/pot mapping, shaped excitation/pitch sigh, full output loading,
 calibrated scale and circuit-state retrigger behavior remain open. Tone filtering
 is now implemented with a provisional resistance-linear control mapping; see
 [the current Tone evidence](808-tone.md).

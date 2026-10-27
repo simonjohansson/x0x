@@ -1,5 +1,9 @@
 # 808 C47 coupling stage
 
+The measurements below predate [finite rectangular excitation](808-excitation.md).
+The network equations are unchanged; current composed/native evidence is kept
+with that increment rather than treating older body captures as current proof.
+
 The 808 path now runs body → Tone → C47 coupling in the existing combined mods.
 This [#9](https://github.com/simonjohansson/x0x/issues/9)/
 [#79](https://github.com/simonjohansson/x0x/issues/79) increment models one

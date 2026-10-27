@@ -65,7 +65,9 @@ volume. MODEL below 64 selects 808; 64 and above selects 909.
 
 The first audible increment is an uncalibrated 808 body: a 55 Hz damped sine
 with a fixed pitch and live DECAY feedback control. The provisional range is
-approximately 142 ms to 1 second, with 250 ms at the approved default. TNTUN
+approximately 142 ms to 1 second, with 250 ms at the approved default. A
+[1 ms rectangular drive](808-excitation.md) now excites the provisional mode
+instead of setting an instantaneous amplitude. TNTUN
 now controls the [808 passive Tone RC stage](808-tone.md); its resistance mapping
 is provisional pending stock-pot calibration. Live Tone/Decay edits keep the
 ringing state; START currently restarts the body and clears the Tone history.

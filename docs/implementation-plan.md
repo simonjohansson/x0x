@@ -9,7 +9,9 @@ verified through native controls/audio on all three machines. The subsequent
 native integration checks, with provisional knob mapping. The
 [C47/VR4 coupling RC](808-coupling.md) is also integrated and tested on all three
 devices, fixed internally at full level; native track level still controls
-volume. Further circuit detail follows.
+volume. A [nominal 1 ms rectangular excitation](808-excitation.md) now replaces
+the instantaneous oscillator reset; edge shaping and physical forcing remain
+provisional. Current component/DT checks pass; DN/DN2 native checks are running.
 
 #25 now adds the first unshaped [909 triangle body](909-body.md) to those same
 mods. Its fixed pitch and START phase remain provisional audition values;
@@ -116,8 +118,8 @@ standard non-strict configuration, labelled accurately.
 
 The first #9 increment supplies an analytically checked fixed 808 body on both
 CPUs and native audio captures from every device. Live Decay and the passive
-Tone and C47 coupling RC stages are implemented. Next add source-derived
-excitation, pitch/feedback, stock Decay mapping and the complete loaded output
+Tone and C47 coupling RC stages are implemented. The finite rectangular drive is now implemented. Next derive
+shaped excitation/forcing, pitch/feedback, stock Decay mapping and the complete loaded output
 network as small commits.
 Each ready increment runs through the already-installed mod. #25 is underway
 with the unshaped triangle and live unloaded RC Decay; diode shaping, body/tune,
@@ -138,7 +140,8 @@ captures. Compare the aligned implementations to the reference VST later in #2. 
 code, selects schematic baselines and records the missing/provisional blocks.
 The first source-derived slice implements the 808 Tone RC network on both CPUs,
 checked against an independent capacitor voltage/current reference. Its native
-knob taper remains provisional. Finite excitation, the full feedback network and
+knob taper remains provisional. The 1 ms drive duration is implemented; pulse
+shaping, the full feedback network and
 the other circuit rows remain open. The pinned Plaits classes now have
 [executable host renders](reference-renders.md), including deterministic repeated
 captures, control changes, retained retrigger history and sanitized builds.

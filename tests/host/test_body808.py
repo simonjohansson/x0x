@@ -14,7 +14,6 @@ class Body808Tests(unittest.TestCase):
             self.assertTrue(fit['applicable'])
             self.assertAlmostEqual(fit['time_constant_s'], TAU, delta=1e-5)
         self.assertEqual(report['onset_sample'], 0)
-        self.assertGreater(report['peak_fs'], GAIN * .98)
         self.assertLess(report['peak_fs'], GAIN)
         self.assertLess(abs(report['dc_fs']), .001)
 
@@ -42,8 +41,8 @@ class Decay808Tests(unittest.TestCase):
         self.assertEqual(actual[:switch], baseline[:switch])
         import math
         n = switch + 200
-        expected = (GAIN * retention(0)**switch * retention(32512)**(n + 1 - switch)
-                    * math.sin(2 * math.pi * FREQUENCY * (n + 1) / SAMPLE_RATE))
+        expected = sum(GAIN/48 * retention(0)**(switch-k) * retention(32512)**(n+1-switch)
+                       * math.sin(2*math.pi*FREQUENCY*(n+1-k)/SAMPLE_RATE) for k in range(48))
         self.assertAlmostEqual(actual[n], expected, places=11)
         self.assertGreater(abs(actual[n]), abs(baseline[n]))
 
@@ -53,3 +52,19 @@ class Decay808Tests(unittest.TestCase):
         for raw in (-1, 32513, True, 64.5):
             with self.assertRaises(ValueError):
                 retention(raw)
+
+
+class Excitation808Tests(unittest.TestCase):
+    def test_finite_pulse_matches_direct_convolution_at_callback_boundaries(self):
+        import math
+        from x0x.body808 import PULSE_SAMPLES, PULSE_GAIN, retention
+        self.assertEqual(PULSE_SAMPLES,48)
+        self.assertEqual(PULSE_SAMPLES/SAMPLE_RATE,.001)
+        for raw in (0,16384,32512):
+            samples=reference(2001,raw)
+            for n in (0,31,32,47,48,63,64,2000):
+                expected=sum(PULSE_GAIN*retention(raw)**(n+1-k)
+                    * math.sin(2*math.pi*FREQUENCY*(n+1-k)/SAMPLE_RATE)
+                    for k in range(min(n+1,PULSE_SAMPLES)))
+                self.assertAlmostEqual(samples[n],expected,places=12)
+            self.assertAlmostEqual(samples[0],PULSE_GAIN*retention(raw)*math.sin(2*math.pi*FREQUENCY/SAMPLE_RATE),places=14)

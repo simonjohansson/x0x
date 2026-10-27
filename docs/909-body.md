@@ -1,5 +1,11 @@
 # 909 triangle body and live Decay
 
+The subsequent [808 finite-excitation increment](808-excitation.md) updates the
+shared payload to 1170 code bytes/512 private data bytes; the 909 algorithm is
+unchanged and its actual CPU comparisons still pass. Native requalification of
+the shared build is recorded with that increment. Earlier results below retain
+their original firmware/source identities.
+
 This [#25](https://github.com/simonjohansson/x0x/issues/25) increment adds an
 unshaped triangle foundation to the existing combined mod. It is not yet a
 complete or calibrated 909. The stock pitch path, diode shaping, complete VCA/envelopes,

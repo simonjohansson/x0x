@@ -1,9 +1,9 @@
 /* Provisional 808 body: damped 55 Hz sine at 48 kHz with live decay.
- * void x0x_808_body(int32_t state[2], int32_t output[32], uint32_t start, uint32_t decay_raw).
+ * void x0x_808_body(int32_t state[3], int32_t output[32], uint32_t start, uint32_t decay_raw).
  * decay_raw is caller-bounded to 0..32512; default 16384 gives tau = 250 ms.
- * State is {x,y} in Q1.31; caller owns disjoint aligned state/output extents.
- * shortcut: START restarts phase/amplitude; replace with measured retrigger
- * excitation when the circuit model is implemented.
+ * State is {x,y,pulse_remaining} in Q1.31; caller owns disjoint aligned state/output extents.
+ * shortcut: START restarts the body and 1 ms rectangle; shaped excitation,
+ * physical forcing/gain and residual-state retrigger follow in #9/#79.
  */
     .text
     .globl x0x_808_body
@@ -33,10 +33,12 @@ x0x_808_body:
     movea.l 84(%sp), %a1
     move.l (%a0), %d4
     move.l 4(%a0), %d5
+    move.l 8(%a0), %d7
     tst.l 88(%sp)
     beq.s .Lcontinue
     moveq #0, %d4
-    move.l #0x20000000, %d5
+    moveq #0, %d5
+    moveq #48, %d7
 .Lcontinue:
     move.l #0xb0, %d0 /* fractional, saturated, nearest-even */
     move.l %d0, %macsr
@@ -56,6 +58,11 @@ x0x_808_body:
     movclr.l %acc0, %d3
     moveq #32, %d6
 .Lsample:
+    tst.l %d7
+    beq.s .Lnopulse
+    subq.l #1, %d7
+    addi.l #11184811, %d5 /* round((.25/48)*2^31); provisional internal forcing scale */
+.Lnopulse:
     moveq #0, %d0
     move.l %d0, %acc0
     move.l %d0, %acc1
@@ -70,6 +77,7 @@ x0x_808_body:
     bne.s .Lsample
     move.l %d4, (%a0)
     move.l %d5, 4(%a0)
+    move.l %d7, 8(%a0)
     moveq #0, %d0
     move.l %d0, %macsr
     move.l 44(%sp), %d0

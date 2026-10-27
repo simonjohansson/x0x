@@ -105,8 +105,9 @@ copy for any over-unity result rather than clip or normalize it.
 
 The current analytical x0x prototypes differ substantially from these classes.
 Over the same two-second, unshifted window, default RMS differences are
-0.084386 FS (Analog versus 808 body/Tone/coupling) and 0.080329 FS (Synthetic
-versus 909 triangle/Decay). Those are comparisons of **analytical prototypes**,
+0.085353 FS (Analog versus the finite-drive 808 body/Tone/coupling) and 0.080329 FS (Synthetic
+versus 909 triangle/Decay). The prototype comparison includes the subsequent finite-808-drive update;
+the original third-party class captures are unchanged. These are comparisons of **analytical prototypes**,
 not fresh ASM/native renders. The reference and prototypes have different gain,
 control mappings, excitation and phase policies. No alignment, gain fitting,
 normalization or fidelity pass/fail threshold is applied.
