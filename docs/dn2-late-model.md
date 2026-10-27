@@ -22,8 +22,18 @@ Evidence: `out/dn2/intc-requalification/qualification.json` and frozen reports.
 The adopted pin's normal daemon builds without generated-core regeneration or
 binary/fingerprint overrides. The standard current Tune/full-OS run passes
 37,821 audio / 37,822 DSP frames, including both 808 Tone checks and native
-controls/mixed models. Original-order late qualification on that normal daemon
-remains the final adoption gate in #80; the candidate result is kept distinct.
+controls/mixed models. The original-order late probe also passes on this normal
+daemon with the same frozen production firmware: stored MODEL32512, fresh
+note76 selects909 in six DSP frames, old voice selections retained, native PCM
+peak0.019779747 FS and amplitude-model error3.192e-8 FS. Final audio/DSP counts
+are both23,154, with no reported halt, missing blocks or ColdFire error.
+The probe hash matches the original; the 3,000-frame post-CC settle and
+32-frame acknowledgement bound are unchanged. No override, rebuild, pre-CC
+idle pause or retry. These complete #80's root-repository delivery gates.
+The public upstream PR remains draft; its broad routed gate is still incomplete.
+
+Normal-runtime proof is `out/dn2/pin-qualification/late/native-boot-report.json`
+and `provenance.json`. Candidate proof above retains its own identity.
 Native build/pin receipts are in `out/909-tune/digikit-adoption.json`.
 
 ## Historical reproduction before the fix

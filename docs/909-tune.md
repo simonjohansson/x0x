@@ -44,7 +44,7 @@ All three latest listed firmware emulators exercise the installed change:
 | --- | --- |
 | DT 1.54 | 47,354 callbacks; all five 909 settings, native locks/LFO/reloads and mixed models pass. Only deferred #78 reset checks fail. |
 | DN 1.44 | 117,674 callbacks; all five settings and prior functional regressions complete with no DSP violations. Only historical #20's bright-Tone exact-zero baseline fails. |
-| DN2 1.12 | Standard pinned-runtime full run passes: 37,821 audio / 37,822 DSP frames, both 808 Tone checks, native Tune/Decay cases, locks/LFO/reloads and mixed models; no missing blocks or reported halt. Separate original late-MODEL probe remains #80 evidence. |
+| DN2 1.12 | Standard pinned-runtime full run passes: 37,821 audio / 37,822 DSP frames, both 808 Tone checks, native Tune/Decay cases, locks/LFO/reloads and mixed models; no missing blocks or reported halt. The separate original late-MODEL probe also passes on unchanged production firmware; see [#80 evidence](dn2-late-model.md). |
 
 The first DN endpoint setup failed because encoder acceleration invalidated a
 linear detent-to-value assumption. The corrected harness uses observed stored

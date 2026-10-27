@@ -720,6 +720,6 @@ prerequisites; do not describe the whole upstream suite as green or PR as merged
 The unchanged 808-leakage firmware passes both its complete DN2 scenario and
 original-order late MODEL probe on the candidate runtime. The adopted pin's
 normal daemon also builds without binary/fingerprint overrides and passes the
-current full Tune scenario. Separate original-order late-MODEL qualification
-on that normal daemon remains #80's final adoption check; see
+current full Tune scenario. The separate original-order late-MODEL probe on
+that normal daemon also passes, completing #80's adoption checks; see
 [diagnosis and current evidence](dn2-late-model.md).

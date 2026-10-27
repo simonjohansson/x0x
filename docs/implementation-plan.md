@@ -22,7 +22,8 @@ output; #20 remains failed without a justified mod correction or tolerance chang
 [DN2 MIDI delivery](dn2-late-model.md) is fixed in public Digikit draft PR200,
 now pinned here. The unchanged-production candidate passes full and original
 late-MODEL scenarios; the normal pinned daemon passes the new full Tune run.
-Its separate original-order late probe remains #80's final adoption gate.
+The separate original-order late probe now also passes on the normal daemon,
+completing #80's root-repository gates; the public PR remains draft.
 These native gates do not block other ready engine work. HTML is unchanged;
 training repetitions retain raw timing/gain, and held-out audio remains unused.
 
@@ -36,8 +37,8 @@ the behavior and circuit details.
 ## The working backlog
 
 Eight consolidated issues replaced the previous 66; #78 records the deferred DT
-reset bug, #79 owns reference-model/schematic alignment, and #80 investigates
-the newly observed late DN2 MODEL transition. Small increments
+reset bug, #79 owns reference-model/schematic alignment, and #80 records
+the resolved late DN2 MODEL transition. Small increments
 are commits and checklist steps inside these issues, rather than a ticket for
 every control, model stage, CPU implementation and matrix cell.
 
@@ -49,7 +50,7 @@ every control, model stage, CPU implementation and matrix cell.
 | Done | [#7](https://github.com/simonjohansson/x0x/issues/7) | Digitone II: select and exercise the silent combined mod in Digikit |
 | In progress | [#9](https://github.com/simonjohansson/x0x/issues/9) | Implement the 808 on both CPUs and integrate each increment into working mods |
 | In progress | [#25](https://github.com/simonjohansson/x0x/issues/25) | Implement the 909 on both CPUs alongside the 808 in those same mods |
-| Pin adopted; final probe | [#80](https://github.com/simonjohansson/x0x/issues/80) | Upstream Digikit mask fix published/pinned; normal-runtime original late-MODEL qualification remains |
+| Done | [#80](https://github.com/simonjohansson/x0x/issues/80) | Upstream Digikit mask fix published/pinned; unchanged-production full and original late-MODEL probes pass on the normal runtime |
 | Alongside engines | [#79](https://github.com/simonjohansson/x0x/issues/79) | Align both engines with sources; initial 808 VST diagnostic now prioritizes missing stages |
 | Deferred by user | [#78](https://github.com/simonjohansson/x0x/issues/78) | Digitakt native reset defaults; fix upstream in Elekloader and consume here |
 | Initial five-setting 808 comparison complete; fidelity open | [#2](https://github.com/simonjohansson/x0x/issues/2) | Fixed-level reference corpora; both-model fidelity comparisons remain open |
