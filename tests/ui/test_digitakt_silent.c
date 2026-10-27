@@ -8,7 +8,7 @@ extern void x0x_dt_render(int32_t *blocks);
 volatile uint8_t fw_render_machine[8];
 volatile uint32_t fw_voice_start;
 const char cm_ui_v3[] = "test";
-static uint32_t reads[8], calls[8], starts[8], models[8];
+static uint32_t reads[8], calls[8], starts[8], models[8], body_calls;
 static int32_t values[8][8];
 
 int32_t cm_src_value(int32_t track, int32_t parameter)
@@ -24,7 +24,18 @@ int x0x_selector(uint32_t bank[8][3], uint32_t notice[4], const uint32_t input[4
     ++calls[input[0]];
     starts[input[0]] = input[2];
     models[input[0]] = input[1];
+    if (!bank[input[0]][0] && !input[2]) return 4;
+    bank[input[0]][0] = 1;
+    notice[0] = input[1] >= 16384;
+    notice[3] = 1;
     return 1;
+}
+
+void x0x_808_body(int32_t state[2], int32_t output[32], uint32_t start)
+{
+    assert(state && start == 1);
+    ++body_calls;
+    for (unsigned i = 0; i < 32; ++i) output[i] = 17;
 }
 
 void x0x_silence(int32_t output[32]) { memset(output, 0, 32 * sizeof *output); }
@@ -62,5 +73,11 @@ int main(void)
             assert(blocks[32 * track + i] == (active ? 0 : (int32_t)(32 * track + i + 1)));
     }
     assert(starts[0] == 0 && starts[7] == 1 && models[0] == 16383 && models[7] == 16384);
+    assert(body_calls == 0);
+    fw_voice_start = 1;
+    x0x_dt_render(blocks);
+    assert(body_calls == 1);
+    for (unsigned i = 0; i < 32; ++i) assert(blocks[i] == 17);
+    for (unsigned i = 224; i < 256; ++i) assert(blocks[i] == 0);
     return 0;
 }

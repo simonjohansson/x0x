@@ -1,4 +1,4 @@
-"""Check the DT silent mod with host fakes, actual ASM, or a full-OS smoke."""
+"""Check the DT combined mod with host fakes, actual ASM, or a full-OS smoke."""
 import argparse
 import contextlib
 import hashlib
@@ -9,6 +9,7 @@ import shutil
 import struct
 import sys
 import time
+import wave
 
 from . import cpu, firmware
 from .digitakt_adapter import BASE, STACK, STOP
@@ -50,7 +51,7 @@ def component():
     linker.write_text("SECTIONS { . = 0x47000000; .text : { *(.text*) } .rodata : { *(.rodata*) } .data : { *(.data*) } .bss : { *(.bss*) *(COMMON) } }")
     prefix = os.environ.get("ELEKLOADER_CROSS", "m68k-elf-")
     objects = []
-    for source in (SOURCE, fakes, ROOT / "targets/coldfire/selector.s", ROOT / "targets/coldfire/silence.s"):
+    for source in (SOURCE, fakes, ROOT / "targets/coldfire/selector.s", ROOT / "targets/coldfire/silence.s", ROOT / "targets/coldfire/body808.s"):
         obj = FOLDER / (source.stem + ".o")
         cpu.command([prefix + "gcc", "-mcpu=54455", "-O2", "-ffreestanding", "-fno-builtin",
                      "-Wall", "-Wextra", "-Werror", "-I", ROOT / "vendor/elekloader/elekloader/sdk/include",
@@ -89,7 +90,8 @@ def component():
         original = struct.pack(">256i", *range(1, 257))
         uc.mem_write(address("blocks"), original)
         allowed = [(address("selection"), address("selection") + 96),
-                   (address("reads"), address("reads") + 32), (STACK - 2048, STACK)]
+                   (address("reads"), address("reads") + 32),
+                   (address("body_state"), address("body_state") + 64), (STACK - 2048, STACK)]
         allowed += [(address("blocks") + 128 * t, address("blocks") + 128 * (t + 1))
                     for t in range(8) if active[t] == 80]
         illegal = []
@@ -106,7 +108,14 @@ def component():
         for track in range(8):
             live = active[track] == 80
             raw = bytes(uc.mem_read(address("blocks") + track * 128, 128))
-            assert raw == (bytes(128) if live else original[track * 128:(track + 1) * 128]), label
+            audible = live and expected[3 * track] and expected[3 * track + 1] == 0 and label != "invalid control"
+            # START can initialize or switch this lane in the current call.
+            if live and starts & (1 << track) and label != "invalid control":
+                audible = (model0 if track == 0 else model7) < 16384
+            if audible:
+                assert any(struct.unpack(">32i", raw)), (label, track, "missing 808 body")
+            else:
+                assert raw == (bytes(128) if live else original[track * 128:(track + 1) * 128]), label
             assert int.from_bytes(uc.mem_read(address("reads") + 4 * track, 4), "big") == (0x27 if live else 0), label
             if not live:
                 expected[3 * track:3 * track + 3] = [0, 0, 0]
@@ -115,7 +124,7 @@ def component():
         state = list(struct.unpack(">24I", uc.mem_read(address("selection"), 96)))
         assert state == expected, (label, state, expected)
         traces.append(label)
-    report = dict(status="passed", scope="compiled DT C and actual ColdFire selector/silent ASM; native services are fakes",
+    report = dict(status="passed", scope="compiled DT C and actual ColdFire selector/body ASM; native services are fakes",
                   scenarios=traces, unqualified=["OS selection/defaults", "native p-lock/LFO routing", "save/reload", "full-OS replacement audio"])
     (FOLDER / "component-report.json").write_text(json.dumps(report, indent=2) + "\n")
     return report
@@ -164,7 +173,7 @@ def full_os():
                   stock=stock, firmware_sha256=hashlib.sha256(image.read_bytes()).hexdigest(),
                   digiemu_revision=cpu.revision(ROOT / "vendor/digiemu"),
                   companion_compatibility=compatibility,
-                  unqualified=["p-lock/LFO delivery", "save/reload", "strict-model qualification", "kick audio"])
+                  unqualified=["p-lock/LFO delivery", "save/reload", "strict-model qualification", "808 circuit fidelity/Tone/Decay response", "909 audio"])
     session = None
     try:
         with (FOLDER / "native-boot.log").open("w") as log, contextlib.redirect_stdout(log):
@@ -176,7 +185,8 @@ def full_os():
             session = Session(snap, paths.syx, hle=False)
             never_fake_set_posts(session.m, session.ev, session.profile.set_post)
         uc, midi = session.m.uc, MidiIn()
-        state = dict(active=None, callbacks=0, selected_callbacks=0, violations=[], controls=[])
+        state = dict(active=None, callbacks=0, selected_callbacks=0, violations=[], controls=[],
+                     body_peak=0, silent_909_callbacks=0)
         returns = set()
         def checked(fn):
             def run(*args):
@@ -193,7 +203,17 @@ def full_os():
             after = bytes(uc.mem_read(names["fw_track_blocks"], 1024))
             for track, machine in enumerate(active["machines"]):
                 lo, hi = 128 * track, 128 * (track + 1)
-                assert after[lo:hi] == (bytes(128) if machine == 80 else active["before"][lo:hi]), "callback changed an unowned block or failed to silence x0x"
+                if machine != 80:
+                    assert after[lo:hi] == active["before"][lo:hi], "callback changed an unowned block"
+                    continue
+                initialized, model, _ = struct.unpack(">3I", uc.mem_read(names["selection"] + 12 * track, 12))
+                if initialized and model == 0:
+                    peak = max(abs(x) for x in struct.unpack(">32i", after[lo:hi]))
+                    state["body_peak"] = max(state["body_peak"], peak)
+                    assert peak < 0x40000000, "808 body exceeded fixed internal headroom"
+                else:
+                    assert after[lo:hi] == bytes(128), "inactive/909 callback was not silent"
+                    state["silent_909_callbacks"] += int(initialized and model == 1)
             state["callbacks"] += 1
             state["selected_callbacks"] += int(80 in active["machines"])
             if active["machines"][0] == 80:
@@ -256,7 +276,17 @@ def full_os():
         report["defaults"]["status"] = "passed" if report["defaults"]["actual"] == report["defaults"]["expected"] else "failed"
         # Exercise control delivery even when the independent defaults check fails.
         send([0xb0, 16, 64, 0xb0, 17, 64, 0xb0, 18, 64, 0xb0, 21, 0])
+        pcm_start = len(session.pcm)
         send([0x90, 60, 100]); report["808"] = selected()
+        wait(400)
+        pcm = bytes(session.pcm[pcm_start:])
+        pcm_peak = max(abs(x) for x in struct.unpack("<" + "h" * (len(pcm) // 2), pcm))
+        assert state["body_peak"] > 0 and pcm_peak > 0, "808 did not reach native audio output"
+        with wave.open(str(FOLDER / "native-808.wav"), "wb") as wav:
+            wav.setparams((2, 2, session.audio_cfg["rate"], 0, "NONE", "not compressed"))
+            wav.writeframes(pcm)
+        report["body_audio"] = dict(raw_peak_q31=state["body_peak"], downstream_pcm_peak=pcm_peak,
+                                    capture=str(FOLDER / "native-808.wav"), scope="isolated native 808 note")
         send([0xb0, 21, 127]); report["pending"] = selected()
         send([0x80, 60, 0]); send([0x90, 60, 100]); report["909"] = selected()
         screen("controls-909")
@@ -368,14 +398,14 @@ def full_os():
         assert state["active"] is None and state["selected_callbacks"] > 0 and not state["violations"], state
         report.update(callbacks=state["callbacks"], selected_callbacks=state["selected_callbacks"],
                       checked=["native machine selection", "native UART control delivery", "next-START MODEL latch",
-                               "x0x blocks zero", "other track blocks preserved",
+                               "808 body reaches native PCM", "909 blocks zero", "other track blocks preserved",
                                "native LFO destination and modulation", "native sequencer parameter lock",
                                "x0x-only defaults helper scope"])
         restored = report["save_reload"]["restored"]
         if restored:
             report["checked"].append("native project save and pattern reload")
         report["checked"].append("native mixed 808/909 tracks")
-        report["unqualified"] = ["strict-model qualification", "kick audio"] + ([] if restored else ["save/reload"])
+        report["unqualified"] = ["strict-model qualification", "808 circuit fidelity/Tone/Decay response", "909 audio"] + ([] if restored else ["save/reload"])
         report["failed_checks"] = [name for name in ("defaults", "parameter_reset", "page_reset")
                                    if report[name]["status"] == "failed"]
         report["status"] = "passed" if not report["failed_checks"] and restored else "failed"

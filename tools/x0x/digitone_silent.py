@@ -1,4 +1,4 @@
-"""Build the real silent DN mod and exercise native selection and MODEL delivery."""
+"""Build the DN mod and exercise native controls with the provisional 808 body."""
 import argparse
 import contextlib
 import hashlib
@@ -8,6 +8,7 @@ from pathlib import Path
 import struct
 import sys
 import time
+import wave
 
 from . import cpu, firmware
 
@@ -61,8 +62,9 @@ def full_os():
     report = dict(status="failed", scope="standard full-OS digiemu Session; native panel/encoder",
                   stock=stock, firmware_sha256=hashlib.sha256(image.read_bytes()).hexdigest(),
                   digiemu_revision=cpu.revision(ROOT / "vendor/digiemu"),
-                  unqualified=["strict-model qualification", "kick audio"])
-    state = dict(active=None, callbacks=0, starts=[], violations=[], observations=[], phase="", samples=[], decay_text=[])
+                  unqualified=["strict-model qualification", "faithful 808 timbre and retrigger", "sound-control response", "909 audio"])
+    state = dict(active=None, callbacks=0, starts=[], violations=[], observations=[], phase="", samples=[], decay_text=[],
+                 body_nonzero=0, body_peak=0, silent_909=0)
     session = None
     try:
         with (FOLDER / "native-boot.log").open("w") as log, contextlib.redirect_stdout(log):
@@ -87,10 +89,17 @@ def full_os():
             if active is None or at != active["return"]: return
             after = bytes(uc.mem_read(names["fw_voices"], 1024))
             lo, hi = active["slot"] * 128, (active["slot"] + 1) * 128
-            assert after[lo:hi] == bytes(128), "x0x did not silence its voice"
             assert after[:lo] == active["before"][:lo] and after[hi:] == active["before"][hi:], "x0x wrote another voice"
             selection = list(struct.unpack(">3I", uc.mem_read(names["selection"] + active["slot"] * 12, 12)))
             assert selection[0] == 1, "real callback did not consume a settled frame/START"
+            if selection[1] == 0:
+                peak = max(abs(v) for v in struct.unpack(">32i", after[lo:hi]))
+                assert peak <= 1 << 29, "808 body exceeded its fixed quarter-scale bound"
+                state["body_peak"] = max(state["body_peak"], peak)
+                state["body_nonzero"] += peak != 0
+            else:
+                assert after[lo:hi] == bytes(128), "unimplemented 909 did not stay silent"
+                state["silent_909"] += 1
             event = dict(slot=active["slot"], track=active["track"], fresh=active["fresh"], model=selection[1])
             state["callbacks"] += 1
             state["observations"].append(event)
@@ -113,7 +122,7 @@ def full_os():
             if word(source + 8) == 0 and state["phase"]:
                 values = [struct.unpack(">6I",uc.mem_read(source + 36 + 24 * i,24)) for i in range(word(source + 32))]
                 state["samples"].append((state["phase"],[(v[0],v[1],v[4],v[5]) for v in values]))
-        session.at(names["render_silence"],checked(receive))
+        session.at(names["render_body"],checked(receive))
         def text(_uc, _at, _size, _data):
             if state["phase"] != "lock-edit": return
             sp = uc.reg_read(UC_M68K_REG_A7)
@@ -153,7 +162,24 @@ def full_os():
         for knob in ("A", "B", "C"): turn(knob,16)
         report["edited"] = stored()
         assert all(value > 16384 for value in report["edited"][1:4]), report["edited"]
-        tap("9")
+        quiet_begin = len(session.pcm)
+        wait(100)
+        quiet = bytes(session.pcm[quiet_begin:])
+        assert quiet and not any(quiet), "isolated 808 capture must begin with silent native output"
+        capture_begin = len(session.pcm)
+        body_before = state["body_nonzero"]
+        session.press(session.code("9")); wait(1200)
+        session.release(session.code("9")); wait(200)
+        pcm = bytes(session.pcm[capture_begin:])
+        assert pcm and len(pcm) % 4 == 0 and session.audio_cfg["rate"] == 48000
+        pcm_peak = max(abs(v[0]) for v in struct.iter_unpack("<h", pcm))
+        assert 0 < pcm_peak < 32767 and state["body_nonzero"] > body_before, "808 must reach both owned output and native stereo PCM"
+        capture = FOLDER / "808-native.wav"
+        with wave.open(str(capture), "wb") as wav:
+            wav.setparams((2, 2, 48000, 0, "NONE", "not compressed"))
+            wav.writeframes(pcm)
+        report["audio"] = dict(path=str(capture), sample_rate=48000, channels=2, frames=len(pcm)//4,
+                               peak_pcm16=pcm_peak, normalization="none", source="isolated native note on the 808 track")
         assert state["starts"], "native key produced no x0x START"
         report["808"] = state["starts"][-1]
         controls()
@@ -246,11 +272,13 @@ def full_os():
         report["mixed_tracks"] = sorted(mixed)
         assert {(0,0),(1,1)} <= mixed and stored() == track0, (mixed,stored(),track0)
         session.release(session.code("11")); session.release(session.code("9")); wait()
-        assert not state["active"] and state["callbacks"] > 0
+        assert not state["active"] and state["callbacks"] > 0 and state["body_nonzero"] > 0 and state["silent_909"] > 0
+        report["render_audio"] = dict(nonzero_808_blocks=state["body_nonzero"], peak_q31=state["body_peak"],
+                                      silent_909_blocks=state["silent_909"])
         report.update(status="passed", callbacks=state["callbacks"], starts=state["starts"],
                       checked=["native menu/defaults", "native first-page controls", "native encoder MODEL delivery",
                                "next-START MODEL latch", "real companion fresh/settled frame",
-                               "zero owned voice output", "other voices preserved", "native p-lock and held-lock display", "native LFO delivery", "native save/reload", "mixed 808/909 tracks"])
+                               "bounded nonzero 808 voice output", "silent 909 voice output", "isolated downstream stereo PCM", "other voices preserved", "native p-lock and held-lock display", "native LFO delivery", "native save/reload", "mixed 808/909 tracks"])
     except (AssertionError, ValueError) as error:
         report["reason"] = str(error)
     finally:

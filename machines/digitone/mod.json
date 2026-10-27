@@ -2,7 +2,7 @@
   "id": "x0x",
   "version": "0.1",
   "title": "X0X KICKS",
-  "description": "Combined 808/909 kick controls with silent DSP bring-up",
+  "description": "Combined kick controls with a provisional 808 body and silent 909",
   "license": "GPL-2.0-or-later",
   "device": "digitone-mk1",
   "os": "1.44",
@@ -12,6 +12,7 @@
     "adapter.c",
     "../../src/controls.c",
     "../../targets/coldfire/selector.s",
+    "../../targets/coldfire/body808.s",
     "../../targets/coldfire/silence.s"
   ],
   "cflags": [
