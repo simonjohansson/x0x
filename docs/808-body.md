@@ -132,5 +132,7 @@ compare short against long within each test, not the ratios across devices.
 
 #9's first body is integrated in all three emulators. The Decay response is
 provisional; stock feedback/pot mapping, excitation/pitch sigh, Tone/output
-coupling, calibrated scale and circuit-state retrigger behavior remain open. #2 reference captures and
+coupling, calibrated scale and circuit-state retrigger behavior remain open.
+[#79](https://github.com/simonjohansson/x0x/issues/79) owns reference-implementation
+and schematic alignment; #2 compares the aligned implementations to a VST later. #2 reference captures and
 physical-device timing remain outside this increment.
