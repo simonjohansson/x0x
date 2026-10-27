@@ -56,14 +56,15 @@ every control, model stage, CPU implementation and matrix cell.
 | In progress | [#9](https://github.com/simonjohansson/x0x/issues/9) | Implement the 808 on both CPUs and integrate each increment into working mods |
 | In progress | [#25](https://github.com/simonjohansson/x0x/issues/25) | Implement the 909 on both CPUs alongside the 808 in those same mods |
 | Investigating | [#80](https://github.com/simonjohansson/x0x/issues/80) | Immediate post-STOP CC does not survive into the stored MODEL; trace native CC/store handling before assigning SDK/firmware/emulator responsibility |
-| Alongside engines | [#79](https://github.com/simonjohansson/x0x/issues/79) | Inspect reference implementations/schematics and align both engines before later VST comparison |
+| Alongside engines | [#79](https://github.com/simonjohansson/x0x/issues/79) | Align both engines with sources; initial 808 VST diagnostic now prioritizes missing stages |
 | Deferred by user | [#78](https://github.com/simonjohansson/x0x/issues/78) | Digitakt native reset defaults; fix upstream in Elekloader and consume here |
-| Deferred by user | [#2](https://github.com/simonjohansson/x0x/issues/2) | Reference VST captures and fidelity comparisons for both models |
+| Initial five-setting 808 comparison complete; fidelity open | [#2](https://github.com/simonjohansson/x0x/issues/2) | Fixed-level reference corpora; both-model fidelity comparisons remain open |
 | After sound | [#20](https://github.com/simonjohansson/x0x/issues/20) | Combined-mod emulator regression and readiness review |
 
 The three silent device issues are closed. The 808 engine in #9 is underway:
 the basic body is integrated and audible on all three devices' emulators. The DT reset
-correction in #78 and reference work in #2 are deferred by the user. Use
+correction in #78 remains deferred. The [initial five-setting 808 comparison](808-reference-baseline.md)
+in #2 is complete; no fitting or fidelity qualification has been performed. Use
 subagents for non-overlapping work when authorized; one blocked device does
 not stop useful work on another device.
 
@@ -156,7 +157,7 @@ two actual ASM implementations. Reuse the existing analyzers, fixtures and CPU r
 each backend to that model and compare matching outputs across CPUs. Record
 bounds, fixed-point overflow/limit cycles, floating-point stability and state
 isolation as part of the engine issue. Initial research-based sound is explicitly
-uncalibrated until deferred #2 reference comparisons pass.
+uncalibrated until #2 reference comparisons pass.
 
 The six device/model combinations remain rows in the integration results, not
 six issue trees. #20 checks the accumulated mixed-model, persistence, routing,
@@ -191,3 +192,20 @@ Only the [latest supported firmware](../firmware/README.md) is in scope.
 Commit small increments directly to main and push, with evidence on the owning
 issue. Do not close a milestone on partial proof or widen tolerances to conceal
 failures. Other stable API or saved-layout changes still require review.
+
+## Initial 808 reference diagnostic — 27 October 2026
+
+[#2](https://github.com/simonjohansson/x0x/issues/2) now compares the current
+808 ASM at the default and four Tone/Decay corners, using fifteen verified
+fresh software-reference takes. The [baseline report](808-reference-baseline.md)
+links the portable HTML with plots and audio, measured differences and limitations.
+ColdFire and SHARC agree within 8.122e-7 FS; both differ substantially from the
+software reference. This is raw component output, not a fresh native-OS test.
+
+Prioritize #9/#79's source-derived resonator/pitch path, then Decay feedback and
+knob mapping, then attack shaping/loaded Tone-output stages and global scaling.
+The reference default is 47.64 Hz with a 143 ms descriptive decay fit; current
+x0x is 55 Hz / 250 ms. No production DSP was changed or fitted. The full grid,
+held-out validation, strength/history/live-control comparisons, aliasing and
+blind listening remain open in #2. Keep held-out recordings unused while making
+model decisions; these five settings do not freeze a fidelity tolerance.

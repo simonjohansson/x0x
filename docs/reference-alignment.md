@@ -154,8 +154,14 @@ numerator/resistor naming describes the unloaded node exactly.
    measured control/retrigger differences. Continue the stock-circuit models
    and record matched physical settings before calling either engine source-aligned;
    the synthetic class is not a stock-909 reference.
-5. Compare those aligned engine revisions to VST captures later in #2. Missing
-   VST access does not block the source audit, analytical models or ASM work.
+5. The [initial five-setting 808 diagnostic](808-reference-baseline.md) in #2
+   now compares the current prototype, before source alignment is complete.
+   It prioritizes the source-derived resonator/pitch path, then stock Decay
+   feedback/control mapping, then excitation and loaded Tone/output stages.
+   Default reference/current pitch is 47.64/55 Hz; descriptive decay fits are
+   143/250 ms. No production tuning or fidelity qualification was performed.
+   Full-grid and held-out comparisons follow as those model stages land;
+   the five diagnostic settings do not substitute for the stock circuit baseline.
 
 #79 remains open for the missing stock circuit models, corrections and alignment report.
 #9/#25 remain the implementation owners. Host, component, native-emulator and
