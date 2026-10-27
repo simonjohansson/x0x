@@ -250,3 +250,7 @@ run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen -
 [tasks."test:909:body"]
 description = "Check actual 909 triangle bodies and matching unshifted CPU samples"
 run = ["mise run test:909:coldfire", "mise run test:808:sharc", "python -m x0x.body909"]
+
+[tasks."research:plaits"]
+description = "Render pinned third-party drum classes for host-only research"
+run = "python -m x0x.plaits_reference"

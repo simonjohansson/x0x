@@ -677,3 +677,11 @@ MODEL. Memory/register/stack guards retain frame, voice and lane isolation.
 This uses C markers, not kick audio; synthetic MODEL/START cases do not establish
 native source or allocator timing. Existing target/component/control/selector
 regressions and the separate standard non-strict OS observer remain independent.
+
+## Optional executable research references
+
+`mise run research:plaits` builds and renders the pinned original Plaits drum
+classes using manually downloaded, hash-verified archives. It uses no firmware,
+emulator or VST and changes no production dependency. [Source setup, exact
+settings, results and limits](reference-renders.md) are separate from the
+actual-ASM/native evidence above. Missing archives are unavailable, not passing.

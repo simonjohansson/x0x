@@ -339,7 +339,7 @@
     "source_revision": "f4cfa7697095a28d292bff758beb51deb49b5a86",
     "license": "MIT (in-file notice retained)",
     "locators": "plaits/dsp/drums/analog_bass_drum.h",
-    "availability_note": "Source inspected and archived; not compiled or rendered as an independent reference."
+    "availability_note": "Archived snapshot verified against S47; unmodified class compiled and rendered in the optional host research harness. See docs/reference-renders.md. This does not qualify stock circuit fidelity."
   },
   {
     "id": "S44",
@@ -354,7 +354,7 @@
     "source_revision": "f4cfa7697095a28d292bff758beb51deb49b5a86",
     "license": "MIT (in-file notice retained)",
     "locators": "plaits/dsp/drums/synthetic_bass_drum.h",
-    "availability_note": "Source inspected and archived; not compiled or rendered as an independent reference. SyntheticBassDrum is 909-like, not evidence of stock TR-909 fidelity."
+    "availability_note": "Archived snapshot verified against S47; unmodified class compiled and rendered in the optional host research harness. See docs/reference-renders.md. This does not qualify stock circuit fidelity."
   },
   {
     "id": "S45",
@@ -369,7 +369,7 @@
     "source_revision": "f4cfa7697095a28d292bff758beb51deb49b5a86",
     "license": "MIT (in-file notice retained)",
     "locators": "plaits/dsp/engine/bass_drum_engine.cc",
-    "availability_note": "Source inspected and archived; not compiled or rendered as an independent reference."
+    "availability_note": "Engine wiring inspected and archived; standalone class renders bypass this full engine, its hardware-clock note correction and overdrive stage."
   },
   {
     "id": "S46",
@@ -384,6 +384,34 @@
     "source_revision": "f4cfa7697095a28d292bff758beb51deb49b5a86",
     "license": "MIT (in-file notice retained)",
     "locators": "plaits/dsp/dsp.h",
-    "availability_note": "Source inspected and archived; not compiled or rendered as an independent reference."
+    "availability_note": "Archived snapshot verified against S47 and included in the executable class reference; explicit 48 kHz class settings bypass the engine note correction. See docs/reference-renders.md."
+  },
+  {
+    "id": "S47",
+    "title": "Original eurorack source archive for host drum reference",
+    "url": "https://codeload.github.com/pichenettes/eurorack/tar.gz/f4cfa7697095a28d292bff758beb51deb49b5a86",
+    "authority": "Original author repository, pinned source archive",
+    "retrieved": "2026-10-27",
+    "path": "sources/eurorack-f4cfa7697095a28d292bff758beb51deb49b5a86.tar.gz",
+    "status": "downloaded",
+    "bytes": 33780463,
+    "sha256": "7bade44c4b3839c7e505a128e68896cf0b039849b8bc824a41e0051e1dfb016e",
+    "source_revision": "f4cfa7697095a28d292bff758beb51deb49b5a86",
+    "license": "MIT for the compiled drum/DSP sources; see per-file notices. Archive includes unrelated code under other licenses.",
+    "availability_note": "Research-only source archive; not a production dependency. See docs/reference-renders.md for manual retrieval and executable scope."
+  },
+  {
+    "id": "S48",
+    "title": "Original stmlib source archive for host drum reference",
+    "url": "https://codeload.github.com/pichenettes/stmlib/tar.gz/e3bd7c9cc00e4364166f9905c0509b6ffd0535ec",
+    "authority": "Original author repository, pinned source archive",
+    "retrieved": "2026-10-27",
+    "path": "sources/stmlib-e3bd7c9cc00e4364166f9905c0509b6ffd0535ec.tar.gz",
+    "status": "downloaded",
+    "bytes": 5999738,
+    "sha256": "eff5d6642a93498996661e0dd4b5a1de4b98093f25a009166910726d1262b5d2",
+    "source_revision": "e3bd7c9cc00e4364166f9905c0509b6ffd0535ec",
+    "license": "MIT for the compiled drum/DSP sources; see per-file notices. Archive includes unrelated code under other licenses.",
+    "availability_note": "Research-only source archive; not a production dependency. See docs/reference-renders.md for manual retrieval and executable scope."
   }
 ]

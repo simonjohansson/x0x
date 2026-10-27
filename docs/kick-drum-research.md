@@ -687,8 +687,9 @@ identifiable independently. Digitakt II has no active cell or delivery dependenc
 The [source/code alignment audit](reference-alignment.md) records the current
 #79 baseline: archived MIT Plaits code is useful for inspecting an 808 model,
 while its synthetic drum is only 909-like and does not replace the original
-909 schematic. This inspected-code evidence does not imply a compiled reference,
-measured comparison or faithful circuit implementation.
+909 schematic. [Executable host class renders](reference-renders.md) now extend
+that initial inspected-code evidence. They compare analytical prototypes descriptively;
+they do not establish calibrated stock controls, faithful circuits or VST agreement.
 
 ## 8. Open questions and research limits
 

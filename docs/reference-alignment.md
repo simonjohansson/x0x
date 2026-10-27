@@ -35,8 +35,10 @@ The four Plaits sources are pinned to original-author repository revision
 [`f4cfa7697095a28d292bff758beb51deb49b5a86`](https://github.com/pichenettes/eurorack/tree/f4cfa7697095a28d292bff758beb51deb49b5a86),
 with their in-file MIT notices retained. The matching `stmlib` dependency is
 `e3bd7c9cc00e4364166f9905c0509b6ffd0535ec`. These are research snapshots, not a
-new production dependency. They have been inspected, not compiled or rendered
-as an executable reference in this repo.
+new production dependency. The initial audit inspected these snapshots only;
+the classes now have [executable host reference renders](reference-renders.md)
+with pinned archive dependencies S47/S48, deterministic initialization and
+ASan/UBSan checks. This does not establish stock circuit or VST fidelity.
 
 - [AnalogBassDrum](https://github.com/pichenettes/eurorack/blob/f4cfa7697095a28d292bff758beb51deb49b5a86/plaits/dsp/drums/analog_bass_drum.h)
   describes itself as a revisited 808 model. It includes finite excitation,
@@ -53,11 +55,12 @@ as an executable reference in this repo.
   tuning compensation. A host reference should call the classes with explicit
   settings rather than inherit an unrelated hardware note correction.
 
-A future executable harness must pin required dependencies, initialize the whole
-object deterministically and seed noise explicitly. In particular, S44's
-`Init()` does not assign its two transient-envelope fields; a heap/uninitialized
-object would not be a reproducible reference. Keep comparison code outside
-production DSP and preserve attribution if any implementation is adapted.
+The executable harness pins required dependencies, initializes whole objects
+with static zero initialization before `Init()`, seeds noise explicitly, and
+uses a fresh process for every capture. S44's `Init()` does not assign its two
+transient-envelope fields, so calling it on an otherwise uninitialized object
+would not give a reproducible reference. Comparison code stays outside production
+DSP; original notices remain in the ignored source archives.
 
 ## 808 source-to-code inventory
 
@@ -147,13 +150,14 @@ numerator/resistor naming describes the unloaded node exactly.
    in #80. Add diode shaping, then
    derive the stock pitch/envelope/attack paths using the schematic baseline;
    use S44 as a secondary comparison, not an excuse to declare stock fidelity.
-4. Build reproducible executable reference calculations/harnesses and record
-   matching fixtures before calling either engine source-aligned. Sources have
-   been inspected; no third-party reference output has been measured yet.
+4. The pinned Plaits classes now have reproducible executable host renders and
+   measured control/retrigger differences. Continue the stock-circuit models
+   and record matched physical settings before calling either engine source-aligned;
+   the synthetic class is not a stock-909 reference.
 5. Compare those aligned engine revisions to VST captures later in #2. Missing
    VST access does not block the source audit, analytical models or ASM work.
 
-#79 remains open for the executable models, corrections and alignment report.
+#79 remains open for the missing stock circuit models, corrections and alignment report.
 #9/#25 remain the implementation owners. Host, component, native-emulator and
 physical/VST evidence stay separate. Tone component/native evidence is recorded
 in [808-tone.md](808-tone.md); the initial source audit itself added no audio

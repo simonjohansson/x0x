@@ -139,8 +139,11 @@ code, selects schematic baselines and records the missing/provisional blocks.
 The first source-derived slice implements the 808 Tone RC network on both CPUs,
 checked against an independent capacitor voltage/current reference. Its native
 knob taper remains provisional. Finite excitation, the full feedback network and
-the other circuit rows remain open; third-party reference code has not been
-rendered yet.
+the other circuit rows remain open. The pinned Plaits classes now have
+[executable host renders](reference-renders.md), including deterministic repeated
+captures, control changes, retained retrigger history and sanitized builds.
+Their control/gain mappings are not stock calibration, and this host evidence
+does not qualify production ASM or native firmware.
 
 Build each instrument increment around one independent high-precision model and
 two actual ASM implementations. Reuse the existing analyzers, fixtures and CPU runners. Compare
