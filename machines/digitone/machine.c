@@ -14,7 +14,7 @@ extern void x0x_silence(int32_t output[32]);
 extern void x0x_808_body(int32_t state[5], int32_t output[32], uint32_t start, uint32_t decay_raw);
 extern void x0x_808_tone(int32_t *state, int32_t output[32], uint32_t tone_raw);
 extern void x0x_808_coupling(int32_t state[2], int32_t output[32]);
-extern void x0x_909_body(int32_t state[2], int32_t output[32], uint32_t start, uint32_t decay_raw);
+extern void x0x_909_body(int32_t state[4], int32_t output[32], uint32_t start, uint32_t decay_raw, uint32_t tune_raw);
 
 void x0x_dn_begin(void)
 {
@@ -48,9 +48,9 @@ static void render_body(void *context, const struct x0x_dn_input *input)
         x0x_808_tone(&tone_state[input->slot], input->output, input->value[0].position.numerator);
         x0x_808_coupling(coupling_state[input->slot], input->output);
     } else {
-        /* shortcut: Tune and Attack await the following 909 circuit stages in #25. */
+        /* shortcut: Attack awaits the following 909 circuit stage in #25. */
         x0x_909_body(body[input->slot], input->output, !!(input->flags & X0X_DN_NATIVE_START),
-                     input->value[1].position.numerator);
+                     input->value[1].position.numerator, input->value[0].position.numerator);
     }
 }
 

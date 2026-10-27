@@ -4,7 +4,9 @@ This #2 diagnostic compares the [diode-shaped 909](909-shaping.md) against
 the default and four Tune/Decay corners, with reference Attack fixed at 128/255.
 It covers **0–500 ms after scheduled MIDI**, using actual CPU component output.
 It is not native-emulator, complete-tail, held-out or stock-fidelity acceptance.
-The provisional model still has fixed 50 Hz pitch and no Tune or Attack path.
+At this historical diode-only checkpoint, the model has fixed 50 Hz pitch and
+no Tune or Attack path. The [subsequent Tune increment](909-tune.md) supersedes
+that runtime inventory while retaining these original measurements.
 
 ## Inputs and evidence boundary
 

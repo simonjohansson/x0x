@@ -68,7 +68,7 @@ def full_os():
                                "909 shaping, pitch envelope and Tune/Attack response, complete VCA and Decay taper"])
     state = dict(active=None, callbacks=0, starts=[], violations=[], observations=[], phase="", samples=[], decay_text=[],
                  body_nonzero=0, body_peak=0, triangle_nonzero=0, triangle_peak=0,
-                 triangle_error=0.0, triangle_samples=[None] * 8, triangle_attenuation=[0.0] * 8, audio_capture=None,
+                 triangle_error=0.0, triangle_state=[None] * 8, audio_capture=None,
                  coupling_blocks=0, coupling_error=0.0, coupling_difference=0, pulse_blocks=0, pulse_counts=set())
     session = None
     try:
@@ -113,7 +113,7 @@ def full_os():
                 state["coupling_blocks"] += 1
                 state["coupling_error"] = max(state["coupling_error"], error)
                 state["coupling_difference"] = max(state["coupling_difference"], max(abs(a-b) for a,b in zip(words,coupling["input"])))
-                state["triangle_samples"][active["slot"]] = None
+                state["triangle_state"][active["slot"]] = None
                 remaining = word(names["body"] + 20*active["slot"] + 8)
                 assert remaining == active["expected_pulse"], "native 808 initial-frequency counter changed"
                 state["pulse_counts"].add(remaining)
@@ -124,17 +124,12 @@ def full_os():
                 assert peak <= 1 << 29, "909 body exceeded its quarter-scale bound"
                 assert not active.get("coupling"), "909 entered the 808 coupling stage"
                 assert active.get("triangle"), "909 did not enter its actual ASM renderer"
-                offset = 0 if active["fresh"] else state["triangle_samples"][active["slot"]]
-                assert offset is not None, "909 continuation has no observed START"
-                attenuation = 0.0 if active["fresh"] else state["triangle_attenuation"][active["slot"]]
-                loss = -1 / (body909.SAMPLE_RATE * body909.decay_tau(active["decay909"]))
-                expected = [body909.GAIN * math.exp(attenuation+(j+1)*loss)
-                            * body909.shaped_triangle(body909.FREQUENCY*(offset+j+1)/body909.SAMPLE_RATE)
-                            for j in range(32)]
-                state["triangle_attenuation"][active["slot"]] = attenuation+32*loss
+                reference_state = body909.INITIAL_STATE if active["fresh"] else state["triangle_state"][active["slot"]]
+                assert reference_state is not None, "909 continuation has no observed START"
+                expected, state["triangle_state"][active["slot"]] = body909.continue_reference(
+                    reference_state, active["decay909"], active["tune909"], 32)
                 error = max(abs(actual / 2**31 - wanted) for actual, wanted in zip(words, expected))
-                assert error <= 1e-5, ("909 native output differs from the diode-shaped reference", error)
-                state["triangle_samples"][active["slot"]] = offset + 32
+                assert error <= 1e-5, ("909 native output differs from the independent C9/diode reference", error)
                 state["triangle_error"] = max(state["triangle_error"], error)
                 state["triangle_peak"] = max(state["triangle_peak"], peak)
                 state["triangle_nonzero"] += peak != 0
@@ -170,14 +165,16 @@ def full_os():
             active = state["active"]
             assert active is not None, "909 ASM ran outside the machine callback"
             sp = uc.reg_read(UC_M68K_REG_A7)
-            saved, output, start, decay = struct.unpack(">4I", uc.mem_read(sp + 4, 16))
+            saved, output, start, decay, tune = struct.unpack(">5I", uc.mem_read(sp + 4, 20))
             assert saved == names["body"] + active["slot"] * 20 and output == names["fw_voices"] + active["slot"] * 128
             assert start == active["fresh"], "909 lost the native START flag"
             active["triangle"] = True
             active["decay909"] = decay
+            active["tune909"] = tune
             capture = state["audio_capture"]
             if capture is not None and active["track"] == capture.get("track", 0) and capture.get("model") == 1 and (active["fresh"] or active["slot"] == capture["slot"]):
                 capture["decay_words"].append(decay)
+                capture.setdefault("tune_words", []).append(tune)
         session.at(names["x0x_909_body"], checked(triangle_entered))
         def pulse_entered(_uc, _at, _size, _data):
             active = state["active"]
@@ -478,7 +475,7 @@ def full_os():
         assert difference > 0.001 * (1 << 31), "native Tone endpoints did not change the settled filtered output"
         tone_response["max_difference_q31_after_sample_1024"] = difference
         report["tone_response"] = tone_response
-        # A fresh fourth track isolates the unshaped 909 triangle from prior sounds/effects.
+        # A fresh fourth track isolates the 909 body from prior sounds/effects.
         tap("STOP"); tap("STOP")
         session.press(session.code("T4")); wait(600); session.release(session.code("T4")); wait()
         tap("YES"); tap("RIGHT"); tap("YES"); controls()
@@ -493,10 +490,27 @@ def full_os():
         if any(quiet):
             report["failed_checks"].append("909_exact_zero_baseline")
         report["decay_909"] = {}
-        for label, detents, raw in (("default", 0, 16384), ("short", -320, 0), ("long", 320, 32512)):
-            if detents:
-                turn("B", detents)
-            assert stored(3)[2] == raw, stored(3)
+        cases909 = (("default",16384,16384), ("short",0,16384), ("long",32512,16384),
+                    ("tune-low",16384,0), ("tune-high",16384,32512))
+        def target909(knob, index, target):
+            trace = dict(knob=knob, target=target, observed=[])
+            report.setdefault("control_targeting_909", []).append(trace)
+            for _ in range(256):
+                actual = stored(3)[index]
+                trace["observed"].append(actual)
+                if actual == target:
+                    wait()
+                    return
+                # Native encoder acceleration makes bulk detents non-linear.
+                delta = target-actual
+                amount = (1 if delta > 0 else -1) * (8 if abs(delta) > 16*256 else 1)
+                session.turn(session.encoder(knob), amount, after_ms=150)
+                assert not session.halted and not state["violations"], (session.halted,state["violations"])
+            raise AssertionError(("909 native control target not reached", trace))
+        for label, raw, tune in cases909:
+            target909("B",2,raw)
+            target909("A",1,tune)
+            assert stored(3)[1:3] == [tune,raw], stored(3)
             capture = dict(track=3, model=1, slot=None, words=[], decay_words=[])
             state["audio_capture"] = capture
             begin = len(session.pcm)
@@ -507,13 +521,14 @@ def full_os():
             words = capture["words"]
             assert len(words) >= 36000 and any(words), "909 raw triangle capture is missing"
             assert set(capture["decay_words"]) == {raw}, (label, capture["decay_words"])
+            assert set(capture["tune_words"]) == {tune}, (label, capture["tune_words"])
             samples = [v/2**31 for v in words]
-            error = max(abs(a-b) for a,b in zip(samples,body909.reference(len(samples),raw)))
+            error = max(abs(a-b) for a,b in zip(samples,body909.reference(len(samples),raw,tune_raw=tune)))
             assert error <= 1e-5, (label,error)
             pcm_peak = max(abs(v[0]) for v in struct.iter_unpack("<h", native))
             assert 0 < pcm_peak < 32767, "909 must reach native PCM without clipping"
             audio909 = dict(raw_frames=len(words), native_frames=len(native)//4, peak_pcm16=pcm_peak,
-                            decay_raw=raw, expected_tau_s=body909.decay_tau(raw), maximum_error_fs=error,
+                            decay_raw=raw, tune_raw=tune, expected_tau_s=body909.decay_tau(raw), maximum_error_fs=error,
                             controls=stored(3), normalization="none", source="native 909 note",
                             pre_capture_pcm16_peak=baseline909)
             for kind, data, channels, width in (("raw", struct.pack(f"<{len(words)}i", *words), 1, 4),

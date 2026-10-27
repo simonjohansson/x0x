@@ -12,7 +12,7 @@ extern int x0x_selector(uint32_t bank[8][3], uint32_t notice[4],
 extern void x0x_silence(int32_t output[32]);
 extern void x0x_808_tone(int32_t *state, int32_t output[32], uint32_t tone_raw);
 extern void x0x_808_coupling(int32_t state[2], int32_t output[32]);
-extern void x0x_909_body(int32_t state[2], int32_t output[32], uint32_t start, uint32_t decay_raw);
+extern void x0x_909_body(int32_t state[4], int32_t output[32], uint32_t start, uint32_t decay_raw, uint32_t tune_raw);
 extern void x0x_808_body(int32_t state[5], int32_t output[32], uint32_t start, uint32_t decay_raw);
 
 void x0x_dt_render(int32_t *blocks)
@@ -51,7 +51,7 @@ void x0x_dt_render(int32_t *blocks)
                 x0x_808_tone(&tone_state[track], blocks + 32 * track, (uint32_t)values[0]);
                 x0x_808_coupling(coupling_state[track], blocks + 32 * track);
             } else {
-                x0x_909_body(body_state[track], blocks + 32 * track, input[2], (uint32_t)values[1]);
+                x0x_909_body(body_state[track], blocks + 32 * track, input[2], (uint32_t)values[1], (uint32_t)values[0]);
             }
             continue;
         }

@@ -12,9 +12,9 @@ from . import analysis, body909, cpu
 from .reference808_compare import digest, raw_position, residual
 
 ROOT=cpu.ROOT
-OUT=ROOT/'out/reference/909-baseline'
+OUT=ROOT/'out/reference/909-tune'
 CAPTURES=ROOT/'research/reference/909/captures'
-COMPONENTS=ROOT/'out/909-shaping'
+COMPONENTS=ROOT/'out/909-tune'
 RATE,FRAMES=48000,24000
 CASES={'default':(128,128),'low-tune-short':(0,0),'high-tune-short':(255,0),
        'low-tune-long':(0,255),'high-tune-long':(255,255)}
@@ -44,51 +44,51 @@ def project_gain(text):
 
 def source_hashes():
     return {p:digest(ROOT/p) for p in ('targets/coldfire/body909.s','targets/sharc/body808.s',
-            'tools/x0x/body909.py','tools/x0x/coldfire_body909.py','tools/x0x/sharc_body808.py',
+            'tools/x0x/body909.py','tools/x0x/tune909.py','tools/x0x/coldfire_body808.py','tools/x0x/coldfire_body909.py','tools/x0x/sharc_body808.py',
             'tools/x0x/reference909_compare.py','tools/x0x/reference808_compare.py','tools/x0x/analysis.py','tools/x0x/comparison.py')}
 
 
 def component_audio(backend):
-    """Reuse actual component output, explicitly without Tune/Attack delivery proof."""
+    """Reuse five actual guarded CPU outputs with their delivered Tune/Decay."""
     folder=COMPONENTS/('coldfire' if backend=='coldfire' else 'sharc')
     metadata=json.loads((folder/'report.json').read_text())
-    proof=json.loads((COMPONENTS/'comparison.json').read_text())
-    assert proof['status']=='passed'
-    assert proof['component_reports_sha256'][str((folder/'report.json').relative_to(COMPONENTS))]==digest(folder/'report.json')
-    assert proof['source_sha256']['tools/x0x/body909.py']==digest(ROOT/'tools/x0x/body909.py')
-    proven={row['raw']:row for row in proof['cases']}
     source=ROOT/('targets/coldfire/body909.s' if backend=='coldfire' else 'targets/sharc/body808.s')
     assert metadata['status']=='passed' and metadata['frames']==FRAMES
     assert metadata['source_sha256']==digest(source),'stale actual CPU component proof'
     if backend=='coldfire':
-        image=folder/'diagnostic.bin';image_hash=digest(image)
+        image_hash=digest(folder/'diagnostic.bin')
+        proven=metadata['reference_cases']
     else:
         code,entry=cpu.sharc_code((folder/'callback.dxe').read_bytes())
         image_hash=hashlib.sha256(code).hexdigest()
+        proven=metadata['body909']['reference_cases']
     assert image_hash==metadata['image_sha256'],'component executable hash changed'
+    proven={row['label']:row for row in proven}
+    assert set(proven)==set(CASES)
     result,records={},{}
     for label,(tune,decay) in CASES.items():
-        raw=raw_position(decay)
-        path=folder/(f'samples_{raw}.json' if backend=='coldfire' else f'samples_909_{raw}.f32')
-        assert digest(path)==proven[raw]['coldfire_samples_sha256' if backend=='coldfire' else 'sharc_samples_sha256']
+        tr,dr=raw_position(tune),raw_position(decay)
+        proof=proven[label]
+        assert (proof['tune_raw'],proof['decay_raw'],proof['frames'])==(tr,dr,FRAMES)
+        path=folder/f"reference_{label}.{'json' if backend=='coldfire' else 'f32'}"
+        assert digest(path)==proof['samples_sha256'],'actual CPU audio changed'
         samples=json.loads(path.read_text()) if backend=='coldfire' else list(struct.unpack('<24000f',path.read_bytes()))
         assert len(samples)==FRAMES and all(math.isfinite(x) for x in samples)
-        error=max(abs(a-b) for a,b in zip(samples,body909.reference(FRAMES,raw)))
+        error=max(abs(a-b) for a,b in zip(samples,body909.reference(FRAMES,dr,tune_raw=tr)))
         assert error<=1e-5,(backend,label,error)
         target=OUT/f'{backend}-{label}.f32'
         target.write_bytes(struct.pack('<24000f',*samples))
         result[label]=samples
         records[label]=dict(path=target.name,sha256=digest(target),actual_component_samples=str(path.relative_to(ROOT)),
             actual_component_samples_sha256=digest(path),requested_reference_tune=tune,reference_attack=128,
-            decay_raw=raw,actual_tune_raw=16384 if backend=='sharc' else None,actual_attack_raw=12345 if backend=='sharc' else None,
+            decay_raw=dr,actual_tune_raw=tr,actual_attack_raw=12345 if backend=='sharc' else None,
             actual_pitch_word=15487 if backend=='sharc' else None,
-            tune_and_attack_implemented=False,oracle_maximum_error_fs=error)
+            tune_implemented=True,attack_implemented=False,oracle_maximum_error_fs=error)
     report=dict(backend=backend,scope='reused actual guarded component output; not native delivery qualification',
         sample_rate=RATE,frames=FRAMES,source_hashes=source_hashes(),cases=records,
         component_report=str((folder/'report.json').relative_to(ROOT)),component_report_sha256=digest(folder/'report.json'),
-        matching_comparison_sha256=digest(COMPONENTS/'comparison.json'),
         executable_sha256=image_hash,project_revision=metadata.get('project_revision'),
-        control_limit='Tune and Attack are unimplemented; same Decay reuses identical actual audio, not requested-Tune delivery proof')
+        control_limit='Nominal C9/IC12 Tune and settled-Hz calibration implemented; Attack absent, Q11/taper/VCA unqualified')
     (OUT/f'{backend}.json').write_text(json.dumps(report,indent=2)+'\n')
     return result,report
 
@@ -183,7 +183,7 @@ def report():
         sample_rate=RATE,frames=FRAMES,reference_gain=4,gain_reason='independently verified909projecttrack.25/master1; as-recorded errors retained',
         normalization=False,fitted_gain=False,alignment_samples=0,held_out_audio_read=False,source_hashes=frozen,
         reference_provenance=provenance,renders=dict(coldfire=cm,sharc=sm),cases=rows,
-        control_limit='Tune/Attack unimplemented; equal-Decay corner rows reuse the same actual component audio, not delivery proof',
+        control_limit='Nominal C9/IC12 Tune is delivered at all five settings; Attack remains unimplemented, stock Q11/taper/VCA unqualified',
         fidelity_verdict='unqualified')
     (OUT/'measurements.json').write_text(json.dumps(result,indent=2,allow_nan=False)+'\n')
     return result

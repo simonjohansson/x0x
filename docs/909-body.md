@@ -1,15 +1,16 @@
-# 909 body, diode shaping and live Decay
+# 909 body, diode shaping, Tune and live Decay
 
-The current [diode-shaper increment](909-shaping.md) rounds the oscillator on
-both CPUs before the existing Decay/VCA multiplier. Its first [five-setting
-training baseline](909-reference-baseline.md) prioritizes stock Tune/pitch and
-loaded ENV1/Q12 work. Fixed 50 Hz and the unloaded Decay curve remain provisional.
-Current native evidence and caveats are recorded with that increment; older
+The current [Tune increment](909-tune.md) adds the stock C9/IC12 pitch CV on
+both CPUs, after the [diode-shaper increment](909-shaping.md). Settled pitch is
+training-calibrated to 52.58 Hz; Tune changes the initial sweep, not transposition.
+The five-setting comparison prioritizes loaded ENV1/Q12 and Q11 trigger/reset
+work. The unloaded Decay curve remains provisional.
+Current native evidence and caveats are recorded with those increments; older
 measurements below preserve their original source/firmware identities.
 
 The historical first [#25](https://github.com/simonjohansson/x0x/issues/25) increment adds an
 unshaped triangle foundation to the existing combined mod. It is not yet a
-complete or calibrated 909. The stock pitch path and complete VCA/envelopes,
+complete or calibrated 909. Full pitch/reset behavior and complete VCA/envelopes,
 Attack pulse/noise and circuit retrigger behavior remain open in #25/#79.
 The existing controls/IDs and START-latched MODEL selection stay unchanged.
 
@@ -21,8 +22,9 @@ through R52=10 kΩ. The original schematic, not the 909-like Plaits class, is
 the selected baseline. Source hashes/paths are recorded in
 [research/manifest.json](../research/manifest.json).
 
-The triangle's fixed 50 Hz pitch, internal gain 0.25 and zero-crossing phase
-restart remain provisional audition values. Live DECAY now uses the unloaded
+The original triangle's fixed 50 Hz pitch is historical; current Tune/pitch
+evidence is above. Internal gain 0.25 and zero-crossing phase restart remain
+provisional audition values. Live DECAY uses the unloaded
 C8 discharge path described below; it is not the complete Roland ENV1/VCA. Unlike 808's resonant feedback loss, this amplitude
 multiplies a separate oscillator. Native AMP/velocity, filtering, effects and
 track volume remain downstream.

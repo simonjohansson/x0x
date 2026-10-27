@@ -1,37 +1,30 @@
 # Implementation plan: one combined mod, silent first
 
-The silent-first priority set on 26 October 2026 is complete: all three native
-mod milestones are accepted, with the DT reset bug deferred to #78. In #9, the
-[first audible 808 body](808-body.md) now runs in all three emulators. It is a
-provisional damped sine, now with [settled pitch calibrated to 47.65 Hz](808-pitch.md).
-Live Decay uses a [reference-informed three-point range](808-decay.md),
-with actual CPU and native-control checks. This remains a provisional mapping. The existing
-[source-derived Tone RC filter](808-tone.md) also passes both CPU and all three
-native integration checks, with provisional knob mapping. The
-[C47/VR4 coupling RC](808-coupling.md) is also integrated and tested on all three
-devices, fixed internally at full level; native track level still controls
-volume. A [nominal 1 ms rectangular excitation](808-excitation.md) now replaces
-the instantaneous oscillator reset; edge shaping and physical forcing remain
-provisional. Current component and native functional checks pass. Full acceptance still
-retains known DT resets in #78 and the DN silence-baseline gate in #20.
+The three silent native milestones are complete. The current 808 has a
+reference-calibrated settled pole/Decay range, switched capacitor state,
+main/companion excitation, Q43 leakage, Tone RC and output coupling on both
+CPUs. See [808 leakage](808-leakage.md) for the current waveform evidence and
+retained default/long pitch-trajectory regressions. Full feedback, loading,
+control taper and faithful residual-state retrigger remain incomplete in #9/#79.
 
-#25 now adds the first unshaped [909 triangle body](909-body.md) to those same
-mods. Its fixed pitch and START phase remain provisional audition values;
-live Decay now uses unloaded C8/VR5/R58 with a provisional resistance-linear taper.
-The source baseline establishes the triangle topology, not a faithful complete
-909. Shaping and the remaining stock control/envelope circuits follow as integrated increments.
-Actual 909 audio is captured on all three devices. A separate late DN2 T2
-MODEL edit did not reach a 909 START; [#80](https://github.com/simonjohansson/x0x/issues/80)
-owns that native transition. Probes show the immediate CC does not survive into
-T2's stored MODEL, and the selector correctly follows the delivered 808 value.
-Tracing native CC handling versus STOP cleanup is still needed. The successful
-saved-909 T1 capture does not close this failed path. A one-PCM16-count DN
-baseline between captures is separately retained as a failed acceptance check
-in #20. Historically, the finite-excitation build passed DN's complete scenario and
-all three exact-zero baselines. The later pitch build reproduced the one-count
-residue; changing waveforms does not establish a general fix. Keep #20 open.
-DT retains only #78 and DN2's tested scenario passes. These gates do not block
-independent engine work.
+The 909 [diode shaper](909-shaping.md) and [C9/IC12 Tune path](909-tune.md)
+now run on both CPUs and all three emulators. Tune changes the initial sweep;
+settled pitch is separately training-calibrated to 52.58 Hz. The five-setting
+comparison improves default/high-short waveform error but worsens low-short
+and both long settings. Continue the existing loaded ENV1/Q12 envelope and
+Q11/C14 finite trigger/reset steps, then the separate Attack branch. Those
+increments are prepared independently and integrated serially through the
+shared DSP sources; no new ticket tree or feature scope.
+
+DT retains only deferred reset #78. DN's [one-count baseline investigation](dn-silence-residue.md)
+proves exact-zero x0x inputs into stock filters with nonzero native downstream
+output; #20 remains failed without a justified mod correction or tolerance change.
+[DN2 MIDI delivery](dn2-late-model.md) is fixed in public Digikit draft PR200,
+now pinned here. The unchanged-production candidate passes full and original
+late-MODEL scenarios; the normal pinned daemon passes the new full Tune run.
+Its separate original-order late probe remains #80's final adoption gate.
+These native gates do not block other ready engine work. HTML is unchanged;
+training repetitions retain raw timing/gain, and held-out audio remains unused.
 
 The product remains one mod per device containing 808 and 909 behind a saved
 per-sound/track MODEL selector. Different tracks/voices can select different
@@ -56,7 +49,7 @@ every control, model stage, CPU implementation and matrix cell.
 | Done | [#7](https://github.com/simonjohansson/x0x/issues/7) | Digitone II: select and exercise the silent combined mod in Digikit |
 | In progress | [#9](https://github.com/simonjohansson/x0x/issues/9) | Implement the 808 on both CPUs and integrate each increment into working mods |
 | In progress | [#25](https://github.com/simonjohansson/x0x/issues/25) | Implement the 909 on both CPUs alongside the 808 in those same mods |
-| Investigating | [#80](https://github.com/simonjohansson/x0x/issues/80) | Immediate post-STOP CC does not survive into the stored MODEL; trace native CC/store handling before assigning SDK/firmware/emulator responsibility |
+| Pin adopted; final probe | [#80](https://github.com/simonjohansson/x0x/issues/80) | Upstream Digikit mask fix published/pinned; normal-runtime original late-MODEL qualification remains |
 | Alongside engines | [#79](https://github.com/simonjohansson/x0x/issues/79) | Align both engines with sources; initial 808 VST diagnostic now prioritizes missing stages |
 | Deferred by user | [#78](https://github.com/simonjohansson/x0x/issues/78) | Digitakt native reset defaults; fix upstream in Elekloader and consume here |
 | Initial five-setting 808 comparison complete; fidelity open | [#2](https://github.com/simonjohansson/x0x/issues/2) | Fixed-level reference corpora; both-model fidelity comparisons remain open |
@@ -405,3 +398,16 @@ retains raw timing/gain/repeats, no held-out/HTML, and explicitly unused Tune/At
 It prioritizes stock Tune/pitch, then loaded ENV1/Q12 VCA and separate Attack work.
 Workers are implementing Tune and modeling VCA independently while emulator
 publication/qualification proceeds; shared DSP integration remains serial.
+
+## 909 Tune and pitch CV — 27 October 2026
+
+The [C9/IC12 increment](909-tune.md) is integrated on both CPUs with exact
+native Tune delivery and interval-integrated phase. The independent RC/RK4
+model, 156 current host tests/C UI suites, both actual CPU suites and installed
+DT/DN/DN2 scenarios complete. SHARC uses 4,866 code / 1,024 private bytes;
+maximum paired CPU difference is 4.58e-6 FS under unchanged 1e-5 FS.
+DT retains #78; DN retains #20; DN2 passes on the normal adopted Digikit pin.
+Default settled pitch now matches 52.58 Hz reference, with default waveform
+RMS .10283→.08229 FS. Preserve low-short and both long regressions; current
+unloaded VCA and trigger/reset are the next planned source-model corrections.
+No saved layouts, public interfaces, HTML or held-out audio changed.

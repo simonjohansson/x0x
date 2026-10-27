@@ -22,8 +22,8 @@ static uint32_t tone_calls, tone_raw;
 static int32_t *tone_state, tone_before;
 static uint32_t coupling_calls;
 static int32_t *coupling_state, coupling_before[2];
-static uint32_t calls909, start909, decay909;
-static int32_t *state909, before909[2];
+static uint32_t calls909, start909, decay909, tune909;
+static int32_t *state909, before909[4];
 int32_t dnm_knob(int32_t slot, int32_t knob) { (void)slot; (void)knob; assert(0); return 0; }
 void dnm_knob_range(int32_t knob, int32_t *lo, int32_t *hi) { (void)knob; (void)lo; (void)hi; assert(0); }
 int x0x_selector(uint32_t bank[8][3], uint32_t notice[4], const uint32_t input[4])
@@ -60,11 +60,12 @@ void x0x_808_coupling(int32_t state[2], int32_t output[32])
     memcpy(coupling_before, state, sizeof coupling_before);
     ++state[0]; state[1] += 2;
 }
-void x0x_909_body(int32_t state[2], int32_t output[32], uint32_t start, uint32_t decay_raw)
+void x0x_909_body(int32_t state[4], int32_t output[32], uint32_t start, uint32_t decay_raw, uint32_t tune_raw)
 {
-    ++calls909; start909 = start; decay909 = decay_raw; state909 = state;
+    ++calls909; start909 = start; decay909 = decay_raw; tune909 = tune_raw; state909 = state;
     memcpy(before909, state, sizeof before909);
-    if (start) { state[0] = -100; state[1] = -200; }
+    if (start) { state[0] = -100; state[1] = -200; state[2] = -300; state[3] = 96; }
+    ++state[2]; --state[3];
     for (unsigned k = 0; k < 32; ++k) output[k] = --state[0];
 }
 
@@ -90,7 +91,7 @@ int main(void)
     x0x_dn_begin(); x0x_dn_capture(words); x0x_dn_ready(0);
     m->render(3, guarded + 1, &voice);
     assert(calls == 1 && zeroes == 0 && calls909 == 1 && start909 == 1);
-    assert(decay909 == 6789 && before909[0] == 0 && before909[1] == 0 && body_calls == 0 && tone_calls == 0 && coupling_calls == 0);
+    assert(tune909 == 12345 && decay909 == 6789 && before909[2] == 0 && before909[3] == 0 && before909[0] == 0 && before909[1] == 0 && body_calls == 0 && tone_calls == 0 && coupling_calls == 0);
     assert(input_seen[0] == 3 && input_seen[1] == 32512 && input_seen[2] == 1 && input_seen[3] == 1);
     assert(guarded[1] == -101 && guarded[32] == -132);
     assert(guarded[0] == 12345 && guarded[33] == 12345);
@@ -125,12 +126,12 @@ int main(void)
     voice.fresh = 1;
     m->render(3, guarded + 1, &voice);
     assert(body_calls == 3 && zeroes == 1 && calls909 == 2 && state909 == slot3);
-    assert(slot3[2] == 0 && decay909 == 32512 && start909 == 1 && before909[0] == 0 && before909[1] == 0);
+    assert(before909[2] == 0 && before909[3] == 0 && slot3[2] == -299 && tune909 == 32512 && decay909 == 32512 && start909 == 1 && before909[0] == 0 && before909[1] == 0);
     assert(tone_calls == 3 && *tone3 == 0);
     assert(coupling_calls == 3 && coupling3[0] == 0 && coupling3[1] == 0);
     voice.fresh = 0;
     m->render(3, guarded + 1, &voice);
-    assert(calls909 == 3 && start909 == 0 && before909[0] == -132 && guarded[1] == -133);
+    assert(calls909 == 3 && before909[2] == -299 && before909[3] == 95 && tune909 == 32512 && start909 == 0 && before909[0] == -132 && guarded[1] == -133);
     assert(body_calls == 3 && tone_calls == 3 && coupling_calls == 3);
     words[3 * 79 + 32] = 0;
     voice.fresh = 1;

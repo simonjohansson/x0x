@@ -194,7 +194,7 @@ def full_os():
         word = lambda at: int.from_bytes(uc.mem_read(at,4),"big")
         state = dict(active=None, callbacks=0, selected_callbacks=0, violations=[], controls=[],
                      body_peak=0, body909_peak=0, body909_callbacks=0, mixed_audible_blocks=0,
-                     capture909=False, started909=False, samples909=[], words909=[], lock_edit=False, lock_display=[],
+                     capture909=False, started909=False, samples909=[], words909=[], tunes909=[], lock_edit=False, lock_display=[],
                      pulse_blocks=0, pulse_counts=set(), decay_phase=None, decay_started=False, decay_samples=[], decay_words=[], tone_words=[])
         state.update(coupling_blocks=0, coupling_error=0.0, coupling_difference=0)
         returns = set()
@@ -290,13 +290,15 @@ def full_os():
             if not state["capture909"]:
                 return
             sp = uc.reg_read(UC_M68K_REG_A7)
-            owner, _output, start, decay = struct.unpack(">4I",uc.mem_read(sp+4,16))
+            owner, _output, start, decay, tune = struct.unpack(">5I",uc.mem_read(sp+4,20))
             if owner == names["body_state"] and start:
                 state["started909"] = True
                 state["samples909"] = []
                 state["words909"] = []
+                state["tunes909"] = []
             if owner == names["body_state"] and state["started909"]:
                 state["words909"].append(decay)
+                state["tunes909"].append(tune)
         session.at(names["x0x_909_body"],checked(body909_entered))
         def coupling_entered(_uc, _at, _size, _data):
             active = state["active"]
@@ -409,7 +411,7 @@ def full_os():
         from .body909 import reference
         assert len(samples909) >= 19200 and state["started909"]
         error909 = max(abs(x-y) for x,y in zip(samples909,reference(len(samples909))))
-        assert error909 <= 1e-5 and set(state["words909"]) == {16384}, error909
+        assert error909 <= 1e-5 and set(state["words909"]) == {16384} and set(state["tunes909"]) == {16384}, error909
         pcm = bytes(session.pcm[pcm_start:])
         pcm_peak = max(abs(x) for x in struct.unpack("<"+"h"*(len(pcm)//2),pcm))
         assert 0 < pcm_peak < 32767 and state["body909_peak"] > 0
@@ -427,9 +429,10 @@ def full_os():
         values = stored()[1]
         assert [values[i] for i in (17, 18, 19, 22)] == [16384, 16384, 16384, 32512]
         report["decay_909"] = {}
-        for label, position in (("short",0),("long",127)):
+        for label, position, tune in (("short",0,64),("long",127,64),
+                                      ("tune-low",64,0),("tune-high",64,127)):
             send([0x80,60,0]); wait(1200)
-            send([0xb0,17,position]); wait(300)
+            send([0xb0,17,position,0xb0,16,tune]); wait(300)
             state["started909"] = False
             state["capture909"] = True
             begin = len(session.pcm)
@@ -437,7 +440,8 @@ def full_os():
             state["capture909"] = False
             samples = [v/2**31 for v in state["samples909"]]
             assert len(samples) >= 28800 and set(state["words909"]) == {position*256}, label
-            error = max(abs(a-b) for a,b in zip(samples,reference(len(samples),position*256)))
+            assert set(state["tunes909"]) == {tune*256}, (label,state["tunes909"])
+            error = max(abs(a-b) for a,b in zip(samples,reference(len(samples),position*256,tune_raw=tune*256)))
             assert error <= 1e-5, (label,error)
             pcm = bytes(session.pcm[begin:])
             peak = max(abs(v[0]) for v in struct.iter_unpack("<h",pcm))
@@ -446,9 +450,9 @@ def full_os():
             with wave.open(str(path),"wb") as wav:
                 wav.setparams((2,2,session.audio_cfg["rate"],0,"NONE","not compressed")); wav.writeframes(pcm)
             audio.write_wav(FOLDER / f"909-decay-{label}-raw.wav",samples,48000)
-            report["decay_909"][label] = dict(raw=position*256,frames=len(samples),maximum_error_fs=error,
+            report["decay_909"][label] = dict(raw=position*256,tune_raw=tune*256,frames=len(samples),maximum_error_fs=error,
                 native_peak_pcm16=peak,native_wav=str(path))
-        send([0x80,60,0,0xb0,17,64])
+        send([0x80,60,0,0xb0,17,64,0xb0,16,64])
         # Use the native destination list and depth control, not injected LFO state.
         tap("LFO")
         for _ in range(150):

@@ -1,7 +1,7 @@
 import math
 import unittest
 
-from x0x import body909 as body
+from x0x import body909 as body, tune909
 from x0x.analysis import analyze
 
 
@@ -10,19 +10,32 @@ class Body909Tests(unittest.TestCase):
         samples = body.reference(48000)
         report = analyze(samples,body.SAMPLE_RATE)
         self.assertAlmostEqual(report["frequency"]["median_hz"],body.FREQUENCY,delta=.001)
-        self.assertAlmostEqual(report["decay_positive"]["time_constant_s"],body.TAU,delta=1e-5)
+        short = body.reference(1001,0)
+        long = body.reference(1001,32512)
+        self.assertAlmostEqual(short[1000]/long[1000],
+            math.exp(-1001/48000*(1/body.decay_tau(0)-1/body.decay_tau(32512))), places=12)
         self.assertGreater(report["peak_fs"],body.GAIN*body.diode_shape(1)*.97)
         self.assertLess(report["peak_fs"],body.GAIN*body.diode_shape(1))
         self.assertEqual(body.reference(32),samples[:32])
         self.assertEqual(report["onset_sample"],0)
         self.assertGreater(samples[0],0)
 
+    def test_body_continuation_preserves_independent_tune_and_envelope_history(self):
+        expected=body.reference(6144,32512,tune_raw=0,tune_changes={32:32512,160:0})
+        state=body.INITIAL_STATE
+        result=[]
+        for sample in range(0,6144,32):
+            raw=0 if sample<32 or sample>=160 else 32512
+            chunk,state=body.continue_reference(state,32512,raw,32)
+            result.extend(chunk)
+        self.assertLess(max(abs(a-b) for a,b in zip(result,expected)),1e-12)
+
     def test_triangle_has_odd_harmonics_distinct_from_the_808_sine(self):
         n=4800
-        samples=[body.triangle(body.FREQUENCY*i/body.SAMPLE_RATE) for i in range(n)]
+        samples=[body.triangle(5*i/n) for i in range(n)]
         def amplitude(harmonic):
-            return 2*abs(sum(y*complex(math.cos(2*math.pi*harmonic*body.FREQUENCY*i/body.SAMPLE_RATE),
-                                       math.sin(2*math.pi*harmonic*body.FREQUENCY*i/body.SAMPLE_RATE))
+            return 2*abs(sum(y*complex(math.cos(2*math.pi*harmonic*5*i/n),
+                                       math.sin(2*math.pi*harmonic*5*i/n))
                              for i,y in enumerate(samples)))/n
         fundamental=amplitude(1)
         self.assertAlmostEqual(fundamental,8/math.pi**2,delta=1e-5)
@@ -81,7 +94,7 @@ class Body909Tests(unittest.TestCase):
         # The shaper stays at its fixed oscillator operating point as the VCA falls.
         sample=119
         wave=body.reference(sample+1,32512)
-        expected=body.GAIN*math.exp(-(sample+1)/(48000*body.decay_tau(32512)))*body.shaped_triangle((sample+1)/960)
+        expected=body.GAIN*math.exp(-(sample+1)/(48000*body.decay_tau(32512)))*body.shaped_triangle(tune909.reference(sample+1)[0][-1])
         self.assertAlmostEqual(wave[sample],expected,places=13)
 
 
@@ -101,6 +114,6 @@ class Decay909Tests(unittest.TestCase):
         self.assertEqual(actual[:switch],baseline[:switch])
         n=2048
         expected=body.GAIN*math.exp(-switch/(48000*body.decay_tau(0))
-            -(n+1-switch)/(48000*body.decay_tau(32512)))*body.shaped_triangle(50*(n+1)/48000)
+            -(n+1-switch)/(48000*body.decay_tau(32512)))*body.shaped_triangle(tune909.reference(n+1)[0][-1])
         self.assertAlmostEqual(actual[n],expected,places=12)
         self.assertGreater(abs(actual[n]),abs(baseline[n]))

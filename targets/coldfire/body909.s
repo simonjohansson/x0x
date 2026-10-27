@@ -1,15 +1,15 @@
-/* Diode-shaped 909 triangle at 48 kHz: provisional 50 Hz, live unloaded C8 Decay, gain .25.
- * void x0x_909_body(int32_t state[2], int32_t output[32], uint32_t start, uint32_t decay_raw).
- * State is {unsigned phase, Q1.31 amplitude}; caller owns aligned disjoint extents.
- * shortcut: START resets to a rising zero crossing; replace the fixed pitch,
- * unloaded envelope/taper and restart when the full circuit is implemented.
- * Clear a rounding-induced constant-amplitude fixed point to retain eventual silence.
+/* C9/IC12-controlled 909 triangle, passive diode shaper and unloaded C8 Decay.
+ * void x0x_909_body(int32_t state[4], int32_t output[32], uint32_t start,
+ *                   uint32_t decay_raw, uint32_t tune_raw).
+ * State: phase Q32, amplitude Q31, C9/15V Q31, trigger samples remaining.
+ * shortcut: zero-crossing START, nominal switch drops and resistance-linear pots
+ * remain provisional until Q11/physical taper/retrigger alignment is measured.
  */
     .text
     .globl x0x_909_body
     .type x0x_909_body, @function
 x0x_909_body:
-    lea -76(%sp), %sp
+    lea -100(%sp), %sp
     movem.l %d2-%d7/%a2-%a6, (%sp)
     move.l %macsr, %d0
     move.l %d0, 72(%sp)
@@ -29,19 +29,23 @@ x0x_909_body:
     move.l %d0, 64(%sp)
     move.l %mask, %d0
     move.l %d0, 68(%sp)
-    movea.l 80(%sp), %a0
-    movea.l 84(%sp), %a1
+    movea.l 104(%sp), %a0
+    movea.l 108(%sp), %a1
     move.l (%a0), %d4
     move.l 4(%a0), %d5
-    tst.l 88(%sp)
+    movea.l 8(%a0), %a3
+    movea.l 12(%a0), %a4
+    tst.l 112(%sp)
     beq.s .L909continue
     move.l #0x40000000, %d4
     move.l #0x20000000, %d5
+    suba.l %a3, %a3
+    movea.l #96, %a4
 .L909continue:
     move.l #0xb0, %d0 /* fractional, saturated, nearest-even */
     move.l %d0, %macsr
     /* D = 1489.96 + 31680*t, t=raw/32512; Q16 D fits unsigned32. */
-    move.l 92(%sp), %d6
+    move.l 116(%sp), %d6
     move.l #66052, %d0
     mulu.l %d0, %d6
     move.l #2076180480, %d0
@@ -68,9 +72,91 @@ x0x_909_body:
     bne.s .L909divide
     move.l #0x80000000, %d2
     sub.l %d7, %d2
-    moveq #32, %d6
+    movea.l %d2, %a5
+    /* C9 off conductance, Q31. R57+VR2 is Q14. */
+    move.l 120(%sp), %d7
+    move.l #66052, %d0
+    mulu.l %d0, %d7
+    move.l #1638400000, %d0
+    mac.l %d7, %d0, %acc0
+    movclr.l %acc0, %d3
+    addi.l #360448000, %d3
+    move.l #1034343, %d2
+    moveq #0, %d7
+    moveq #31, %d6
+.L909tune_divide:
+    add.l %d7, %d7
+    add.l %d2, %d2
+    bcs.s .L909tune_subtract
+    cmp.l %d3, %d2
+    bcs.s .L909tune_nextbit
+.L909tune_subtract:
+    sub.l %d3, %d2
+    addq.l #1, %d7
+.L909tune_nextbit:
+    subq.l #1, %d6
+    bne.s .L909tune_divide
+    addi.l #410829, %d7
+    move.l %d7, %d1
+    bsr .L909tune_coeff
+    move.l %d6, 76(%sp)
+    move.l #21385359, %d6
+    mac.l %d0, %d6, %acc0
+    movclr.l %acc0, %d7
+    sub.l %d7, %d6
+    move.l %d6, 80(%sp)
+    addi.l #61624301, %d1
+    bsr .L909tune_coeff
+    move.l %d6, 84(%sp)
+    move.l #57926843, %d6
+    mac.l %d0, %d6, %acc0
+    movclr.l %acc0, %d7
+    sub.l %d7, %d6
+    move.l %d6, 88(%sp)
+    move.l #21385359, %d6
+    mac.l %d0, %d6, %acc0
+    movclr.l %acc0, %d7
+    sub.l %d7, %d6
+    move.l %d6, 92(%sp)
+    move.l #576855, %d6
+    mac.l %d3, %d6, %acc0
+    movclr.l %acc0, %d6
+    move.l %d6, 96(%sp)
+    move.l %a5, %d2
+    movea.l #32, %a6
 .L909sample:
-    addi.l #4473924, %d4 /* round(50/48000 * 2^32), natural phase wrap */
+    move.l %a4, %d0
+    tst.l %d0
+    bne.s .L909tune_on
+    move.l 76(%sp), %d0
+    moveq #0, %d1
+    move.l 80(%sp), %d7
+    moveq #0, %d3
+    bra.s .L909tune_flow
+.L909tune_on:
+    move.l 84(%sp), %d0
+    move.l 88(%sp), %d1
+    move.l 92(%sp), %d7
+    move.l 96(%sp), %d3
+    subq.l #1, %a4
+.L909tune_flow:
+    move.l %a3, %d6
+    mac.l %d7, %d6, %acc0
+    movclr.l %acc0, %d7
+    add.l %d3, %d7
+    addi.l #4704779, %d7
+    add.l %d7, %d4
+    mac.l %d0, %d6, %acc0
+    movclr.l %acc0, %d0
+    add.l %d1, %d0
+    cmp.l %d0, %d6
+    bne.s .L909tune_store
+    move.l %a4, %d7
+    tst.l %d7
+    bne.s .L909tune_store
+    moveq #0, %d0
+.L909tune_store:
+    movea.l %d0, %a3
     move.l %d4, %d3
     cmpi.l #0x80000000, %d3
     beq.s .L909peak
@@ -129,10 +215,14 @@ x0x_909_body:
     mac.l %d5, %d3, %acc0
     movclr.l %acc0, %d0
     move.l %d0, (%a1)+
-    subq.l #1, %d6
+    subq.l #1, %a6
+    move.l %a6, %d6
+    tst.l %d6
     bne .L909sample
     move.l %d4, (%a0)
     move.l %d5, 4(%a0)
+    move.l %a3, 8(%a0)
+    move.l %a4, 12(%a0)
     moveq #0, %d0
     move.l %d0, %macsr
     move.l 44(%sp), %d0
@@ -152,7 +242,29 @@ x0x_909_body:
     move.l 72(%sp), %d0
     move.l %d0, %macsr
     movem.l (%sp), %d2-%d7/%a2-%a6
-    lea 76(%sp), %sp
+    lea 100(%sp), %sp
+    rts
+    /* Stable (1-(1-exp(-x))/x)/x, x <= .0318. */
+.L909tune_coeff:
+    move.l #2982616, %d3
+    mac.l %d3, %d1, %acc0
+    movclr.l %acc0, %d3
+    addi.l #-17895697, %d3
+    mac.l %d3, %d1, %acc0
+    movclr.l %acc0, %d3
+    addi.l #89478485, %d3
+    mac.l %d3, %d1, %acc0
+    movclr.l %acc0, %d3
+    addi.l #-357913941, %d3
+    mac.l %d3, %d1, %acc0
+    movclr.l %acc0, %d3
+    addi.l #1073741824, %d3
+    mac.l %d3, %d1, %acc0
+    movclr.l %acc0, %d0
+    mac.l %d0, %d1, %acc0
+    movclr.l %acc0, %d6
+    sub.l %d1, %d6
+    addi.l #0x80000000, %d6
     rts
     .balign 4
 .L909shape_table:

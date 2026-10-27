@@ -1,13 +1,15 @@
 """Independent 909 triangle, antiparallel diode shaper and provisional envelope.
 
-S02 p4/p11 and S05 p3/p12 establish the triangle VCO topology. Fixed 50 Hz,
-gain 0.25 and zero-crossing START remain provisional. Decay uses unloaded C8/VR5/R58,
+S02 p4/p11 and S05 p3/p12 establish the triangle VCO and C9/IC12 Tune path.
+Settled 52.58 Hz is a separate training calibration; gain 0.25 and zero-crossing START remain provisional. Decay uses unloaded C8/VR5/R58,
 not the complete ENV1/Q12 VCA. The physical A taper remains uncalibrated.
 """
 import math
 
+from . import tune909
+
 SAMPLE_RATE = 48000
-FREQUENCY = 50.0
+FREQUENCY = tune909.SETTLED_HZ
 GAIN = 0.25
 RAW_MAX = 32512
 DEFAULT_DECAY = 16384
@@ -82,17 +84,37 @@ def shaper_coefficients():
             for left,right,dl,dr in zip(values,values[1:],slopes,slopes[1:])]
 
 
-def reference(frames, decay_raw=DEFAULT_DECAY, changes=None):
+def reference(frames, decay_raw=DEFAULT_DECAY, changes=None,
+              tune_raw=tune909.DEFAULT_TUNE, tune_changes=None):
     changes = changes or {}
     loss = -1 / (SAMPLE_RATE * decay_tau(decay_raw))
     total = 0.0
+    phases, _ = tune909.reference(frames, tune_raw, tune_changes)
     result = []
     for n in range(frames):
         if n in changes:
             loss = -1 / (SAMPLE_RATE * decay_tau(changes[n]))
         total += loss
-        result.append(GAIN * math.exp(total) * shaped_triangle(FREQUENCY * (n+1) / SAMPLE_RATE))
+        result.append(GAIN * math.exp(total) * shaped_triangle(phases[n]))
     return result
+
+
+INITIAL_STATE = (0.0, 0.0, tune909.TRIGGER_SAMPLES, GAIN)
+
+
+def continue_reference(state, decay_raw, tune_raw, frames):
+    """Continue physical phase/C9/count/amplitude from a private snapshot.
+
+    START callers use INITIAL_STATE; native phase words map to cycles by
+    uint32/2**32 minus .25. The diode shaper remains before the separate VCA.
+    """
+    phase, voltage, remaining, amplitude = state
+    phases, voltages, remaining = tune909.continue_reference(
+        phase, voltage, remaining, tune_raw, frames)
+    loss = -1/(SAMPLE_RATE*decay_tau(decay_raw))
+    samples=[amplitude*math.exp((i+1)*loss)*shaped_triangle(value)
+             for i,value in enumerate(phases)]
+    return samples, (phases[-1], voltages[-1], remaining, amplitude*math.exp(frames*loss))
 
 
 def compare():

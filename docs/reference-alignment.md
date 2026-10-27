@@ -91,17 +91,18 @@ model and plumbing; they do not close the missing circuit rows above.
 ## 909 source-to-code inventory
 
 The first 909 slice added an unshaped triangle; the subsequent
-[diode shaper](909-shaping.md) is now implemented on both CPUs. Its fixed 50 Hz,
-gain and zero-crossing START remain explicitly provisional. Live Decay now uses
+[diode shaper](909-shaping.md) and [C9 Tune path](909-tune.md) run on both CPUs.
+Settled pitch is training-calibrated to 52.58 Hz; gain and zero-crossing START
+remain explicitly provisional. Live Decay uses
 the unloaded C8/VR5/R58 discharge path with a provisional resistance-linear taper;
 the sources establish the VCO topology, not those complete-circuit parameters.
-The stock pitch and complete envelope/VCA networks remain missing; the diode
-stage retains explicit provisional operating assumptions.
+Full pitch/reset behavior and complete envelope/VCA networks remain missing;
+the diode stage retains explicit provisional operating assumptions.
 
 | Block | Source target | Current implementation | Alignment status |
 | --- | --- | --- | --- |
 | VCO/shaper | S02 p.4/p.11; S05 p.3/p.12: triangle oscillator IC13, D10/D11 and R52 rounding | Independent triangle/KCL diode model; separate CPU phase/fold and cubic diode implementations | Triangle and diode rounding implemented; VCO/control calibration, diode operating points and Q12 loading remain open |
-| Tune/pitch path | S02 ENV3/VR2/C9; S05 p.3 distinguishes stock Tune from added Pitch/Tune Depth | Fixed 50 Hz; TNTUN delivered but ignored in this slice | Stock pitch-envelope/time mapping missing; do not reinterpret stock Tune as chromatic transpose |
+| Tune/pitch path | S02 ENV3/VR2/C9; S05 p.3 distinguishes stock Tune from added Pitch/Tune Depth | Loaded switched C9 RC and IC12 CV; Tune changes sweep discharge, settled 52.58 Hz is separately training-calibrated | Nominal RC/phase implemented on both CPUs; pot taper, operating points and Q11/C14 reset remain open |
 | Tonal Decay/VCA | S02 p.11 / S05 p.12 ENV1→Q12: C8=0.33 µF, VR5=1 MΩ(A), R58=47 kΩ | Live unloaded RC time constant; independent continuous exponential and both ASM backends | Partial: resistance-linear taper provisional; D8/R36/R22, R54/Q12 loading, charging/accent and complete VCA missing. See [909 model](909-body.md) |
 | Attack pulse/noise | S02 p.4/p.11, ENV2→Q6; S05 p.12, VR3 and C12 | ATTK routed | Pulse, filtered continuous noise and VCA absent; Attack is branch level, not ADSR rise time |
 | Trigger/accent/retrigger | S02 pp.4–5 and BD Q11 clamp; separate accent and approximately 2 ms/5 V trigger | START restarts triangle phase/amplitude | Provisional restart, no circuit excitation/clamp-release or residual-state behavior |
@@ -147,10 +148,10 @@ numerator/resistor naming describes the unloaded node exactly.
    edge/diode and physical input transfer, then add the internal transient and
    deliberate residual-state retrigger as each stage lands. Then replace provisional Decay radius control with the
    source-derived feedback network. Keep the distinctions in the table current.
-3. The first unshaped 909 triangle runs on both CPUs and all three devices in
-   #25, now with live unloaded RC Decay and the separate late DN2 transition retained
-   in #80. Add diode shaping, then
-   derive the stock pitch/envelope/attack paths using the schematic baseline;
+3. The 909 triangle, diode shaper and [C9/IC12 Tune path](909-tune.md) run on both
+   CPUs and all three devices in #25, with unloaded RC Decay. Its five-setting
+   training comparison improves settled pitch but retains long/low-short waveform
+   regressions. Continue loaded ENV1/Q12, Q11 trigger/reset and Attack paths;
    use S44 as a secondary comparison, not an excuse to declare stock fidelity.
 4. The pinned Plaits classes now have reproducible executable host renders and
    measured control/retrigger differences. Continue the stock-circuit models

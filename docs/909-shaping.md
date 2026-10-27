@@ -1,5 +1,8 @@
 # 909 antiparallel diode shaping
 
+This historical `e55f3e9` checkpoint precedes the [current Tune/pitch
+increment](909-tune.md); its measurements retain their original identities.
+
 This #25/#79 increment adds the documented D10/D11 rounding stage between the
 existing constant-amplitude triangle oscillator and its separate Decay/VCA
 multiplier. It changes both actual ASM backends in the same combined mods.

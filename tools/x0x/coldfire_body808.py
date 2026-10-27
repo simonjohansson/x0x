@@ -19,7 +19,7 @@ class Runner:
         self.state_words = state_words
         self.stride = max(16,4*state_words)
         self.extent = 8*self.stride+8
-        self.stack_bytes = 128 if state_words == 5 else 96
+        self.stack_bytes = 128 if state_words in (4, 5) else 96
         harness = cpu.require_module("emu.harness", "digiemu")
         from unicorn import UC_HOOK_CODE, UC_HOOK_MEM_WRITE
         from unicorn import m68k_const
@@ -45,7 +45,7 @@ class Runner:
         if not any(lo <= address and address + size <= hi for lo, hi in self.allowed):
             self.invalid.append((address, size))
 
-    def render(self, voice=0, start=0, decay_raw=16384):
+    def render(self, voice=0, start=0, decay_raw=16384, tune_raw=None):
         assert 0 <= voice < 8 and start in (0, 1) and 0 <= decay_raw <= 32512
         uc = self.uc
         register = lambda name: getattr(self.regs, "UC_M68K_REG_" + name)
@@ -53,8 +53,12 @@ class Runner:
         before = bytes(uc.mem_read(self.STATES - 4, self.extent))
         uc.mem_write(self.OUTPUT - 4, b"\xa5" * 136)
         uc.mem_write(self.SNAPSHOT - 4, b"\xa5" * 44)
-        uc.mem_write(self.STACK-self.stack_bytes-16, b"\xa5"*(self.stack_bytes+48))
-        arguments = struct.pack(">6I", self.STOP, state, self.OUTPUT, start, decay_raw, self.SNAPSHOT)
+        uc.mem_write(self.STACK-self.stack_bytes-16, b"\xa5"*(self.stack_bytes+64))
+        args = [self.STOP, state, self.OUTPUT, start, decay_raw]
+        if tune_raw is not None:
+            assert 0 <= tune_raw <= 32512
+            args.append(tune_raw)
+        arguments = struct.pack(f">{len(args)+1}I", *args, self.SNAPSHOT)
         uc.mem_write(self.STACK, arguments)
         uc.reg_write(register("SR"), 0x2700)
         saved = {register(name): 0x10203040 + i for i, name in enumerate(
@@ -70,9 +74,9 @@ class Runner:
         assert uc.reg_read(register("PC")) == self.STOP, "body did not return before the test watchdog"
         assert uc.reg_read(register("A7")) == self.STACK + 4, "caller stack pointer changed"
         assert all(uc.reg_read(reg) == value for reg, value in saved.items()), "callee register changed"
-        assert bytes(uc.mem_read(self.STACK, 24)) == arguments, "caller arguments changed"
+        assert bytes(uc.mem_read(self.STACK, len(arguments))) == arguments, "caller arguments changed"
         assert bytes(uc.mem_read(self.STACK-self.stack_bytes-16, 16)) == b"\xa5" * 16, "stack underflow"
-        assert bytes(uc.mem_read(self.STACK + 24, 8)) == b"\xa5" * 8, "stack overflow"
+        assert bytes(uc.mem_read(self.STACK + len(arguments), 8)) == b"\xa5" * 8, "stack overflow"
         snapshot = bytes(uc.mem_read(self.SNAPSHOT - 4, 44))
         assert snapshot[:4] == snapshot[-4:] == b"\xa5" * 4, "EMAC snapshot guard changed"
         assert struct.unpack(">8I", snapshot[4:36]) == EMAC_SEED, "EMAC context changed"
