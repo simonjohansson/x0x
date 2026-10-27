@@ -1,8 +1,10 @@
 # C39 companion-pulse reference
 
-The next #9/#79 increment establishes an isolated **host-only** reference for
+This #9/#79 checkpoint establishes an isolated **host-only** reference for
 C39/R161/D52. It does not change production DSP, resolve the current initial
 pitch regressions, or qualify a new native/reference comparison.
+The subsequent [state-conversion increment](808-switch-state.md) applies the
+charge-continuity result on both CPUs; companion forcing itself remains open.
 
 ## Circuit and explicit assumptions
 
@@ -127,9 +129,10 @@ independent C/UI suites pass. The local result/provenance snapshots are
 `out/reference/808-retrigger/reference.json` (earlier C39-only checkpoint) and
 `out/reference/808-retrigger/bridge.json` (current isolated bridge).
 
-No production C/ASM, private voice layout, public API, saved format or control
-changes. No new emulator run or VST pass is claimed: the unchanged production
-revision remains the [initial-switch evidence](808-initial-pitch.md), including
-its reference regressions. Held-out audio and the HTML report are untouched.
+This host-only checkpoint changed no production C/ASM, private voice layout,
+public API, saved format or control. Its production baseline was the historical
+[initial-switch evidence](808-initial-pitch.md), including reference regressions;
+see the subsequent state-conversion evidence above for the current DSP.
+Held-out audio and the HTML report are untouched.
 #9/#79 retain DSP integration and complete circuit work; #2 retains fidelity;
 #78/#20/#80 keep their existing acceptance status.

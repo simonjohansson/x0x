@@ -256,6 +256,8 @@ decay_coefficients:
     R10=DM(I5,M5);
     R9=32;
     R13=4;
+    R4=DM(I0,M5);
+    I12=R4;
 body_sample:
     R4=DM(I0,M5);
     R4=PASS R4;
@@ -291,6 +293,35 @@ no_pulse:
     R8=R8+R13;
     R9=R9-1;
     IF NE JUMP body_sample;
+    R4=I12;
+    R5=32;
+    COMP(R4,R5);
+    IF NE JUMP store_body;
+    // Preserve C41/C42 voltage using effective damping, not a full feedback shelf.
+    R4=0xb91a2d6a; // cos(omega_attack/fs)-1
+    F4=F4-F2;
+    R5=0x426949d4; // fs/(omega_attack*cos(omega_attack/fs))
+    F5=F4*F5;
+    R6=0x3f000000;
+    F4=F4*F6;
+    F4=F4*F5;
+    F2=F5+F4;      // n=sigma/omega_attack, second-order log approximation
+    F3=F2*F2;
+    F4=F3*F3;
+    F5=F3-F4;
+    R6=0x4018ae06; // r-1/r
+    F5=F5*F6;
+    R11=0x3eba39e8; // 1/r
+    F5=F5+F11;     // alpha
+    F4=F4-F3;
+    R11=0x3f800000;
+    F4=F4+F11;
+    F4=F4*F2;
+    F4=F4*F6;      // -beta
+    F1=F1*F5;
+    F4=F4*F0;
+    F1=F1-F4;
+store_body:
     R4=I1;
     R4=R4-R13;
     I4=R4;

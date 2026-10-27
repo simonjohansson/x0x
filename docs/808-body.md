@@ -25,7 +25,9 @@ default DECAY=64, `c=exp(-1/(48000*.143))*cos(2*pi*47.65/48000)` and
 `s=exp(-1/(48000*.143))*sin(2*pi*47.65/48000)`. Other Decay values use the existing live
 feedback retention. For the first 6 ms, c/s use the source-derived initial frequency instead.
 The independent oracle convolves analytical impulse responses with the finite
-drive, integrating both frequency and log retention over timed changes.
+drive and accumulated log retention. At 6 ms, both CPUs and the oracle
+[convert the modal state](808-switch-state.md) to retain C41/C42 voltage rather
+than retaining y unchanged across the frequency switch.
 It does not copy the ASM recurrence. [Source boundary, equations and current
 checks](808-excitation.md) distinguish the duration-only trigger approximation
 from the still-missing pulse shaper and full bridged-T forcing.

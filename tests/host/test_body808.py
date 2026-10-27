@@ -4,10 +4,19 @@ from x0x.analysis import analyze
 from x0x.body808 import FREQUENCY, ATTACK_FREQUENCY, ATTACK_SAMPLES, GAIN, SAMPLE_RATE, TAU, reference
 
 
-def impulse_phase(n, k):
+def impulse_shape(n, k, raw):
     import math
-    return 2*math.pi/SAMPLE_RATE * (ATTACK_FREQUENCY*(min(n+1, ATTACK_SAMPLES)-k)
-                                   + FREQUENCY*max(n+1-ATTACK_SAMPLES, 0))
+    from x0x.body808 import retention
+    high, low = 2*math.pi*ATTACK_FREQUENCY, 2*math.pi*FREQUENCY
+    if n < ATTACK_SAMPLES:
+        return math.sin(high*(n+1-k)/SAMPLE_RATE)
+    sigma = -SAMPLE_RATE*math.log(retention(raw))
+    ratio = (sigma*sigma+low*low)/(sigma*sigma+high*high)
+    angle = high*(ATTACK_SAMPLES-k)/SAMPLE_RATE
+    x = math.sin(angle)
+    y = ratio*high/low*math.cos(angle)+(ratio-1)*sigma/low*x
+    dt = (n+1-ATTACK_SAMPLES)/SAMPLE_RATE
+    return x*math.cos(low*dt)+y*math.sin(low*dt)
 
 
 class Body808Tests(unittest.TestCase):
@@ -49,7 +58,7 @@ class Decay808Tests(unittest.TestCase):
         import math
         n = switch + 200
         expected = sum(GAIN/48 * retention(0)**(switch-k) * retention(32512)**(n+1-switch)
-                       * math.sin(impulse_phase(n,k)) for k in range(48))
+                       * impulse_shape(n,k,0) for k in range(48))
         self.assertAlmostEqual(actual[n], expected, places=11)
         self.assertGreater(abs(actual[n]), abs(baseline[n]))
 
@@ -74,7 +83,23 @@ class Excitation808Tests(unittest.TestCase):
             samples=reference(2001,raw)
             for n in (0,31,32,47,48,63,64,255,256,287,288,289,319,320,2000):
                 expected=sum(PULSE_GAIN*retention(raw)**(n+1-k)
-                    * math.sin(impulse_phase(n,k))
+                    * impulse_shape(n,k,raw)
                     for k in range(min(n+1,PULSE_SAMPLES)))
                 self.assertAlmostEqual(samples[n],expected,places=12)
             self.assertAlmostEqual(samples[0],PULSE_GAIN*retention(raw)*math.sin(2*math.pi*ATTACK_FREQUENCY/SAMPLE_RATE),places=14)
+
+    def test_switch_conserves_both_capacitor_voltages_without_an_output_jump(self):
+        import math
+        from x0x.body808 import retention, switch_coordinates
+        high, low = 2*math.pi*ATTACK_FREQUENCY, 2*math.pi*FREQUENCY
+        a = 1/(1e6*15e-9)
+        for raw in (0,1,16383,16384,16385,32511,32512):
+            sigma = -SAMPLE_RATE*math.log(retention(raw))
+            alpha, beta = switch_coordinates(raw)
+            for x,y in ((.2,-.1),(-.2,.1),(0,.25)):
+                new_y = alpha*y+beta*x
+                c41 = -a*(sigma*x+high*y)/(sigma*sigma+high*high)
+                after = -a*(sigma*x+low*new_y)/(sigma*sigma+low*low)
+                self.assertAlmostEqual(after,c41,places=14)
+                self.assertAlmostEqual(-x-after,-x-c41,places=14)
+            self.assertLess(abs(alpha)+abs(beta),1)  # No increase in the state bound.

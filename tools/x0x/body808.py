@@ -43,8 +43,20 @@ def _phase(sample):
                                    + FREQUENCY*max(0, sample-ATTACK_SAMPLES))
 
 
+def switch_coordinates(decay_raw):
+    """Keep output and C41/C42 voltage when the calibrated pole pair changes.
+
+    shortcut: effective constant damping, not the complete feedback shelf;
+    this state conversion addresses only the initial frequency transition.
+    """
+    sigma = -SAMPLE_RATE * math.log(retention(decay_raw))
+    low, high = 2*math.pi*FREQUENCY, 2*math.pi*ATTACK_FREQUENCY
+    ratio = (sigma*sigma + low*low)/(sigma*sigma + high*high)
+    return ratio*high/low, (ratio-1)*sigma/low
+
+
 def reference(frames, decay_raw=DEFAULT_DECAY, changes=None):
-    """Finite-drive convolution with an integrated, two-frequency phase."""
+    """Finite-drive convolution, then free decay from conserved capacitor state."""
     changes = changes or {}
     loss = math.log(retention(decay_raw))
     attenuation = 0.0
@@ -52,14 +64,25 @@ def reference(frames, decay_raw=DEFAULT_DECAY, changes=None):
     cosine_sum = sine_sum = 0.0
     for n in range(frames):
         if n in changes:
-            loss = math.log(retention(changes[n]))
+            decay_raw = changes[n]
+            loss = math.log(retention(decay_raw))
         if n < PULSE_SAMPLES:
             weight = PULSE_GAIN * math.exp(-attenuation)
             cosine_sum += weight * math.cos(_phase(n))
             sine_sum += weight * math.sin(_phase(n))
         attenuation += loss
-        samples.append(math.exp(attenuation) * (cosine_sum * math.sin(_phase(n+1))
-                                               - sine_sum * math.cos(_phase(n+1))))
+        if n < ATTACK_SAMPLES:
+            angle = _phase(n+1)
+            sample = math.exp(attenuation) * (cosine_sum*math.sin(angle)-sine_sum*math.cos(angle))
+            if n+1 == ATTACK_SAMPLES:
+                quadrature = math.exp(attenuation) * (cosine_sum*math.cos(angle)+sine_sum*math.sin(angle))
+                alpha, beta = switch_coordinates(decay_raw)
+                switch_x, switch_y = sample, alpha*quadrature+beta*sample
+                switch_attenuation = attenuation
+        else:
+            angle = 2*math.pi*FREQUENCY*(n+1-ATTACK_SAMPLES)/SAMPLE_RATE
+            sample = math.exp(attenuation-switch_attenuation) * (switch_x*math.cos(angle)+switch_y*math.sin(angle))
+        samples.append(sample)
     return samples
 
 

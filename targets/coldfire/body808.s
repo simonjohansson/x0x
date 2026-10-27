@@ -85,6 +85,7 @@ x0x_808_body:
     move.l %a2, %d0
     mac.l %d6, %d0, %acc0
     movclr.l %acc0, %d3
+    movea.l %d7, %a4
     moveq #32, %d6
 .Lsample:
     tst.l %d7
@@ -106,6 +107,48 @@ x0x_808_body:
     move.l %d4, (%a1)+
     subq.l #1, %d6
     bne.s .Lsample
+    cmpa.l #32, %a4
+    bne .Lstore_body
+    /* Preserve physical capacitor voltage at the frequency switch.
+     * n=sigma/omega_attack; log/rational series errors are below Q31 audio error.
+     * shortcut: effective damping, not the complete feedback shelf.
+     */
+    move.l #2147167893, %d0 /* cos(omega_attack/fs) */
+    sub.l %d2, %d0
+    move.l %d0, %d6
+    lsr.l #1, %d6
+    asl.l #6, %d0
+    moveq #0, %d1
+    move.l %d1, %acc0
+    move.l #1956964868, %d1 /* fs/(64*omega_attack*cos(omega_attack/fs)) */
+    mac.l %d0, %d1, %acc0
+    movclr.l %acc0, %d0
+    move.l %d0, %acc0
+    mac.l %d0, %d6, %acc0 /* -log(rho) = (1-rho)*(1+(1-rho)/2+...) */
+    movclr.l %acc0, %d0
+    mac.l %d0, %d0, %acc0
+    movclr.l %acc0, %d2 /* z=n*n */
+    mac.l %d2, %d2, %acc0
+    movclr.l %acc0, %d3 /* z*z */
+    move.l %d2, %d6
+    sub.l %d3, %d6
+    asl.l #2, %d6
+    move.l #781089281, %d1 /* 1/r, r=omega_attack/omega_normal */
+    move.l %d1, %acc0
+    move.l #1280770858, %d1 /* (r-1/r)/4 */
+    mac.l %d6, %d1, %acc0
+    movclr.l %acc0, %d6 /* alpha = 1/r+(r-1/r)*(z-z*z) */
+    sub.l %d2, %d3
+    addi.l #2147483647, %d3
+    mac.l %d0, %d3, %acc0
+    movclr.l %acc0, %d3
+    asl.l #2, %d3
+    mac.l %d3, %d1, %acc0
+    movclr.l %acc0, %d3 /* -beta = (r-1/r)*n*(1-z+z*z) */
+    mac.l %d5, %d6, %acc0
+    msac.l %d4, %d3, %acc0
+    movclr.l %acc0, %d5
+.Lstore_body:
     move.l %d4, (%a0)
     move.l %d5, 4(%a0)
     move.l %d7, 8(%a0)

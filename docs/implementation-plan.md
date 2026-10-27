@@ -304,3 +304,17 @@ Next integrate the derived forcing/state with a documented fixed audio scale
 on both CPUs, then rerun native/five-setting checks. Feedback/loading remain
 explicit approximations for later planned increments. Existing regressions, #78/#20/#80 and all
 fidelity gates remain open. HTML and held-out recordings remain untouched.
+
+## 808 state at the initial switch — 27 October 2026
+
+The [next #9/#79 increment](808-switch-state.md) carries C41/C42 voltage through
+the initial frequency switch on both CPUs. It changes the modal quadrature
+without resetting the output or adding excitation. The current calibrated
+pitch/Decay, finite drive, internal scale, private state size and controls stay
+unchanged. Source-separated companion forcing remains the next planned step;
+full feedback/pulse-shaper/leakage alignment is still open. 131 host tests and C/UI suites, both actual CPU suites and fresh five-setting
+training comparisons are recorded with that increment. DT retains only #78
+resets; DN reproduces #20's one-count silence baseline; DN2's tested scenario
+passes. Default/short raw residuals improve slightly but both long settings
+worsen; retain those regressions without changing acceptance limits. The
+original HTML and held-out recordings remain untouched.

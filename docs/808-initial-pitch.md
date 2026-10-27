@@ -1,5 +1,9 @@
 # Initial 808 frequency switch
 
+The original integration and measurements below are historical. The subsequent
+[capacitor-state correction](808-switch-state.md) retains physical charge at
+the transition; it does not yet add the companion excitation.
+
 This #9/#79 increment adds the first, brief frequency-switch stage to both
 CPUs. It is separate from the slower nonlinear pitch sigh and from the C39
 companion retrigger pulse. The excitation remains the existing 1 ms rectangle.
