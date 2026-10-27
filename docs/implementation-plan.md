@@ -1,5 +1,12 @@
 # Implementation plan: one combined mod, silent first
 
+The [full training-grid baseline](full-reference-grid-baseline.md) now compares
+243 808 and 2,187 909 recordings against accepted commit `65aeaf7` on both
+actual CPUs, plus seven declared-voice histories per engine. This is component
+diagnostic evidence; held-out/native fidelity gates remain open and the HTML
+report is unchanged. Use the full measured surfaces to prioritize subsequent
+#9/#25/#79 corrections, rather than only the original five settings.
+
 The three silent native milestones are complete. The current 808 has a
 reference-calibrated settled pole/Decay range, switched capacitor state,
 main/companion excitation, Q43 leakage, Tone RC and output coupling on both
@@ -42,8 +49,8 @@ the behavior and circuit details.
 ## The working backlog
 
 Eight consolidated issues replaced the previous 66; #78 records the deferred DT
-reset bug, #79 owns reference-model/schematic alignment, and #80 records
-the resolved late DN2 MODEL transition. Small increments
+reset bug, #79 owns reference-model/schematic alignment, #80 records
+the resolved late DN2 MODEL transition, and #81 tracks private DN2 capacity. Small increments
 are commits and checklist steps inside these issues, rather than a ticket for
 every control, model stage, CPU implementation and matrix cell.
 
@@ -56,9 +63,10 @@ every control, model stage, CPU implementation and matrix cell.
 | In progress | [#9](https://github.com/simonjohansson/x0x/issues/9) | Implement the 808 on both CPUs and integrate each increment into working mods |
 | In progress | [#25](https://github.com/simonjohansson/x0x/issues/25) | Implement the 909 on both CPUs alongside the 808 in those same mods |
 | Done | [#80](https://github.com/simonjohansson/x0x/issues/80) | Upstream Digikit mask fix published/pinned; unchanged-production full and original late-MODEL probes pass on the normal runtime |
-| Alongside engines | [#79](https://github.com/simonjohansson/x0x/issues/79) | Align both engines with sources; initial 808 VST diagnostic now prioritizes missing stages |
+| Alongside engines | [#79](https://github.com/simonjohansson/x0x/issues/79) | Align both engines with sources and the full measured training surfaces |
+| Private capacity | [#81](https://github.com/simonjohansson/x0x/issues/81) | Rebalance the existing DN2 voice reservation for the planned larger DSP; no SDK/public-format change |
 | Deferred by user | [#78](https://github.com/simonjohansson/x0x/issues/78) | Digitakt native reset defaults; fix upstream in Elekloader and consume here |
-| Initial five-setting 808 comparison complete; fidelity open | [#2](https://github.com/simonjohansson/x0x/issues/2) | Fixed-level reference corpora; both-model fidelity comparisons remain open |
+| Full training grids complete for both engines; fidelity open | [#2](https://github.com/simonjohansson/x0x/issues/2) | Fixed-level reference corpora; both-model fidelity comparisons remain open |
 | After sound | [#20](https://github.com/simonjohansson/x0x/issues/20) | Combined-mod emulator regression and readiness review |
 
 The three silent device issues are closed. The 808 engine in #9 is underway:
@@ -125,13 +133,15 @@ CPUs and native audio captures from every device. Live Decay and the passive
 Tone and C47 coupling RC stages and the finite rectangular drive are implemented.
 Settled pitch and short/default/long Decay now have training-reference calibration.
 The first [initial-frequency switch](808-initial-pitch.md) now follows the
-source pole ratio for a nominal 6 ms window. Next derive the companion C39
-retrigger/forcing and pulse shaper, followed by nonlinear pitch sigh, stock
-feedback/pot response and loaded output as small commits.
+source pole ratio for a nominal 6 ms window. Companion C39
+retrigger/forcing and the main pulse shaper are now implemented, along with Q43 leakage.
+Next correct the measured interior Decay surface and continuing pitch sigh,
+then excitation/output and retained-state behavior as small integrated commits.
 Each ready increment runs through the already-installed mod. #25 is underway
-with the unshaped triangle and live unloaded RC Decay; diode shaping, body/tune,
-complete VCA/envelope and pulse/noise
-attack follow. Keep the same registration and
+with the shaped triangle, Tune CV, loaded VCA and finite reset. The full grid
+now prioritizes missing Attack/transient behavior and body/level/Decay gaps.
+Pulse/noise prototypes remain unadopted; their numeric passes do not establish
+reference improvement. Keep the same registration and
 saved controls throughout; both models must coexist, not become separate mods.
 
 Get the engines working before performance tuning. Instruction counts are
@@ -149,8 +159,8 @@ validation; source alignment is not a reason to postpone all measurements. The
 code, selects schematic baselines and records the missing/provisional blocks.
 The first source-derived slice implements the 808 Tone RC network on both CPUs,
 checked against an independent capacitor voltage/current reference. Its native
-knob taper remains provisional. The 1 ms drive duration is implemented; pulse
-shaping, the full feedback network and
+knob taper remains provisional. The 1 ms drive duration and main pulse shaping are implemented;
+the full feedback network and
 the other circuit rows remain open. The pinned Plaits classes now have
 [executable host renders](reference-renders.md), including deterministic repeated
 captures, control changes, retained retrigger history and sanitized builds.
