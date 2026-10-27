@@ -61,9 +61,9 @@ class Runner:
         self.steps, self.invalid = 0, []
         self.allowed = [(state, state + 8), (self.OUTPUT, self.OUTPUT + 128),
                         (self.SNAPSHOT, self.SNAPSHOT + 36), (self.STACK - 96, self.STACK)]
-        uc.emu_start(self.BASE, self.STOP, count=1024)
+        uc.emu_start(self.BASE, self.STOP, timeout=10_000_000)
         assert not self.invalid, self.invalid
-        assert uc.reg_read(register("PC")) == self.STOP, "body exceeded instruction bound"
+        assert uc.reg_read(register("PC")) == self.STOP, "body did not return before the test watchdog"
         assert uc.reg_read(register("A7")) == self.STACK + 4, "caller stack pointer changed"
         assert all(uc.reg_read(reg) == value for reg, value in saved.items()), "callee register changed"
         assert bytes(uc.mem_read(self.STACK, 24)) == arguments, "caller arguments changed"

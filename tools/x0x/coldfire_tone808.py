@@ -36,9 +36,9 @@ class Runner(BodyRunner):
         self.steps, self.invalid = 0, []
         self.allowed = [(state, state + 4), (self.OUTPUT, self.OUTPUT + 128),
                         (self.SNAPSHOT, self.SNAPSHOT + 36), (self.STACK - 92, self.STACK)]
-        uc.emu_start(self.BASE, self.STOP, count=1500)
+        uc.emu_start(self.BASE, self.STOP, timeout=10_000_000)
         assert not self.invalid, self.invalid
-        assert uc.reg_read(register("PC")) == self.STOP, "Tone exceeded instruction bound"
+        assert uc.reg_read(register("PC")) == self.STOP, "Tone did not return before the test watchdog"
         assert uc.reg_read(register("A7")) == self.STACK + 4, "caller stack pointer changed"
         assert all(uc.reg_read(reg) == value for reg, value in saved.items()), "callee register changed"
         assert bytes(uc.mem_read(self.STACK, 20)) == arguments, "caller arguments changed"
@@ -130,7 +130,6 @@ def run(folder=None):
                   image_sha256=hashlib.sha256(image).hexdigest(), frames=len(inputs),
                   cases=cases, live_tone_peak_error_fs=live_error, composed=composed,
                   maximum_instructions_per_block_with_wrapper=worst,
-                  instruction_bound=1500,
                   checked=["source-derived RC response", "unsigned coefficient division",
                            "impulse/step/two-tone/full-scale differences", "live Tone with persistent state",
                            "state/output/stack guards", "callee registers and full EMAC preservation",

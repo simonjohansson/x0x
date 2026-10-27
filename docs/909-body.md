@@ -68,7 +68,7 @@ renders give:
 The two CPU outputs differ by at most 2.129e-7 FS. Both retain state/output,
 callee/context and retrigger/interleaving guards. The combined SHARC callback
 passes 4686 component calls with 914 code bytes, unchanged 320 state bytes and
-overall worst 827 instructions under the unchanged 1000-instruction bound.
+overall worst 827 observed instructions.
 The 808 path and its Tone/Decay comparisons remain checked by that same suite.
 
 The actual ColdFire four-second run exposes a known fixed-point limit: the

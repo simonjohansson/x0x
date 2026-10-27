@@ -116,6 +116,10 @@ with the unshaped triangle; diode shaping, body/tune, envelope and pulse/noise
 attack follow. Keep the same registration and
 saved controls throughout; both models must coexist, not become separate mods.
 
+Get the engines working before performance tuning. Instruction counts are
+informational; there is no per-callback instruction budget. Test watchdogs catch
+hangs, while measured workload/performance qualification comes later.
+
 [#79](https://github.com/simonjohansson/x0x/issues/79) makes the source-to-code
 alignment explicit: inspect published reference implementations and primary
 schematics, choose each stock circuit baseline, audit provisional/missing stages,

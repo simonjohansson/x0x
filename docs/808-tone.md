@@ -54,7 +54,7 @@ bytes and next 128 body bytes, then adds sixteen float Tone states at offset
 256: 320 total private state bytes. A positive-float reciprocal estimate with
 four Newton refinements computes G without relying on an unmodeled RECIPS seed.
 At the Tone increment `58d0d55`, the combined callback was 764 code bytes and at
-most 827 instructions under the unchanged 1000-instruction test bound. Its 3934
+most 827 observed instructions. Its 3934
 component callbacks retained output/state guards, context preservation,
 invalid-frame atomicity and then-unimplemented 909 silence. Current combined
 callback costs/results are recorded in [909-body.md](909-body.md).

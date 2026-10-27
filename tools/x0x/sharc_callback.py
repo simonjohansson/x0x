@@ -9,6 +9,7 @@ from pathlib import Path
 import struct
 import sys
 import tempfile
+import time
 
 from x0x import cpu
 
@@ -18,6 +19,7 @@ STATE, STATE_BYTES = 0x20092000, 16 * 8
 INPUT, PARAM, OUTPUT = 0x20094000, 0x20094100, 0x20094404
 FRAME, OLD_FRAME, RETURN = 0x20095000, 0x20095100, 0xBC9FF0
 GUARD = 0xA5A5A5A5
+CALL_TIMEOUT_SECONDS = 10  # Hang protection, not a DSP performance budget.
 
 
 def input_words(slot: int, pitch: int, flags: int, params: list[int]) -> dict[int, int]:
@@ -181,7 +183,8 @@ class CallbackRunner:
         before.loop_slots = list(runner.state.loop_slots)
         before.special = dict(runner.state.special)
         before.mmrs = dict(runner.state.mmrs)
-        for _ in range(1000):
+        deadline = time.monotonic() + CALL_TIMEOUT_SECONDS
+        while time.monotonic() < deadline:
             try:
                 runner.step()
             except self.sr.Halt as halt:
@@ -192,7 +195,7 @@ class CallbackRunner:
                 raise AssertionError("callback stack pointer became unknown")
             self.high_water_bytes = max(self.high_water_bytes, FRAME - 8 - stack.value)
         else:
-            raise AssertionError("callback exceeded the 1000-instruction bound")
+            raise AssertionError("callback did not return before the test watchdog")
         if outcome.reason != "breakpoint" or runner.state.pc_sw != RETURN:
             raise AssertionError(f"callback failed to return through its C frame: {outcome}")
         self.worst_instructions = max(self.worst_instructions, runner.instructions)

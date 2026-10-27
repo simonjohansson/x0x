@@ -99,13 +99,13 @@ class Runner(ArithmeticRunner):
             self.allowed_writes += [(self.STATES + lane * 12, self.STATES + (lane + 1) * 12),
                                     (self.OUTPUT, self.OUTPUT + 16)]
         try:
-            self.uc.emu_start(self.BASE, self.STOP, count=1000)
+            self.uc.emu_start(self.BASE, self.STOP, timeout=10_000_000)
         except UcError as error:
             raise AssertionError(f"selector execution failed: {error}") from error
         if self.invalid_writes:
             raise AssertionError(f"selector wrote unowned memory: {self.invalid_writes}")
         if self.uc.reg_read(self.register("PC")) != self.STOP:
-            raise AssertionError("selector did not return within 1000 instructions")
+            raise AssertionError("selector did not return before the test watchdog")
         if self.uc.reg_read(self.register("A7")) != self.STACK + 4:
             raise AssertionError("selector corrupted caller stack pointer")
         if any(self.uc.reg_read(register) != value for register, value in saved.items()):
@@ -213,7 +213,7 @@ def diagnose():
                   unqualified=["native delivery freshness classification", "UI/saved layout/persistence",
                                "native ownership/retrigger identity", "kick DSP reset/excitation/audio",
                                "physical deadlines"],
-                  audio_frames_rendered=0, instruction_bound_per_call=1000,
+                  audio_frames_rendered=0,
                   worst_instructions=max(case["instructions"] for case in cases),
                   selector_stack_bytes=16, wrapper_and_nested_stack_extent_bytes=32,
                   private_abi=dict(bank_bytes=96, lanes=8, lane_bytes=12,

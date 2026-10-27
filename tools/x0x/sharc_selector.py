@@ -14,13 +14,13 @@ import struct
 import subprocess
 import sys
 import tempfile
+import time
 
 from . import cpu, sharc_callback as callback
 
 ROOT = cpu.ROOT
 SOURCE = ROOT / "targets/sharc/selector.s"
 REFERENCE = ROOT / "tests/ui/sharc_selector_reference.c"
-BOUND = 1000
 
 
 def case(label, slot=0, flags=1, model=0, pitch=15487):
@@ -166,7 +166,8 @@ class SelectorRunner(callback.CallbackRunner):
             setattr(before, name, dict(getattr(machine.state, name)))
         for name in ("pc_stack", "status_stack", "loops", "loop_slots"):
             setattr(before, name, copy.deepcopy(getattr(machine.state, name)))
-        for _ in range(BOUND):
+        deadline = time.monotonic() + callback.CALL_TIMEOUT_SECONDS
+        while time.monotonic() < deadline:
             try:
                 machine.step()
             except self.sr.Halt as halt:
@@ -178,7 +179,7 @@ class SelectorRunner(callback.CallbackRunner):
                 raise AssertionError("selector stack pointer became unknown")
             self.high_water_bytes = max(self.high_water_bytes, callback.FRAME - 8 - stack.value)
         else:
-            raise AssertionError("selector exceeded its instruction bound")
+            raise AssertionError("selector did not return before the test watchdog")
         self.worst_instructions = max(self.worst_instructions, machine.instructions)
         allowed = {*(f"R{i}" for i in range(16)), *(f"I{i}" for i in (0, 1, 2, 3, 4, 5, 12, 13)),
                    "ASTATX", "STKYX", "ASTATY", "STKYY", "PX", "PX1", "PX2"}
@@ -292,7 +293,7 @@ def verify() -> dict:
                       calls=runner.calls, initialized_callbacks=sum(row["notices"] for row in reference),
                       rejected_inputs=sum(not row["valid"] for row in reference),
                       kernel_stack_bytes=runner.high_water_bytes, adapter_call_frame_bytes=8,
-                      instruction_bound=BOUND, worst_case_instructions=runner.worst_instructions,
+                      worst_case_instructions=runner.worst_instructions,
                       decoded_instructions=decoded, rejected_mutations=rejected,
                       input_origin="synthetic-raw-SDK-callbacks; compiled C is a host policy reference",
                       checked=["MODEL threshold and START-only latch", "all 16 independent slots",

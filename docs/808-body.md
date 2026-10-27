@@ -77,7 +77,7 @@ increments `x_next=x+(a*x+s*y)` and `y_next=y+(a*y-s*x)`. This avoids bias from
 rounding the near-one coefficient c directly. Its 24,000-sample direct run has
 maximum error 2.675e-7 FS, frequency 54.99999754 Hz and fitted time constant
 0.250000204 s. All 944 callback cases pass with 560 code bytes, 256 state bytes
-and at most 649 instructions under the unchanged 1,000-instruction bound.
+and at most 649 observed instructions.
 The first 128 state bytes retain the selector metadata; sixteen x/y pairs occupy
 the next 128. This is private DSP RAM, not a saved-sound layout.
 
@@ -90,8 +90,7 @@ context guards. Maximum analytical waveform error is 1.009e-6 FS on ColdFire
 and 8.23e-7 FS on SHARC. Matching endpoint/default renders differ by at most
 6.357e-7 FS. All use the unchanged 1e-5 FS limit, with no alignment or gain fit.
 ColdFire uses 252 code bytes and at most 503 instructions including its test
-wrapper; SHARC uses 606 code bytes and at most 662 instructions under the
-unchanged 1,000-instruction bound. Those runs predate Tone. Current component
+wrapper; SHARC uses 606 code bytes and at most 662 observed instructions. Those runs predate Tone. Current component
 costs, the additional Tone state and composed-output errors are recorded in
 [808-tone.md](808-tone.md).
 

@@ -107,6 +107,10 @@ extension behavior; physical instruction behavior and timing remain unqualified.
 
 ### Combined-model selector diagnostics
 
+Instruction counts are informational, with no per-render instruction budget.
+Direct DSP tests use a wall-clock watchdog only to catch non-returning code.
+Runtime performance qualification follows working engines and measured workloads.
+
 The ColdFire selector is a shared private C-stack-callable ASM primitive for
 DT/DN. Its eight lanes hold initialized/model/diagnostic-tail words. It emits
 model/initialize/change/clear metadata, renders no audio and never infers native
@@ -116,7 +120,7 @@ retention, per-lane clearing, invalid inputs, every write, callee registers and
 all eight EMAC snapshot words. Eight reassembled defective variants fail.
 The test image is 472 bytes including its context wrapper, the state bank is
 96 bytes, and combined wrapper/nested stack extent is 32 bytes. Worst case is
-116 emulated instructions including the wrapper, under a 1,000-instruction bound.
+116 observed emulated instructions including the wrapper.
 Valid, aligned, disjoint caller-owned pointer extents are private ABI preconditions.
 
 The SHARC selector callback executes directly on 189 synthetic SDK frames,
@@ -127,8 +131,7 @@ reassembled write-before-validation defect verifies this guard. Six defective
 variants fail. For a supplied input/output frame the diagnostic writes 32 floats;
 its checksum/tail signal is test equipment, not either kick model. The callback
 uses 440 code bytes, 128 state bytes and no additional kernel stack beyond the
-existing eight-byte bridge call frame. Worst case is 351 instructions under a
-1,000-instruction bound. Required modeled context and all writes are checked.
+existing eight-byte bridge call frame. Worst observed count is 351 instructions. Required modeled context and all writes are checked.
 
 These counts use the latest approved A TNTUN/B DECAY/C ATTK/F MODEL layout.
 No LEVEL control is delivered; native track level handles volume. D/E/G/H are

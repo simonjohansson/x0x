@@ -176,7 +176,7 @@ def component() -> tuple[dict, bytes]:
                   worst_instructions=max(policy.worst_instructions, live.worst_instructions, triangle.worst_instructions,
                                          *(r[0].worst_instructions for r in rendered.values()),
                                          *(r.worst_instructions for r in tone_runs)),
-                  instruction_bound=selector.BOUND, c_reference=provenance,
+                  c_reference=provenance,
                   checked=["analytic fixed-frequency damped-sine body", "provisional DECAY curve and fractions",
                            "continuous live DECAY edit", "source-derived Tone RC and continuous edits",
                            "provisional body/Tone reset on every START", "all 16 independent slots",

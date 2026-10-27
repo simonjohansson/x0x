@@ -113,11 +113,11 @@ def run_coldfire(image: bytes, word: int) -> tuple[list[float], int]:
     count = [0]
     machine.uc.hook_add(UC_HOOK_CODE, lambda *_: count.__setitem__(0, count[0] + 1))
     try:
-        machine.uc.emu_start(base, stop, count=1000)
+        machine.uc.emu_start(base, stop, timeout=10_000_000)
     except UcError as error:
         raise RuntimeError(f"ColdFire instruction execution failed: {error}") from error
     if machine.uc.reg_read(regs.UC_M68K_REG_PC) != stop:
-        raise AssertionError("ColdFire diagnostic did not return within its instruction bound")
+        raise AssertionError("ColdFire diagnostic did not return before the test watchdog")
     if machine.uc.reg_read(regs.UC_M68K_REG_A7) != stack + 4:
         raise AssertionError("ColdFire diagnostic did not preserve its caller's stack")
     if any(machine.uc.reg_read(reg) != value for reg, value in saved.items()):
