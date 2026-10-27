@@ -72,7 +72,7 @@ def component() -> tuple[dict, bytes]:
             current = (changes or {}).get(block * 32, current)
             current_tone = (tone_changes or {}).get(block * 32, current_tone)
             chunk, state = machine.call_raw(body_case("body", current, current_tone, flags=int(block == 0)), True)
-            assert state[112] == max(48-(block+1)*32,0), "pulse must last exactly 48 samples"
+            assert state[112] == max(body808.ATTACK_SAMPLES-(block+1)*32,0), "initial frequency counter must last 6 ms"
             result.extend(chunk)
         expected = coupling808.filter_reference(tone808.filter_reference(
             body808.reference(frames, decay_raw=raw, changes=changes),

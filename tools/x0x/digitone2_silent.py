@@ -165,8 +165,8 @@ def full_os() -> dict:
             report["callback_params"] = emu.dsp_peek(0x20093D14, 160)
             counters=struct.unpack("<16I",bytes.fromhex(emu.dsp_peek(0x200921c0,64)["hex"]))
             assert counters == (0,)*16, counters
-            report["excitation_808"] = dict(pulse_samples=48,counters_after_settled_note=list(counters),
-                scope="native pulse bank consumed; precise 32+16 timing verified in actual-ASM component")
+            report["excitation_808"] = dict(pulse_samples=body808.PULSE_SAMPLES,initial_frequency_samples=body808.ATTACK_SAMPLES,counters_after_settled_note=list(counters),
+                scope="native initial counter consumed; separate 1 ms drive / 6 ms frequency timing is actual-ASM component proof")
             state = struct.unpack("<32I", bytes.fromhex(report["after_note"]["hex"]))
             assert any(state[2 * i] > 0 and state[2 * i + 1] == 1 for i in range(16)), (
                 state

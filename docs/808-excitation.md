@@ -1,5 +1,9 @@
 # Finite 808 excitation: nominal 1 ms rectangle
 
+The counter layout, measurements and firmware hashes below record the historical
+finite-excitation increment. The [initial frequency-switch stage](808-initial-pitch.md)
+now reuses that private counter for a 6 ms window while retaining the 1 ms drive.
+
 [#9](https://github.com/simonjohansson/x0x/issues/9) replaces the prototype's
 instantaneous `y=0.25` reset with a 48-sample rectangular drive. Roland S01 p.4
 and Werner/Abel/Smith S03 §3 describe a nominal 1 ms trigger; at 48 kHz this spans
@@ -81,7 +85,7 @@ Tone and coupling files from an older model are not current proof. Run
 `mise run test` for independent host/C checks and `mise run test:{dt,dn,dn2}`
 for installed-mod evidence. Component proof is not native or VST qualification.
 
-## Native integration status
+## Historical native integration status
 
 | Device | Current native evidence | Verdict |
 | --- | --- | --- |

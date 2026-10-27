@@ -11,7 +11,7 @@ import sys
 import time
 import wave
 
-from . import audio, coupling808, cpu, firmware
+from . import audio, body808, coupling808, cpu, firmware
 from .digitakt_adapter import BASE, STACK, STOP
 
 ROOT = cpu.ROOT
@@ -231,7 +231,7 @@ def full_os():
                     state["coupling_difference"] = max(state["coupling_difference"],max(abs(a-b) for a,b in zip(words,coupling["input"])))
                     owner, expected = active["pulses"][track]
                     remaining = word(owner+8)
-                    assert remaining == expected, "native 808 pulse length changed"
+                    assert remaining == expected, "native 808 initial-frequency counter changed"
                     state["pulse_counts"].add(remaining)
                     state["pulse_blocks"] += 1
                     state["body_peak"] = max(state["body_peak"], peak)
@@ -276,7 +276,7 @@ def full_os():
             owner, _output, start, decay = struct.unpack(">4I", uc.mem_read(sp + 4, 16))
             track, offset = divmod(owner-names["body_state"],12)
             assert offset == 0 and 0 <= track < 8
-            state["active"]["pulses"][track] = (owner,16 if start else max(word(owner+8)-32,0))
+            state["active"]["pulses"][track] = (owner,body808.ATTACK_SAMPLES-32 if start else max(word(owner+8)-32,0))
             if owner != names["body_state"] or not state["decay_phase"]:
                 return
             if start:
@@ -636,9 +636,10 @@ def full_os():
             report["checked"].append("native project save and pattern reload")
         report["checked"].append("native mixed 808/909 tracks")
         assert state["coupling_blocks"] > 0 and state["coupling_difference"] > 0
-        assert state["pulse_counts"] == {0,16}, state["pulse_counts"]
+        assert state["pulse_counts"] == set(range(0,body808.ATTACK_SAMPLES,32)), state["pulse_counts"]
         report["excitation_808"] = dict(blocks=state["pulse_blocks"],counter_after_blocks=sorted(state["pulse_counts"]),
-            scope="actual native 808 counter: 48-sample rectangle spans 32+16 samples")
+            pulse_samples=body808.PULSE_SAMPLES, initial_frequency_samples=body808.ATTACK_SAMPLES,
+            scope="actual initial counter; first 48 samples drive the body, first 288 use the higher frequency")
         report["coupling_808"] = dict(blocks=state["coupling_blocks"],
             maximum_entry_recurrence_error_fs=state["coupling_error"],
             maximum_input_output_difference_q31=state["coupling_difference"],

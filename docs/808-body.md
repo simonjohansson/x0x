@@ -23,8 +23,9 @@ before each rotation for exactly 48 samples. Both ASM implementations compute:
 The fixed internal drive sum is 0.25; there is no per-hit normalization. At the
 default DECAY=64, `c=exp(-1/(48000*.143))*cos(2*pi*47.65/48000)` and
 `s=exp(-1/(48000*.143))*sin(2*pi*47.65/48000)`. Other Decay values use the existing live
-feedback retention. The independent oracle convolves analytical impulse
-responses with the finite drive, integrating log retention over timed changes.
+feedback retention. For the first 6 ms, c/s use the source-derived initial frequency instead.
+The independent oracle convolves analytical impulse responses with the finite
+drive, integrating both frequency and log retention over timed changes.
 It does not copy the ASM recurrence. [Source boundary, equations and current
 checks](808-excitation.md) distinguish the duration-only trigger approximation
 from the still-missing pulse shaper and full bridged-T forcing.
@@ -32,7 +33,8 @@ from the still-missing pulse shaper and full bridged-T forcing.
 The earlier formula `0.25*exp(-(n+1)/12000)*sin(2*pi*55*(n+1)/48000)` describes
 the historical instantaneous-state prototype, before finite excitation.
 
-The body stays at 47.65 Hz with a fixed internal peak below 0.25 digital full scale.
+The [initial frequency-switch stage](808-initial-pitch.md) uses about 131.006 Hz
+for the first 6 ms; the body then stays at 47.65 Hz with a fixed internal peak below 0.25 digital full scale.
 The subsequent coupling stage has a separately derived half-scale transient bound.
 Ordinary note pitch is not used. Native AMP/velocity, filters and track level
 remain downstream.

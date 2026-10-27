@@ -113,7 +113,7 @@ def run(folder=None):
         words = []
         for block in range(frames // 32):
             words.extend(runner.render(start=int(block == 0), decay_raw=raw))
-            assert struct.unpack(">I",runner.uc.mem_read(runner.STATES+8,4))[0] == max(48-(block+1)*32,0)
+            assert struct.unpack(">I",runner.uc.mem_read(runner.STATES+8,4))[0] == max(body808.ATTACK_SAMPLES-(block+1)*32,0)
             worst = max(worst, runner.steps)
         samples = [word / 2**31 for word in words]
         expected = body808.reference(len(samples), raw)

@@ -169,7 +169,7 @@ selected:
     // shortcut: 1 ms rectangular drive; edge shaping, physical forcing/gain and residual retrigger follow.
     R0=0;
     R1=0;
-    R4=48;
+    R4=288;
     DM(I0,M5)=R4;
     JUMP render_body;
 continue_body:
@@ -180,16 +180,34 @@ continue_body:
 render_body:
     // shortcut: three training anchors, not the stock feedback network/pot curve.
     // Use c-1 to avoid float32 radius bias when c is close to one.
-    // 47.65 Hz settled body; initial pitch evolution remains unmodeled.
+    // S03 equation7/section8.1: nominal 131.006 Hz for 6 ms, then 47.65 Hz.
     R2=0x3f010204; // 64/127, the approved default in the existing raw/32512 normalization.
     COMP(F11,F2);
     IF GE JUMP decay_high;
+    R4=DM(I0,M5);
+    R4=PASS R4;
+    IF EQ JUMP steady_low;
+    R2=0x3a7986e6;
+    R3=0xba4a7914;
+    R4=0x3788f17b;
+    R5=0x3c8c6323;
+    JUMP decay_coefficients;
+steady_low:
     R2=0x3a798f0c;
     R3=0xba290c80;
     R4=0x36c73f05;
     R5=0x3bcc41cb;
     JUMP decay_coefficients;
 decay_high:
+    R4=DM(I0,M5);
+    R4=PASS R4;
+    IF EQ JUMP steady_high;
+    R2=0x393b9629;
+    R3=0xb9c8b858;
+    R4=0x364de63d;
+    R5=0x3c8c7126;
+    JUMP decay_coefficients;
+steady_high:
     R2=0x393b9c4a;
     R3=0xb985d886;
     R4=0x3595c97c;
@@ -244,6 +262,9 @@ body_sample:
     IF EQ JUMP no_pulse;
     R4=R4-1;
     DM(I0,M5)=R4;
+    R5=240;
+    COMP(R4,R5);
+    IF LT JUMP no_pulse;
     R4=0x3baaaaab;
     F1=F1+F4;
 no_pulse:

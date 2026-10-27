@@ -1,7 +1,7 @@
 /* Provisional 808 body: damped 47.65 Hz sine at 48 kHz with live decay.
  * void x0x_808_body(int32_t state[3], int32_t output[32], uint32_t start, uint32_t decay_raw).
  * decay_raw is caller-bounded to 0..32512; default 16384 gives tau = 143 ms.
- * State is {x,y,pulse_remaining} in Q1.31; caller owns disjoint aligned state/output extents.
+ * State is {Q31 x,y,initial_samples_remaining}; drive=1 ms, frequency switch=6 ms.
  * shortcut: START restarts the body and 1 ms rectangle; shaped excitation,
  * physical forcing/gain and residual-state retrigger follow in #9/#79.
  */
@@ -38,7 +38,7 @@ x0x_808_body:
     beq.s .Lcontinue
     moveq #0, %d4
     moveq #0, %d5
-    moveq #48, %d7
+    move.l #288, %d7
 .Lcontinue:
     move.l #0xb0, %d0 /* fractional, saturated, nearest-even */
     move.l %d0, %macsr
@@ -48,6 +48,14 @@ x0x_808_body:
     bge.s .Ldecay_high
     move.l #131072, %d0 /* low branch excludes 16384, keeping the product signed-positive */
     mulu.l %d0, %d6
+    tst.l %d7
+    beq.s .Lsteady_low
+    move.l #2145824990, %d2
+    move.l #36801676, %d3
+    move.l #1030110, %d0
+    movea.l #17667, %a2
+    bra.s .Ldecay_coefficients
+.Lsteady_low:
     move.l #2146098800, %d2
     move.l #13386187, %d3
     move.l #1030242, %d0
@@ -57,6 +65,14 @@ x0x_808_body:
     subi.l #16384, %d6
     move.l #133152, %d0 /* floor(2^31 / 16128) */
     mulu.l %d0, %d6
+    tst.l %d7
+    beq.s .Lsteady_high
+    move.l #2146855100, %d2
+    move.l #36819343, %d3
+    move.l #190576, %d0
+    movea.l #3268, %a2
+    bra.s .Ldecay_coefficients
+.Lsteady_high:
     move.l #2147129041, %d2
     move.l #13392613, %d3
     move.l #190600, %d0
@@ -74,6 +90,8 @@ x0x_808_body:
     tst.l %d7
     beq.s .Lnopulse
     subq.l #1, %d7
+    cmpi.l #240, %d7 /* Drive only for the first 48 of 288 initial samples. */
+    blt.s .Lnopulse
     addi.l #11184811, %d5 /* round((.25/48)*2^31); provisional internal forcing scale */
 .Lnopulse:
     moveq #0, %d0

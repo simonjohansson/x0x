@@ -125,8 +125,10 @@ The first #9 increment supplies an analytically checked fixed 808 body on both
 CPUs and native audio captures from every device. Live Decay and the passive
 Tone and C47 coupling RC stages and the finite rectangular drive are implemented.
 Settled pitch and short/default/long Decay now have training-reference calibration.
-Next derive the missing shaped excitation/initial pitch and stock feedback/pot
-response, then complete loaded output and retrigger behavior as small commits.
+The first [initial-frequency switch](808-initial-pitch.md) now follows the
+source pole ratio for a nominal 6 ms window. Next derive the companion C39
+retrigger/forcing and pulse shaper, followed by nonlinear pitch sigh, stock
+feedback/pot response and loaded output as small commits.
 Each ready increment runs through the already-installed mod. #25 is underway
 with the unshaped triangle and live unloaded RC Decay; diode shaping, body/tune,
 complete VCA/envelope and pulse/noise
@@ -252,3 +254,19 @@ blocks. All five raw reference residuals improve. The dark/short fit still
 differs (29.4 vs 25.4 ms), and interior knob positions remain approximate.
 Keep those in #9/#2/#79 while proceeding with the missing initial pitch/forcing
 and stock feedback/control model. See [current evidence](808-decay.md).
+
+## Initial 808 frequency switch — 27 October 2026
+
+The next #9/#79 slice adds a nominal 6 ms high-frequency window on both CPUs,
+retaining the existing 1 ms drive, state size and controls. The S03 Eq.7 pole
+ratio gives about 131.006 Hz before returning to 47.65 Hz. S01's roughly 4 ms
+description and S03's 6 ms baseline are both retained in
+[the model/evidence](808-initial-pitch.md). This does not implement the companion
+C39 retrigger, pulse shaper or nonlinear leakage/pitch sigh.
+
+The analytical trial improves long-setting raw residuals but worsens default
+and short settings. Keep those as explicit regressions and prioritize the
+missing forcing/retrigger stages next. Component agreement is not reference
+fidelity; do not close the full initial-pitch/excitation workstream on this
+isolated switch. The HTML remains unchanged. The continuation loop now
+advances existing ready work until concrete human input is required.

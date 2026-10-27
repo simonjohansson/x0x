@@ -1,7 +1,13 @@
 import unittest
 
 from x0x.analysis import analyze
-from x0x.body808 import FREQUENCY, GAIN, SAMPLE_RATE, TAU, reference
+from x0x.body808 import FREQUENCY, ATTACK_FREQUENCY, ATTACK_SAMPLES, GAIN, SAMPLE_RATE, TAU, reference
+
+
+def impulse_phase(n, k):
+    import math
+    return 2*math.pi/SAMPLE_RATE * (ATTACK_FREQUENCY*(min(n+1, ATTACK_SAMPLES)-k)
+                                   + FREQUENCY*max(n+1-ATTACK_SAMPLES, 0))
 
 
 class Body808Tests(unittest.TestCase):
@@ -43,7 +49,7 @@ class Decay808Tests(unittest.TestCase):
         import math
         n = switch + 200
         expected = sum(GAIN/48 * retention(0)**(switch-k) * retention(32512)**(n+1-switch)
-                       * math.sin(2*math.pi*FREQUENCY*(n+1-k)/SAMPLE_RATE) for k in range(48))
+                       * math.sin(impulse_phase(n,k)) for k in range(48))
         self.assertAlmostEqual(actual[n], expected, places=11)
         self.assertGreater(abs(actual[n]), abs(baseline[n]))
 
@@ -63,11 +69,12 @@ class Excitation808Tests(unittest.TestCase):
         from x0x.body808 import PULSE_SAMPLES, PULSE_GAIN, retention
         self.assertEqual(PULSE_SAMPLES,48)
         self.assertEqual(PULSE_SAMPLES/SAMPLE_RATE,.001)
+        self.assertEqual(ATTACK_SAMPLES/SAMPLE_RATE,.006)
         for raw in (0,16384,32512):
             samples=reference(2001,raw)
-            for n in (0,31,32,47,48,63,64,2000):
+            for n in (0,31,32,47,48,63,64,255,256,287,288,289,319,320,2000):
                 expected=sum(PULSE_GAIN*retention(raw)**(n+1-k)
-                    * math.sin(2*math.pi*FREQUENCY*(n+1-k)/SAMPLE_RATE)
+                    * math.sin(impulse_phase(n,k))
                     for k in range(min(n+1,PULSE_SAMPLES)))
                 self.assertAlmostEqual(samples[n],expected,places=12)
-            self.assertAlmostEqual(samples[0],PULSE_GAIN*retention(raw)*math.sin(2*math.pi*FREQUENCY/SAMPLE_RATE),places=14)
+            self.assertAlmostEqual(samples[0],PULSE_GAIN*retention(raw)*math.sin(2*math.pi*ATTACK_FREQUENCY/SAMPLE_RATE),places=14)

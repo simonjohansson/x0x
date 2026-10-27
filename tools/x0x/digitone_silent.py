@@ -11,7 +11,7 @@ import sys
 import time
 import wave
 
-from . import body909, coupling808, cpu, firmware
+from . import body808, body909, coupling808, cpu, firmware
 
 ROOT = cpu.ROOT
 SOURCE = ROOT / "machines/digitone/machine.c"
@@ -115,7 +115,7 @@ def full_os():
                 state["coupling_difference"] = max(state["coupling_difference"], max(abs(a-b) for a,b in zip(words,coupling["input"])))
                 state["triangle_samples"][active["slot"]] = None
                 remaining = word(names["body"] + 12*active["slot"] + 8)
-                assert remaining == active["expected_pulse"], "native 808 pulse length changed"
+                assert remaining == active["expected_pulse"], "native 808 initial-frequency counter changed"
                 state["pulse_counts"].add(remaining)
                 state["pulse_blocks"] += 1
                 state["body_peak"] = max(state["body_peak"], peak)
@@ -186,7 +186,7 @@ def full_os():
             owner, output, start = struct.unpack(">3I",uc.mem_read(sp+4,12))
             assert owner == names["body"]+12*active["slot"] and start == active["fresh"]
             assert output == names["fw_voices"]+128*active["slot"]
-            active["expected_pulse"] = 16 if start else max(word(owner+8)-32,0)
+            active["expected_pulse"] = body808.ATTACK_SAMPLES-32 if start else max(word(owner+8)-32,0)
         session.at(names["x0x_808_body"],checked(pulse_entered))
         def coupling_entered(_uc, _at, _size, _data):
             active = state["active"]
@@ -526,9 +526,10 @@ def full_os():
             report["decay_909"][label] = audio909
         report["audio_909"] = report["decay_909"]["default"]
         assert not state["active"] and state["callbacks"] > 0 and state["body_nonzero"] > 0 and state["triangle_nonzero"] > 0
-        assert state["pulse_counts"] == {0,16}, state["pulse_counts"]
+        assert state["pulse_counts"] == set(range(0,body808.ATTACK_SAMPLES,32)), state["pulse_counts"]
         report["excitation_808"] = dict(blocks=state["pulse_blocks"],counter_after_blocks=sorted(state["pulse_counts"]),
-            scope="actual native 808 counter: 48-sample rectangle spans 32+16 samples")
+            pulse_samples=body808.PULSE_SAMPLES, initial_frequency_samples=body808.ATTACK_SAMPLES,
+            scope="actual initial counter; first 48 samples drive the body, first 288 use the higher frequency")
         report["render_audio"] = dict(nonzero_808_blocks=state["body_nonzero"], peak_q31=state["body_peak"],
                                       nonzero_909_blocks=state["triangle_nonzero"], peak_909_q31=state["triangle_peak"],
                                       maximum_909_reference_error_fs=state["triangle_error"])
