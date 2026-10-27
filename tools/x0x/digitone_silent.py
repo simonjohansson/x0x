@@ -129,11 +129,11 @@ def full_os():
                 attenuation = 0.0 if active["fresh"] else state["triangle_attenuation"][active["slot"]]
                 loss = -1 / (body909.SAMPLE_RATE * body909.decay_tau(active["decay909"]))
                 expected = [body909.GAIN * math.exp(attenuation+(j+1)*loss)
-                            * body909.triangle(body909.FREQUENCY*(offset+j+1)/body909.SAMPLE_RATE)
+                            * body909.shaped_triangle(body909.FREQUENCY*(offset+j+1)/body909.SAMPLE_RATE)
                             for j in range(32)]
                 state["triangle_attenuation"][active["slot"]] = attenuation+32*loss
                 error = max(abs(actual / 2**31 - wanted) for actual, wanted in zip(words, expected))
-                assert error <= 1e-5, ("909 native output differs from the triangle reference", error)
+                assert error <= 1e-5, ("909 native output differs from the diode-shaped reference", error)
                 state["triangle_samples"][active["slot"]] = offset + 32
                 state["triangle_error"] = max(state["triangle_error"], error)
                 state["triangle_peak"] = max(state["triangle_peak"], peak)

@@ -1,8 +1,8 @@
-"""Independent first 909 triangle body, before diode shaping and circuit envelopes.
+"""Independent 909 triangle, antiparallel diode shaper and provisional envelope.
 
 S02 p4/p11 and S05 p3/p12 establish the triangle VCO topology. Fixed 50 Hz,
 gain 0.25 and zero-crossing START remain provisional. Decay uses unloaded C8/VR5/R58,
-not the complete ENV1/diode/Q12 VCA. The physical A taper remains uncalibrated.
+not the complete ENV1/Q12 VCA. The physical A taper remains uncalibrated.
 """
 import math
 
@@ -13,6 +13,15 @@ RAW_MAX = 32512
 DEFAULT_DECAY = 16384
 C8, R58, VR5 = .33e-6, 47000.0, 1000000.0
 PHASE_STEP = round(FREQUENCY / SAMPLE_RATE * 2**32)
+R52, R53, R43 = 10000.0, 2200.0, 47.0
+R49, R50 = 100000.0, 47000.0
+# shortcut: generic silicon operating point; replace with measured D10/D11 and IC13 behavior.
+COMPARATOR_SWING = 13.0
+DIODE_IS, DIODE_NVT = 1e-9, .052
+TRIANGLE_VOLTS = COMPARATOR_SWING * R50 / (R49 + R50)
+LINEAR_VOLTS = TRIANGLE_VOLTS * (R53 + R43) / (R52 + R53 + R43)
+THEVENIN_OHMS = R52 * (R53 + R43) / (R52 + R53 + R43)
+SHAPER_SEGMENTS = 16
 
 
 def decay_tau(raw):
@@ -36,6 +45,43 @@ def triangle(cycles):
     return 2 / math.pi * math.asin(math.sin(2 * math.pi * cycles))
 
 
+def diode_shape(value):
+    """Solve R52/antiparallel Shockley diodes/passive R53+R43 load by KCL.
+
+    Fixed open-diode linear units retain the existing provisional audio scale;
+    there is no peak normalization. Q12's signal-dependent loading is omitted.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or abs(value) > 1:
+        raise ValueError("triangle must be finite in -1..1")
+    target = abs(value) * LINEAR_VOLTS
+    node = min(target, .6)
+    for _ in range(12):
+        argument = node / DIODE_NVT
+        residual = node + 2 * THEVENIN_OHMS * DIODE_IS * math.sinh(argument) - target
+        slope = 1 + 2 * THEVENIN_OHMS * DIODE_IS / DIODE_NVT * math.cosh(argument)
+        correction = residual / slope
+        node -= correction
+        if abs(correction) < 1e-14:
+            break
+    else:
+        raise ArithmeticError("909 diode KCL did not converge")
+    return math.copysign(node / LINEAR_VOLTS, value)
+
+
+def shaped_triangle(cycles):
+    return diode_shape(triangle(cycles))
+
+
+def shaper_coefficients():
+    """Positive-half cubic Hermite coefficients, constant first, for both CPUs."""
+    values = [diode_shape(i / SHAPER_SEGMENTS) for i in range(SHAPER_SEGMENTS + 1)]
+    slopes = [1 / (1 + 2 * THEVENIN_OHMS * DIODE_IS / DIODE_NVT
+                    * math.cosh(v * LINEAR_VOLTS / DIODE_NVT)) / SHAPER_SEGMENTS
+              for v in values]
+    return [(left, dl, 3 * (right-left) - 2 * dl - dr, 2 * (left-right) + dl + dr)
+            for left,right,dl,dr in zip(values,values[1:],slopes,slopes[1:])]
+
+
 def reference(frames, decay_raw=DEFAULT_DECAY, changes=None):
     changes = changes or {}
     loss = -1 / (SAMPLE_RATE * decay_tau(decay_raw))
@@ -45,7 +91,7 @@ def reference(frames, decay_raw=DEFAULT_DECAY, changes=None):
         if n in changes:
             loss = -1 / (SAMPLE_RATE * decay_tau(changes[n]))
         total += loss
-        result.append(GAIN * math.exp(total) * triangle(FREQUENCY * (n+1) / SAMPLE_RATE))
+        result.append(GAIN * math.exp(total) * shaped_triangle(FREQUENCY * (n+1) / SAMPLE_RATE))
     return result
 
 
@@ -68,7 +114,7 @@ def compare():
                       cross_cpu=max(abs(a-b) for a,b in zip(cf,sharc)))
         assert all(error <= 1e-5 for error in errors.values()), (setting, errors)
         cases.append(dict(raw=setting, maximum_errors_fs=errors))
-    report = dict(status="passed", scope="unshaped 909 triangle with unloaded RC Decay; no complete circuit fidelity claim",
+    report = dict(status="passed", scope="diode-shaped 909 triangle with unloaded RC Decay; no complete circuit fidelity claim",
                   frames=24000, sample_rate=SAMPLE_RATE, decay_cases=cases,
                   maximum_errors_fs={key:max(row["maximum_errors_fs"][key] for row in cases) for key in errors},
                   limit_fs=1e-5, alignment_samples=0, normalization=False)

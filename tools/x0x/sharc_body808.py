@@ -50,7 +50,7 @@ def component() -> tuple[dict, bytes]:
                 begin = position909[slot]
                 loss = -1 / (body909.SAMPLE_RATE * body909.decay_tau(row["params"][1]))
                 wave = [body909.GAIN * math.exp(attenuation909[slot] + (j+1)*loss)
-                        * body909.triangle(body909.FREQUENCY*(begin+j+1)/body909.SAMPLE_RATE)
+                        * body909.shaped_triangle(body909.FREQUENCY*(begin+j+1)/body909.SAMPLE_RATE)
                         for j in range(32)]
                 attenuation909[slot] += 32*loss
                 assert max(abs(a-b) for a,b in zip(samples, wave)) < 1e-5, row["label"]
@@ -185,7 +185,7 @@ def component() -> tuple[dict, bytes]:
 
     output = FOLDER / "samples.f32"
     output.write_bytes(struct.pack(f"<{len(samples)}f", *samples))
-    report = dict(status="passed", scope="actual SHARC 808 and unshaped 909 bodies with synthetic SDK frames",
+    report = dict(status="passed", scope="actual SHARC 808 and diode-shaped 909 bodies with synthetic SDK frames",
                   project_revision=cpu.revision(cpu.ROOT),
                   elekloader_revision=cpu.revision(cpu.ROOT / "vendor/elekloader"),
                   emulator_revision=cpu.revision(cpu.ROOT / "vendor/digikit"),
@@ -217,9 +217,9 @@ def component() -> tuple[dict, bytes]:
                            "continuous live DECAY edit", "source-derived Tone RC and continuous edits",
                            "unloaded C47 coupling after Tone", "48-sample excitation across callbacks", "provisional full-chain reset on every START", "all 16 independent slots",
                            "START-only MODEL latch", "provisional same-model retrigger",
-                           "model-change body clear", "909 triangle, unloaded RC Decay with live edits and independent mixed models", "invalid-input atomicity",
+                           "model-change body clear", "909 diode KCL curve, unloaded RC Decay with live edits and independent mixed models", "invalid-input atomicity",
                            "state/output guards", "SDK context preservation"],
-                  unqualified=["808/909 circuit fidelity", "909 diode shaper, pitch/attack circuits, complete VCA and pot taper",
+                  unqualified=["808/909 circuit fidelity", "909 physical diode parameters, pitch/attack circuits, complete VCA and pot taper",
                                "stock 808 Decay circuit and Tone pot taper calibration", "loaded output/buffer/C49/C50 network", "native OS integration",
                                "VST or hardware comparison", "real-device timing"])
     (FOLDER / "report.json").write_text(json.dumps(report, indent=2) + "\n")

@@ -1,4 +1,4 @@
-// First provisional 808 resonator/Tone and unshaped 909 triangle bodies.
+// Provisional 808 resonator/Tone and diode-shaped 909 triangle bodies.
 // Per slot: {callback count since model change, selected code}; 0=inactive, 1=808, 2=909.
 // Metadata L2; body +128, Tone +256, coupling +320, counters +448, C39 +512, C40 +576, per-slot coefficient cache +640.
 .SECTION/SW callback_code;
@@ -985,8 +985,202 @@ sample909:
     IF GE JUMP rising909;
     R4=NOT R4;
 rising909:
+    // Symmetric R52/D10/D11 curve; the existing VCA follows it.
+    R6=R4;
+    R4=PASS R4;
+    IF GE JUMP shape909_magnitude;
+    R4=NOT R4;
+shape909_magnitude:
+    R11=-27;
+    R7=LSHIFT R4 BY R11;
+    R4=LSHIFT R4 BY 4;
+    R5=0x7fffffff;
+    R4=R4 AND R5;
     R5=-31;
     F4=FLOAT R4 BY R5;
+shape909_bin_0_16:
+    R11=8;
+    COMP(R7,R11);
+    IF LT JUMP shape909_bin_0_8;
+    JUMP shape909_bin_8_16;
+shape909_bin_0_8:
+    R11=4;
+    COMP(R7,R11);
+    IF LT JUMP shape909_bin_0_4;
+    JUMP shape909_bin_4_8;
+shape909_bin_0_4:
+    R11=2;
+    COMP(R7,R11);
+    IF LT JUMP shape909_bin_0_2;
+    JUMP shape909_bin_2_4;
+shape909_bin_0_2:
+    R11=1;
+    COMP(R7,R11);
+    IF LT JUMP shape909_bin_0_1;
+    JUMP shape909_bin_1_2;
+shape909_bin_0_1:
+    R5=0xb53b4c91;
+    R11=0x33679cfd;
+    R12=0x3d7ffb60;
+    R13=0x00000000;
+    JUMP shape909_evaluate;
+shape909_bin_1_2:
+    R5=0xb5b1dcf4;
+    R11=0xb5fcbfa1;
+    R12=0x3d7ff94b;
+    R13=0x3d7ffab3;
+    JUMP shape909_evaluate;
+shape909_bin_2_4:
+    R11=3;
+    COMP(R7,R11);
+    IF LT JUMP shape909_bin_2_3;
+    JUMP shape909_bin_3_4;
+shape909_bin_2_3:
+    R5=0xb652c856;
+    R11=0xb6b90de4;
+    R12=0x3d7ff12d;
+    R13=0x3dfff851;
+    JUMP shape909_evaluate;
+shape909_bin_3_4:
+    R5=0xb7021342;
+    R11=0xb76cab22;
+    R12=0x3d7fdbbb;
+    R13=0x3e3ff62f;
+    JUMP shape909_evaluate;
+shape909_bin_4_8:
+    R11=6;
+    COMP(R7,R11);
+    IF LT JUMP shape909_bin_4_6;
+    JUMP shape909_bin_6_8;
+shape909_bin_4_6:
+    R11=5;
+    COMP(R7,R11);
+    IF LT JUMP shape909_bin_4_5;
+    JUMP shape909_bin_5_6;
+shape909_bin_4_5:
+    R5=0xb7a09ffa;
+    R11=0xb8144aee;
+    R12=0x3d7fa5c2;
+    R13=0x3e7fe762;
+    JUMP shape909_evaluate;
+shape909_bin_5_6:
+    R5=0xb84354b4;
+    R11=0xb8b8da3e;
+    R12=0x3d7f1f60;
+    R13=0x3e9fe145;
+    JUMP shape909_evaluate;
+shape909_bin_6_8:
+    R11=7;
+    COMP(R7,R11);
+    IF LT JUMP shape909_bin_6_7;
+    JUMP shape909_bin_7_8;
+shape909_bin_6_7:
+    R5=0xb8e42c93;
+    R11=0xb964e897;
+    R12=0x3d7dd407;
+    R13=0x3ebfb388;
+    JUMP shape909_evaluate;
+shape909_bin_7_8:
+    R5=0xb9721c2d;
+    R11=0xba0b3730;
+    R12=0x3d7ab3f3;
+    R13=0x3edf4329;
+    JUMP shape909_evaluate;
+shape909_bin_8_16:
+    R11=12;
+    COMP(R7,R11);
+    IF LT JUMP shape909_bin_8_12;
+    JUMP shape909_bin_12_16;
+shape909_bin_8_12:
+    R11=10;
+    COMP(R7,R11);
+    IF LT JUMP shape909_bin_8_10;
+    JUMP shape909_bin_10_12;
+shape909_bin_8_10:
+    R11=9;
+    COMP(R7,R11);
+    IF LT JUMP shape909_bin_8_9;
+    JUMP shape909_bin_9_10;
+shape909_bin_8_9:
+    R5=0xb9cf058d;
+    R11=0xbaa09393;
+    R12=0x3d7383e4;
+    R13=0x3efe35c9;
+    JUMP shape909_evaluate;
+shape909_bin_9_10:
+    R5=0xb9e2f6bc;
+    R11=0xbb214a57;
+    R12=0x3d64a08a;
+    R13=0x3f0de8f8;
+    JUMP shape909_evaluate;
+shape909_bin_10_12:
+    R11=11;
+    COMP(R7,R11);
+    IF LT JUMP shape909_bin_10_11;
+    JUMP shape909_bin_11_12;
+shape909_bin_10_11:
+    R5=0xb936af18;
+    R11=0xbb79d800;
+    R12=0x3d4b2577;
+    R13=0x3f1b7558;
+    JUMP shape909_evaluate;
+shape909_bin_11_12:
+    R5=0x391fe1f2;
+    R11=0xbb8d34bf;
+    R12=0x3d29c669;
+    R13=0x3f27226c;
+    JUMP shape909_evaluate;
+shape909_bin_12_16:
+    R11=14;
+    COMP(R7,R11);
+    IF LT JUMP shape909_bin_12_14;
+    JUMP shape909_bin_14_16;
+shape909_bin_12_14:
+    R11=13;
+    COMP(R7,R11);
+    IF LT JUMP shape909_bin_12_13;
+    JUMP shape909_bin_13_14;
+shape909_bin_12_13:
+    R5=0x399273fd;
+    R11=0xbb799a92;
+    R12=0x3d0858e0;
+    R13=0x3f30ae67;
+    JUMP shape909_evaluate;
+shape909_bin_13_14:
+    R5=0x3985cfe5;
+    R11=0xbb41956d;
+    R12=0x3cd9288b;
+    R13=0x3f384ca9;
+    JUMP shape909_evaluate;
+shape909_bin_14_16:
+    R11=15;
+    COMP(R7,R11);
+    IF LT JUMP shape909_bin_14_15;
+    JUMP shape909_bin_15_16;
+shape909_bin_14_15:
+    R5=0x39493681;
+    R11=0xbb0f56dd;
+    R12=0x3caf08ee;
+    R13=0x3f3e6512;
+    JUMP shape909_evaluate;
+shape909_bin_15_16:
+    R5=0x390e89b4;
+    R11=0xbad39ebf;
+    R12=0x3c8fea7e;
+    R13=0x3f435a96;
+    JUMP shape909_evaluate;
+shape909_evaluate:
+    F5=F5*F4;
+    F5=F5+F11;
+    F5=F5*F4;
+    F5=F5+F12;
+    F5=F5*F4;
+    F4=F5+F13;
+    R6=PASS R6;
+    IF GE JUMP shape909_signed;
+    R5=0x80000000;
+    R4=R4 XOR R5;
+shape909_signed:
     F5=F1*F2;
     F1=F1+F5;
     F4=F4*F1;

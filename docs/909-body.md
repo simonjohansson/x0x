@@ -1,15 +1,15 @@
-# 909 triangle body and live Decay
+# 909 body, diode shaping and live Decay
 
-The subsequent [808 finite-excitation increment](808-excitation.md) updates the
-shared payload to 1170 code bytes/512 private data bytes; the 909 algorithm is
-unchanged and its actual CPU comparisons still pass. Current native requalification of
-the shared build is recorded with that increment: DN/DN2 scenarios pass and DT
-retains only #78. The historical DN baseline remains an open investigation in #20. Earlier results below retain
-their original firmware/source identities.
+The current [diode-shaper increment](909-shaping.md) rounds the oscillator on
+both CPUs before the existing Decay/VCA multiplier. Its first [five-setting
+training baseline](909-reference-baseline.md) prioritizes stock Tune/pitch and
+loaded ENV1/Q12 work. Fixed 50 Hz and the unloaded Decay curve remain provisional.
+Current native evidence and caveats are recorded with that increment; older
+measurements below preserve their original source/firmware identities.
 
-This [#25](https://github.com/simonjohansson/x0x/issues/25) increment adds an
+The historical first [#25](https://github.com/simonjohansson/x0x/issues/25) increment adds an
 unshaped triangle foundation to the existing combined mod. It is not yet a
-complete or calibrated 909. The stock pitch path, diode shaping, complete VCA/envelopes,
+complete or calibrated 909. The stock pitch path and complete VCA/envelopes,
 Attack pulse/noise and circuit retrigger behavior remain open in #25/#79.
 The existing controls/IDs and START-latched MODEL selection stay unchanged.
 
@@ -27,7 +27,7 @@ C8 discharge path described below; it is not the complete Roland ENV1/VCA. Unlik
 multiplies a separate oscillator. Native AMP/velocity, filtering, effects and
 track volume remain downstream.
 
-At 48 kHz, the independent analytical reference is
+At 48 kHz, the historical unshaped foundation used
 
 `y[n] = 0.25 * exp(-sum(1/(48000*tau(d[k])), k=0..n)) * (2/pi) * asin(sin(2*pi*50*(n+1)/48000))`.
 
@@ -71,8 +71,8 @@ Tone history and existing live Tone/Decay behavior.
 
 909 DECAY shapes amplitude on every callback. TNTUN and ATTK remain delivered but unused.
 The stock Tune controls pitch-envelope time, not chromatic transpose; deriving
-that path is a later increment. The raw triangle also lacks the diode stage's
-harmonic rounding and an antialiasing qualification.
+that path is a later increment. The subsequent diode stage now rounds the raw triangle; stock operating-point
+and antialiasing qualification remain open.
 
 ## Independent and integration checks
 

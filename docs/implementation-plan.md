@@ -391,3 +391,17 @@ investigation; do not repeat this completed leakage port, widen tolerances or
 claim full fidelity/combined acceptance. Independent workers delivered the
 SHARC port, model/tests and MIDI trace while the coordinator implemented
 ColdFire and integrated the results. HTML and held-out recordings are untouched.
+
+## 909 diode shaper and first comparison — 27 October 2026
+
+The [source-derived diode stage](909-shaping.md) now runs on both CPUs before
+the existing VCA, retaining state, approved controls and the fixed audition
+scale. 145 host tests/C UI suites plus three new comparison tests pass. Both CPU suites
+pass unchanged 1e-5 FS: peer difference ≤4.229e-7 FS; tested 808 outputs are byte-identical.
+DT retains only #78; DN's new native run passes without resolving historical #20.
+DN2's full new diode run passes on the INTC-fix candidate; vendor-pin adoption and
+upstream delivery remain separate #80 work. The [first 909 training baseline](909-reference-baseline.md)
+retains raw timing/gain/repeats, no held-out/HTML, and explicitly unused Tune/Attack.
+It prioritizes stock Tune/pitch, then loaded ENV1/Q12 VCA and separate Attack work.
+Workers are implementing Tune and modeling VCA independently while emulator
+publication/qualification proceeds; shared DSP integration remains serial.

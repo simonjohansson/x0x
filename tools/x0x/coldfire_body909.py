@@ -1,4 +1,4 @@
-"""Execute the provisional unshaped 909 body as ColdFire ASM in digiemu."""
+"""Execute the diode-shaped 909 body as ColdFire ASM in digiemu."""
 import hashlib
 import json
 from pathlib import Path
@@ -80,7 +80,7 @@ def run(folder=None):
         edge = Runner(image)
         edge.uc.mem_write(edge.STATES,struct.pack(">II",(phase-body909.PHASE_STEP) & 0xffffffff,0x20000000))
         first = edge.render()[0] / 2**31
-        assert abs(first-sign * body909.GAIN * body909.RETENTION) <= 1e-9, first
+        assert abs(first-sign * body909.diode_shape(1) * body909.GAIN * body909.RETENTION) <= 1e-9, first
     interleaved = Runner(image)
     for block in range(80):
         interleaved.render(7, int(block % 5 == 0))
@@ -114,10 +114,10 @@ def run(folder=None):
         maximum_instructions_per_block_with_wrapper=worst,
         tail_after_seconds=4,tail_amplitude_q31=amplitude,tail_peak_fs=tail_peak,
         samples=str(samples_path),wav=str(folder / "body909.wav"),
-        checked=["zero-state silence","streamed analytic triangle and unloaded RC Decay corners/fractions", "live Decay without START","phase wrap and exact fold extrema",
+        checked=["zero-state silence","diode KCL shaper after analytic triangle and unloaded RC Decay corners/fractions", "live Decay without START","phase wrap and exact fold extrema",
                  "output/state/stack guards","callee registers and complete EMAC context",
                  "independent interleaved voice","provisional START restart","exact silence after the rounding fixed point"],
-        unqualified=["909 diode shaping and circuit envelopes","stock VCA/taper and Tune/Attack controls",
+        unqualified=["909 physical diode parameters and circuit envelopes","stock VCA/taper and Tune/Attack controls",
                      "stock 909 fidelity","native OS integration","hardware timing"])
     (folder / "report.json").write_text(json.dumps(report,indent=2) + "\n")
     return report

@@ -1,4 +1,4 @@
-/* First unshaped 909 triangle at 48 kHz: provisional 50 Hz, live unloaded C8 Decay, gain .25.
+/* Diode-shaped 909 triangle at 48 kHz: provisional 50 Hz, live unloaded C8 Decay, gain .25.
  * void x0x_909_body(int32_t state[2], int32_t output[32], uint32_t start, uint32_t decay_raw).
  * State is {unsigned phase, Q1.31 amplitude}; caller owns aligned disjoint extents.
  * shortcut: START resets to a rising zero crossing; replace the fixed pitch,
@@ -84,6 +84,38 @@ x0x_909_body:
 .L909peak:
     move.l #0x7fffffff, %d3 /* positive unity is outside Q1.31 */
 .L909multiply:
+    /* R52/D10/D11 passive-loaded KCL curve, before the envelope. */
+    move.l %d3, %d1
+    bpl.s .L909magnitude
+    neg.l %d1
+    bpl.s .L909magnitude
+    move.l #0x7fffffff, %d1
+.L909magnitude:
+    move.l %d1, %d7
+    moveq #27, %d0
+    lsr.l %d0, %d1
+    lsl.l #4, %d1
+    lea .L909shape_table(%pc), %a2
+    adda.l %d1, %a2
+    lsl.l #4, %d7
+    andi.l #0x7fffffff, %d7
+    moveq #0, %d0
+    move.l %d0, %acc0
+    move.l 12(%a2), %d0
+    mac.l %d0, %d7, %acc0
+    movclr.l %acc0, %d0
+    add.l 8(%a2), %d0
+    mac.l %d0, %d7, %acc0
+    movclr.l %acc0, %d0
+    add.l 4(%a2), %d0
+    mac.l %d0, %d7, %acc0
+    movclr.l %acc0, %d0
+    add.l (%a2), %d0
+    tst.l %d3
+    bpl.s .L909shaped
+    neg.l %d0
+.L909shaped:
+    move.l %d0, %d3
     moveq #0, %d0
     move.l %d0, %acc0
     move.l %d5, %d7
@@ -98,7 +130,7 @@ x0x_909_body:
     movclr.l %acc0, %d0
     move.l %d0, (%a1)+
     subq.l #1, %d6
-    bne.s .L909sample
+    bne .L909sample
     move.l %d4, (%a0)
     move.l %d5, 4(%a0)
     moveq #0, %d0
@@ -122,4 +154,22 @@ x0x_909_body:
     movem.l (%sp), %d2-%d7/%a2-%a6
     lea 76(%sp), %sp
     rts
+    .balign 4
+.L909shape_table:
+    .long 0,134208257,116,-1498
+    .long 134206875,134203994,-4044,-2846
+    .long 268403979,134187368,-11843,-6745
+    .long 402572759,134143446,-30294,-16650
+    .long 536669262,134032910,-75926,-41120
+    .long 670585126,133757699,-189289,-100009
+    .long 804053527,133079093,-468805,-233650
+    .long 936430164,131440532,-1140454,-495841
+    .long 1066234401,127672100,-2630885,-847961
+    .long 1190427655,119866448,-5285163,-929644
+    .long 1304079296,106507190,-8186880,-374137
+    .long 1402025470,89011020,-9254079,327440
+    .long 1482109850,71485181,-8179017,599872
+    .long 1546015886,56926762,-6343350,548094
+    .long 1597147392,45884345,-4696942,412084
+    .long 1638746878,37726712,-3467184,291918
     .size x0x_909_body, .-x0x_909_body

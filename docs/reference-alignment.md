@@ -90,15 +90,17 @@ model and plumbing; they do not close the missing circuit rows above.
 
 ## 909 source-to-code inventory
 
-The first 909 slice adds an unshaped triangle on both CPUs. Its fixed 50 Hz,
+The first 909 slice added an unshaped triangle; the subsequent
+[diode shaper](909-shaping.md) is now implemented on both CPUs. Its fixed 50 Hz,
 gain and zero-crossing START remain explicitly provisional. Live Decay now uses
 the unloaded C8/VR5/R58 discharge path with a provisional resistance-linear taper;
 the sources establish the VCO topology, not those complete-circuit parameters.
-The stock pitch/shaper and complete envelope/VCA networks remain missing.
+The stock pitch and complete envelope/VCA networks remain missing; the diode
+stage retains explicit provisional operating assumptions.
 
 | Block | Source target | Current implementation | Alignment status |
 | --- | --- | --- | --- |
-| VCO/shaper | S02 p.4/p.11; S05 p.3/p.12: triangle oscillator IC13, D10/D11 and R52 rounding | Independent triangle model and separate CPU phase/fold implementations | Triangle foundation implemented; circuit VCO/control calibration and diode rounding missing |
+| VCO/shaper | S02 p.4/p.11; S05 p.3/p.12: triangle oscillator IC13, D10/D11 and R52 rounding | Independent triangle/KCL diode model; separate CPU phase/fold and cubic diode implementations | Triangle and diode rounding implemented; VCO/control calibration, diode operating points and Q12 loading remain open |
 | Tune/pitch path | S02 ENV3/VR2/C9; S05 p.3 distinguishes stock Tune from added Pitch/Tune Depth | Fixed 50 Hz; TNTUN delivered but ignored in this slice | Stock pitch-envelope/time mapping missing; do not reinterpret stock Tune as chromatic transpose |
 | Tonal Decay/VCA | S02 p.11 / S05 p.12 ENV1→Q12: C8=0.33 µF, VR5=1 MΩ(A), R58=47 kΩ | Live unloaded RC time constant; independent continuous exponential and both ASM backends | Partial: resistance-linear taper provisional; D8/R36/R22, R54/Q12 loading, charging/accent and complete VCA missing. See [909 model](909-body.md) |
 | Attack pulse/noise | S02 p.4/p.11, ENV2→Q6; S05 p.12, VR3 and C12 | ATTK routed | Pulse, filtered continuous noise and VCA absent; Attack is branch level, not ADSR rise time |
