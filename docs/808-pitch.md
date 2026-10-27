@@ -1,5 +1,9 @@
 # 808 settled-body pitch
 
+The coefficients and measurements below record the historical pitch increment
+`a75bcb5`/`60d13bc`. The subsequent [Decay increment](808-decay.md) changes
+the radius mapping while retaining the 47.65 Hz rotation.
+
 This #9/#2 increment changes the provisional body from 55 Hz to **47.65 Hz**
 on ColdFire (DT/DN) and SHARC (DN2). It uses the rounded settled-body frequency
 in the [initial five-setting training diagnostic](808-reference-baseline.md).

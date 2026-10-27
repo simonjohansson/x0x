@@ -178,17 +178,27 @@ continue_body:
     I4=R15;
     R1=DM(I4,M5);
 render_body:
-    // shortcut: provisional linear feedback-radius Decay curve until circuit modeling.
+    // shortcut: three training anchors, not the stock feedback network/pot curve.
     // Use c-1 to avoid float32 radius bias when c is close to one.
     // 47.65 Hz settled body; initial pitch evolution remains unmodeled.
-    R2=0x39041a51;
+    R2=0x3f010204; // 64/127, the approved default in the existing raw/32512 normalization.
+    COMP(F11,F2);
+    IF GE JUMP decay_high;
+    R2=0x3a798f0c;
+    R3=0xba290c80;
+    R4=0x36c73f05;
+    R5=0x3bcc41cb;
+    JUMP decay_coefficients;
+decay_high:
+    R2=0x393b9c4a;
+    R3=0xb985d886;
+    R4=0x3595c97c;
+    R5=0x3bcc562d;
+decay_coefficients:
     F2=F2*F11;
-    R3=0xb92e5840;
     F2=F2+F3;
-    R3=0x3552f0ab;
-    F3=F3*F11;
-    R4=0x3bcc5ad6;
-    F3=F3+F4;
+    F3=F4*F11;
+    F3=F3+F5;
     // shortcut: resistance-linear bright-up Tone mapping until the C-taper is calibrated.
     // Physical RC TPT coefficient: (2-t)/(102.224-99.112*t), t=raw/32512.
     F6=FLOAT R6;

@@ -22,16 +22,17 @@ class Decay808Tests(unittest.TestCase):
     def test_feedback_positions_give_monotonic_decay_without_changing_pitch(self):
         from x0x.body808 import decay_tau
         lengths = []
-        for raw in (0, 16384, 32512):
+        for raw, target in ((0, .0333), (16384, .143), (32512, .366)):
             measured = analyze(reference(SAMPLE_RATE // 2, raw), SAMPLE_RATE)
             tau = measured['decay_positive']['time_constant_s']
             self.assertAlmostEqual(tau, decay_tau(raw), delta=1e-5)
+            self.assertAlmostEqual(tau, target, delta=1e-5)
             self.assertAlmostEqual(measured['frequency']['median_hz'], FREQUENCY, delta=.001)
             lengths.append(tau)
         self.assertLess(lengths[0], lengths[1])
         self.assertLess(lengths[1], lengths[2])
         self.assertAlmostEqual(lengths[1], TAU, places=8)
-        self.assertAlmostEqual(lengths[2], 1, places=8)
+        self.assertAlmostEqual(lengths[2], .366, places=8)
 
     def test_live_decay_change_preserves_phase_and_accumulated_attenuation(self):
         from x0x.body808 import retention
@@ -49,6 +50,8 @@ class Decay808Tests(unittest.TestCase):
     def test_fractional_decay_is_not_quantized_to_the_displayed_integer(self):
         from x0x.body808 import retention
         self.assertLess(retention(16384), retention(16385))
+        positions = [retention(raw) for raw in range(32513)]
+        self.assertTrue(all(a < b < 1 for a, b in zip(positions, positions[1:])))
         for raw in (-1, 32513, True, 64.5):
             with self.assertRaises(ValueError):
                 retention(raw)

@@ -4,16 +4,16 @@ The silent-first priority set on 26 October 2026 is complete: all three native
 mod milestones are accepted, with the DT reset bug deferred to #78. In #9, the
 [first audible 808 body](808-body.md) now runs in all three emulators. It is a
 provisional damped sine, now with [settled pitch calibrated to 47.65 Hz](808-pitch.md).
-Live Decay changes its feedback retention and is
-verified through native controls/audio on all three machines. The subsequent
+Live Decay uses a [reference-informed three-point range](808-decay.md),
+with actual CPU and native-control checks. This remains a provisional mapping. The subsequent
 [source-derived Tone RC filter](808-tone.md) also passes both CPU and all three
 native integration checks, with provisional knob mapping. The
 [C47/VR4 coupling RC](808-coupling.md) is also integrated and tested on all three
 devices, fixed internally at full level; native track level still controls
 volume. A [nominal 1 ms rectangular excitation](808-excitation.md) now replaces
 the instantaneous oscillator reset; edge shaping and physical forcing remain
-provisional. Current component and all three native functional checks pass; only the known DT
-reset checks fail in that full run.
+provisional. Current component and native functional checks pass. Full acceptance still
+retains known DT resets in #78 and the DN silence-baseline gate in #20.
 
 #25 now adds the first unshaped [909 triangle body](909-body.md) to those same
 mods. Its fixed pitch and START phase remain provisional audition values;
@@ -27,9 +27,9 @@ T2's stored MODEL, and the selector correctly follows the delivered 808 value.
 Tracing native CC handling versus STOP cleanup is still needed. The successful
 saved-909 T1 capture does not close this failed path. A one-PCM16-count DN
 baseline between captures is separately retained as a failed acceptance check
-in #20. The latest finite-excitation build passes DN's complete scenario and
-all three exact-zero baselines, but changing the waveform does not identify the
-old residue's cause or establish a general fix. Keep the historical failure open.
+in #20. Historically, the finite-excitation build passed DN's complete scenario and
+all three exact-zero baselines. The later pitch build reproduced the one-count
+residue; changing waveforms does not establish a general fix. Keep #20 open.
 DT retains only #78 and DN2's tested scenario passes. These gates do not block
 independent engine work.
 
@@ -65,7 +65,7 @@ every control, model stage, CPU implementation and matrix cell.
 The three silent device issues are closed. The 808 engine in #9 is underway:
 the basic body is integrated and audible on all three devices' emulators. The DT reset
 correction in #78 remains deferred. The [initial five-setting 808 comparison](808-reference-baseline.md)
-in #2 is complete; no fitting or fidelity qualification has been performed. Use
+in #2 is complete; pitch/Decay calibration now uses the training recordings; full fidelity remains unqualified. Use
 subagents for non-overlapping work when authorized; one blocked device does
 not stop useful work on another device.
 
@@ -123,9 +123,10 @@ standard non-strict configuration, labelled accurately.
 
 The first #9 increment supplies an analytically checked fixed 808 body on both
 CPUs and native audio captures from every device. Live Decay and the passive
-Tone and C47 coupling RC stages are implemented. The finite rectangular drive is now implemented. Next derive
-shaped excitation/forcing, pitch/feedback, stock Decay mapping and the complete loaded output
-network as small commits.
+Tone and C47 coupling RC stages and the finite rectangular drive are implemented.
+Settled pitch and short/default/long Decay now have training-reference calibration.
+Next derive the missing shaped excitation/initial pitch and stock feedback/pot
+response, then complete loaded output and retrigger behavior as small commits.
 Each ready increment runs through the already-installed mod. #25 is underway
 with the unshaped triangle and live unloaded RC Decay; diode shaping, body/tune,
 complete VCA/envelope and pulse/noise
@@ -139,8 +140,10 @@ hangs, while measured workload/performance qualification comes later.
 [#79](https://github.com/simonjohansson/x0x/issues/79) makes the source-to-code
 alignment explicit: inspect published reference implementations and primary
 schematics, choose each stock circuit baseline, audit provisional/missing stages,
-and correct the engines incrementally in #9/#25. It can proceed without VST
-captures. Compare the aligned implementations to the reference VST later in #2. The
+and correct the engines incrementally in #9/#25. Reference recordings are now
+available: use the training settings to prioritize and calibrate each increment
+while retaining circuit-model gaps. #2 owns broader and held-out fidelity
+validation; source alignment is not a reason to postpone all measurements. The
 [first source/code audit](reference-alignment.md) pins the available reference
 code, selects schematic baselines and records the missing/provisional blocks.
 The first source-derived slice implements the 808 Tone RC network on both CPUs,
@@ -224,6 +227,20 @@ one-count silence gate in #20. DN2 passes its tested native scenario with no
 halt/missing blocks. The original HTML report remains unchanged.
 
 Keep #9/#79 open for initial pitch/forcing, stock Decay feedback/control curves,
-loaded Tone/output stages and faithful retrigger. Decay is the next independent
-model correction; full-grid/held-out fidelity and #80 remain open. Component
+loaded Tone/output stages and faithful retrigger. The subsequent Decay increment
+corrects the coarse range; the full curve is still unqualified; full-grid/held-out fidelity and #80 remain open. Component
 precision does not qualify reference or native acceptance gates.
+
+## Reference-informed 808 Decay — 27 October 2026
+
+The next existing #9/#2 increment replaces the excessive Decay range with
+[three reference-informed anchors](808-decay.md) on both CPUs: raw body
+33.3/143/366 ms, giving composed output fits near 29/143/367 ms at fixed Tone.
+The three training anchors and five-setting comparisons are separate from
+held-out validation. The two-segment radius curve remains approximate at
+interior positions and does not implement the stock feedback shelf/pot.
+
+Continue the existing model work, not new features or ticket trees: initial
+excitation/pitch, stock feedback/control mapping, loaded output and retrigger.
+The HTML stays unchanged at the user's request. Keep emulator/component, native
+control/audio and reference-fidelity evidence separate, with #78/#20/#80 open.

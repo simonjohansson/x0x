@@ -8,7 +8,7 @@ import math
 SAMPLE_RATE = 48000
 # Rounded settled-body pitch from #2's five-setting training diagnostic, not circuit alignment.
 FREQUENCY = 47.65
-TAU = 0.25
+TAU = 0.143
 GAIN = 0.25
 PULSE_SAMPLES = 48  # Nominal 1 ms trigger in S01/S03, at 48 kHz.
 PULSE_GAIN = GAIN / PULSE_SAMPLES
@@ -16,17 +16,18 @@ PULSE_GAIN = GAIN / PULSE_SAMPLES
 
 RAW_MAX = 32512
 DEFAULT_DECAY = 16384
-RETENTION_MAX = math.exp(-1 / SAMPLE_RATE)  # One-second maximum amplitude time constant.
+RETENTION_MIN = math.exp(-1 / (SAMPLE_RATE * .0333))
+RETENTION_MAX = math.exp(-1 / (SAMPLE_RATE * .366))
 RETENTION_DEFAULT = math.exp(-1 / (SAMPLE_RATE * TAU))
-RETENTION_MIN = ((RETENTION_DEFAULT - (DEFAULT_DECAY / RAW_MAX) * RETENTION_MAX)
-                 / (1 - DEFAULT_DECAY / RAW_MAX))
 
 
 def retention(decay_raw):
-    """Provisional linear feedback retention, not a stock VR6 circuit/pot curve."""
+    """Three training anchors; piecewise retention, not the stock VR6 circuit."""
     if type(decay_raw) is not int or not 0 <= decay_raw <= RAW_MAX:
         raise ValueError("Decay must be an exact native word in 0..32512")
-    return RETENTION_MIN + (RETENTION_MAX - RETENTION_MIN) * decay_raw / RAW_MAX
+    if decay_raw < DEFAULT_DECAY:
+        return RETENTION_MIN + (RETENTION_DEFAULT - RETENTION_MIN) * decay_raw / DEFAULT_DECAY
+    return RETENTION_DEFAULT + (RETENTION_MAX - RETENTION_DEFAULT) * (decay_raw - DEFAULT_DECAY) / (RAW_MAX - DEFAULT_DECAY)
 
 
 def decay_tau(decay_raw):

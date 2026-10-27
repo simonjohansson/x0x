@@ -76,7 +76,7 @@ its SHARC payload directly through the SDK bridge.
 | --- | --- | --- | --- |
 | Trigger/excitation | S01 p.4/p.9; S03 §§3–4, approximately 1 ms accent-dependent pulse and R162/R163/C40/D53 shaping | START clears x/y and drives the provisional mode for 48 samples, with independent convolution and both ASM implementations | Nominal 1 ms rectangle implemented; shaping/diode, physical forcing/gain and accent remain missing |
 | Resonator | S03 §5 Eq.5 and §7 Eq.7; S01 p.9 bridged-T around IC12/C41/C42/R165–R167 | `x0x_808_body` / SHARC `body_sample`: two-state damped rotation at 47.65 Hz with a finite rectangular drive | Settled pitch calibrated to the initial training references; provisional isolated mode/forcing, circuit numerator, physical input transfer and full topology absent |
-| Decay | S03 §6 Eq.6 and Fig.7; VR6 changes a frequency-dependent R164/R169/C43 feedback shelf returned through R170 | `retention()` and each ASM coefficient setup linearly interpolate radius versus delivered B | Audible and numerically checked, but not the stock shelf/pot response |
+| Decay | S03 §6 Eq.6 and Fig.7; VR6 changes a frequency-dependent R164/R169/C43 feedback shelf returned through R170 | `retention()` and each ASM coefficient setup interpolate radius through three training-calibrated anchors versus delivered B | Short/default/long calibration against the recordings; not the stock shelf/pot response or a qualified full curve |
 | Initial pitch shift | S01 p.5 and S03 §8.1: Q41–Q43 switched resistance during attack | Rotation frequency stays fixed | Missing; retain the service-note/paper timing difference instead of silently choosing one |
 | Internal retrigger/pitch sigh | S03 §§8.1–8.2: C39/R161/D52 event and Q43 leakage behavior | No transient or nonlinear feedback state | Missing |
 | Tone | S01 p.9; S03 §9 Table1 and Eq.11 passive low-pass | TPT RC filter on both CPUs, checked against independent capacitor voltage/current integration; TNTUN changes it live | Nominal RC response implemented; bright-up resistance-linear knob mapping is provisional, C taper/direction calibration remains |
@@ -156,7 +156,7 @@ numerator/resistor naming describes the unloaded node exactly.
    the synthetic class is not a stock-909 reference.
 5. The [initial five-setting 808 diagnostic](808-reference-baseline.md) in #2
    now compares the current prototype, before source alignment is complete.
-   It prioritizes the source-derived resonator/pitch path, then stock Decay
+   It prioritizes the source-derived resonator/pitch path, then Decay calibration and stock
    feedback/control mapping, then excitation and loaded Tone/output stages.
    The initial reference/prototype pitch was 47.64/55 Hz, with descriptive decay
    fits of 143/250 ms. The subsequent [settled-pitch increment](808-pitch.md)
@@ -170,3 +170,9 @@ numerator/resistor naming describes the unloaded node exactly.
 physical/VST evidence stay separate. Tone component/native evidence is recorded
 in [808-tone.md](808-tone.md); the initial source audit itself added no audio
 qualification.
+
+The [three-point Decay increment](808-decay.md) now uses the fixed-Tone
+training recordings for short/default/long output targets. It keeps a simple
+two-segment radius interpolation and leaves the original shelf/pot network
+unmodeled. Source alignment and held-out reference fidelity remain separate
+open gates; calibration is not a substitute for either.

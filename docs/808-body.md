@@ -8,7 +8,8 @@ initial five-setting software-reference measurements; see [pitch calibration](80
 This is a provisional calibration, not complete circuit alignment. The saved layout
 stays unchanged. DECAY changes feedback retention on every block, and TNTUN now
 drives the [passive Tone RC stage](808-tone.md). ATTK is ignored in 808 mode.
-The [first 909 body](909-body.md) follows separately. The raw-body equations below
+The [first 909 body](909-body.md) follows separately. The [reference-informed Decay increment](808-decay.md) shortens the
+previously excessive tails. The raw-body equations below
 describe the 808 oscillator before Tone and the [C47 coupling filter](808-coupling.md).
 
 ## Model and units
@@ -20,8 +21,8 @@ before each rotation for exactly 48 samples. Both ASM implementations compute:
 - `y_next = c*(y+u) - s*x`.
 
 The fixed internal drive sum is 0.25; there is no per-hit normalization. At the
-default DECAY=64, `c=exp(-1/12000)*cos(2*pi*47.65/48000)` and
-`s=exp(-1/12000)*sin(2*pi*47.65/48000)`. Other Decay values use the existing live
+default DECAY=64, `c=exp(-1/(48000*.143))*cos(2*pi*47.65/48000)` and
+`s=exp(-1/(48000*.143))*sin(2*pi*47.65/48000)`. Other Decay values use the existing live
 feedback retention. The independent oracle convolves analytical impulse
 responses with the finite drive, integrating log retention over timed changes.
 It does not copy the ASM recurrence. [Source boundary, equations and current
@@ -38,18 +39,20 @@ remain downstream.
 
 ## Provisional Decay mapping
 
-For the exact delivered raw word `d` in 0..32512, use
-`r(d) = r_min + (r_max-r_min)*d/32512`, where:
+For the exact delivered raw word `d` in 0..32512, linearly interpolate
+retention between three anchors, with a join at the approved default 16384:
 
-- `r_max = exp(-1/48000)`;
-- `r_default = exp(-1/12000)`;
-- `r_min = (r_default-(64/127)*r_max)/(1-64/127)`.
+- `r_min = exp(-1/(48000*.0333))`;
+- `r_default = exp(-1/(48000*.143))`;
+- `r_max = exp(-1/(48000*.366))`.
 
-The resulting amplitude time constant is `tau(d) = -1/(48000*log(r(d)))`.
-The endpoints are approximately 142 ms and 1 second; the approved default 64
-retains 250 ms. This changes feedback loss rather than adding an independent
-output envelope. The curve is deliberately provisional, not the stock VR6
-potentiometer/circuit model or a timbre-fidelity claim.
+Use `d/16384` below the default, and `(d-16384)/16128` above it. The
+resulting raw-body amplitude time constant is `-1/(48000*log(r(d)))`.
+These anchors bring the short/default/long output fits near the fixed-Tone
+training recordings; the unloaded coupling stage changes the short fit.
+This changes feedback loss, not a separate output envelope. It is a reference
+calibration, not stock VR6 feedback/pot modeling or full-curve qualification.
+See [the derivation and evidence](808-decay.md).
 
 Coefficients update once per delivered 32-sample block without clearing body
 state. Native smoothing/fractions, parameter locks and LFO delivery therefore
@@ -139,7 +142,7 @@ counts, measuring their squared-energy loss without assuming native wall time.
 Raw/direct and downstream measurements have different windows and host effects;
 compare short against long within each test, not the ratios across devices.
 
-#9's first body is integrated in all three emulators. The Decay response is
+#9's first body is integrated in all three emulators. The three-point Decay response is now reference-informed but
 provisional; stock feedback/pot mapping, shaped excitation/pitch sigh, full output loading,
 calibrated scale and circuit-state retrigger behavior remain open. Tone filtering
 is now implemented with a provisional resistance-linear control mapping; see

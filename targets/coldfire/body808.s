@@ -1,6 +1,6 @@
 /* Provisional 808 body: damped 47.65 Hz sine at 48 kHz with live decay.
  * void x0x_808_body(int32_t state[3], int32_t output[32], uint32_t start, uint32_t decay_raw).
- * decay_raw is caller-bounded to 0..32512; default 16384 gives tau = 250 ms.
+ * decay_raw is caller-bounded to 0..32512; default 16384 gives tau = 143 ms.
  * State is {x,y,pulse_remaining} in Q1.31; caller owns disjoint aligned state/output extents.
  * shortcut: START restarts the body and 1 ms rectangle; shaped excitation,
  * physical forcing/gain and residual-state retrigger follow in #9/#79.
@@ -42,19 +42,32 @@ x0x_808_body:
 .Lcontinue:
     move.l #0xb0, %d0 /* fractional, saturated, nearest-even */
     move.l %d0, %macsr
-    /* Linear provisional feedback retention, interpolated once per block. */
+    /* Three reference-training anchors; stock feedback/pot modeling remains open. */
     move.l 92(%sp), %d6
-    move.l #66052, %d0 /* floor(2^31 / 32512); product stays signed-positive */
+    cmpi.l #16384, %d6
+    bge.s .Ldecay_high
+    move.l #131072, %d0 /* low branch excludes 16384, keeping the product signed-positive */
     mulu.l %d0, %d6
-    move.l #2147126590, %d2
+    move.l #2146098800, %d2
+    move.l #13386187, %d3
+    move.l #1030242, %d0
+    movea.l #6426, %a2
+    bra.s .Ldecay_coefficients
+.Ldecay_high:
+    subi.l #16384, %d6
+    move.l #133152, %d0 /* floor(2^31 / 16128) */
+    mulu.l %d0, %d6
+    move.l #2147129041, %d2
+    move.l #13392613, %d3
+    move.l #190600, %d0
+    movea.l #1189, %a2
+.Ldecay_coefficients:
     move.l %d2, %acc0
-    move.l #270547, %d2
-    mac.l %d6, %d2, %acc0
+    mac.l %d6, %d0, %acc0
     movclr.l %acc0, %d2
-    move.l #13392598, %d3
     move.l %d3, %acc0
-    move.l #1688, %d3
-    mac.l %d6, %d3, %acc0
+    move.l %a2, %d0
+    mac.l %d6, %d0, %acc0
     movclr.l %acc0, %d3
     moveq #32, %d6
 .Lsample:
