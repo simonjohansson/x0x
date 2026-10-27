@@ -677,8 +677,9 @@ C controls and actual ASM remain independently testable. The DN delivered-contro
 gap investigated in superseded #75 is resolved for the installed mod in #40;
 the DT reset bug is deferred to #78. The [development guide](development.md)
 records current evidence boundaries.
-The kick models remain future work. The
-issue backlog uses engine labels **808** and **909**,
+The first uncalibrated [808 body](808-body.md) is audible on all three emulators;
+the complete kick circuits remain future work. The issue backlog uses engine
+labels **808** and **909**,
 device/CPU labels and explicit blocking relationships. Shared work may carry
 both engine labels. UI, DSP, reference, test and integration work remain
 identifiable independently. Digitakt II has no active cell or delivery dependency.

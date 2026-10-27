@@ -2,15 +2,17 @@
 
 The [silent three-device milestone](implementation-plan.md) is accepted in
 closed issues #39, #40 and #7. Digitakt reset shortcuts remain a known bug
-deferred to #78; the next planned engine work is #9. The detailed checks below
-record evidence already collected, not a new prerequisite queue. Historical
-#75 and matrix links are superseded provenance.
+deferred to #78. The first audible increment of #9 now runs in all three
+emulators; its [body model and current evidence](808-body.md) record the exact
+scope. The detailed checks below preserve earlier evidence, not a prerequisite
+queue. Historical #75 and matrix links are superseded provenance.
 
 
 The scaffold has independent host, C adapter and assembled CPU tests.
 The synthetic probe is test equipment, not an 808/909 implementation or a VST
-reference. The silent mod callbacks use assembly. Native pages, packaging and
-full-OS coverage are recorded per device below; neither kick model is implemented.
+reference. The current 808 body uses actual ASM and an independent analytical
+oracle; the full 808 circuit and 909 remain unimplemented. Native pages, packaging
+and full-OS coverage are recorded per device below.
 
 The product is one combined x0x mod per device, containing both engines behind
 a saved MODEL selector. Different tracks can run 808 and 909 concurrently.
@@ -150,6 +152,26 @@ digiemu's native JIT needs executable-memory permission. In the Codex sandbox
 used during setup, the ColdFire process terminated with SIGILL; the same bounded
 command passed when run with the executor's required native-code permission.
 Digikit's instruction interpreter and the host/C tests ran inside the sandbox.
+
+## Current first-body checks
+
+```sh
+mise run test:808:body  # actual ColdFire and SHARC bodies, oracle and cross-CPU comparison
+mise run test:dt        # actual DT audio; retains the known #78 reset failures
+mise run test:dn        # actual DN audio and native controls/locks/LFO/persistence
+mise run test:dn2       # coupled DN2 audio and native controls/locks/LFO/persistence
+```
+
+The current native runners build the production 808 body and capture downstream
+PCM. 808 output must be finite and nonzero; the 909 branch remains zero and
+unrelated stock output is preserved. Tone/Decay controls are delivered but do
+not yet shape the fixed body. Existing `:silent` task/module names are retained
+as compatibility aliases; they now exercise the first-body mod. Direct body
+reports/samples live in `out/coldfire/body808` and `out/sharc/body808`; native
+captures remain under `out/{dt,dn,dn2}/silent`. See [808-body.md](808-body.md).
+
+The silent milestone counts below describe the completed pre-audio versions.
+Current commands regenerate reports for the first-body implementation instead.
 
 ## Silent Digitakt mod
 

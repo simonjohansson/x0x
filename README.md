@@ -14,11 +14,13 @@ of that combined mod.
 The [development guide](docs/development.md) covers mise setup, pinned emulator
 dependencies, independent test commands and the latest-only firmware baseline.
 
-Start with the [kick-drum research](docs/kick-drum-research.md) and
-[implementation plan](docs/implementation-plan.md). The first milestone is one selectable, silent x0x mod in each emulator,
-with the MODEL selector, controls, p-locks and LFO targets working. Then add the
-808 and 909 in small integrated commits. All three silent milestones are accepted;
-the Digitakt reset bug is deferred to #78. Digitakt II is outside the active scope.
+Start with the [architecture](docs/architecture.md),
+[kick-drum research](docs/kick-drum-research.md) and
+[implementation plan](docs/implementation-plan.md). All three silent milestones
+are accepted. The [first 808 body](docs/808-body.md) now makes sound in every
+emulator: a fixed, uncalibrated 55 Hz decaying sine. Tone/Decay response and the
+remaining circuit stages follow in #9; 909 mode remains silent until #25.
+The Digitakt reset bug is deferred to #78. Digitakt II is outside the active scope.
 
 Downloaded source material is kept locally in `research/`. Its two tracked
 manifests record how to reconstruct the archive; downloaded files remain

@@ -48,7 +48,7 @@ run = [
 ]
 
 [tasks."test:ui:dt"]
-description = "Test Digitakt adapter and approved silent-machine declarations without firmware"
+description = "Test Digitakt adapter and approved machine declarations without firmware"
 run = ["python -m x0x.digitakt_adapter --host", "python -m x0x.digitakt_silent --host"]
 
 [tasks."test:ui:dn"]
@@ -108,11 +108,11 @@ description = "Boot Digitakt and trace native panel PLAY through C and ASM obser
 run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.digitakt_transport'
 
 [tasks."test:dt:silent"]
-description = "Test the production DT registration with actual selector and silent ASM in digiemu"
+description = "Test the production DT registration with actual selector/body ASM in digiemu"
 run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.digitakt_silent'
 
 [tasks."test:dt:silent:full-os"]
-description = "Boot the silent DT mod and check native selection, defaults, MODEL and owned output"
+description = "Boot the DT mod and check controls, MODEL and first 808 audio"
 run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.digitakt_silent --full-os'
 
 [tasks."test:dn:component"]
@@ -144,11 +144,11 @@ description = "Test DN final-frame adapter diagnostics in a standard non-strict 
 run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.digitone_transport --full-os'
 
 [tasks."test:dn:silent"]
-description = "Boot the real silent DN mod and test native controls and MODEL delivery"
+description = "Boot the DN mod and test controls, MODEL and first 808 audio"
 run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.digitone_silent'
 
 [tasks."firmware:dn:silent"]
-description = "Build the latest-OS silent Digitone mod with the pinned SDK"
+description = "Build the latest-OS Digitone first-body mod with the pinned SDK"
 run = "python -m x0x.digitone_silent --build"
 
 [tasks."test:dn2:component"]
@@ -156,7 +156,7 @@ description = "Test Digitone II C snapshots and the pinned SHARC bridge in Digik
 run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0x.digitone2_adapter'
 
 [tasks."test:dn2:silent"]
-description = "Execute the silent DN2 SHARC payload with the approved controls in Digikit"
+description = "Execute the DN2 808 body with approved controls and guards in Digikit"
 run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0x.digitone2_silent'
 
 [tasks."test:dn2:silent:full-os"]
@@ -164,7 +164,7 @@ description = "Boot the installed DN2 mod through the public coupled emulator AP
 run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" SHARC_GEN_DIR="{{config_root}}/vendor/digikit/out/native/shared-core/gen" uv run --frozen --project vendor/digikit --python "$(mise which python)" python -m x0x.digitone2_silent --full-os'
 
 [tasks."firmware:dn2:silent"]
-description = "Build and verify the latest-OS silent DN2 mod without claiming coupled boot"
+description = "Build and verify the latest-OS DN2 first-body mod without claiming coupled boot"
 run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0x.digitone2_silent --build'
 
 [tasks."test:adapters"]
@@ -200,15 +200,15 @@ description = "Package a latest-OS Core baseline for Digitone II emulator work"
 run = "python -m x0x.firmware baseline dn2"
 
 [tasks."test:dt"]
-description = "Run native Digitakt silent-mod acceptance (reset failures remain explicit)"
+description = "Run native Digitakt first-body acceptance (reset failures remain explicit)"
 run = "mise run test:dt:silent:full-os"
 
 [tasks."test:dn"]
-description = "Run native Digitone silent-mod acceptance"
+description = "Run native Digitone first-body acceptance"
 run = "mise run test:dn:silent"
 
 [tasks."test:dn2"]
-description = "Run coupled Digitone II silent-mod acceptance"
+description = "Run coupled Digitone II first-body acceptance"
 run = "mise run test:dn2:silent:full-os"
 
 [tasks.render]

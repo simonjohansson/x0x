@@ -1,10 +1,10 @@
 # Implementation plan: one combined mod, silent first
 
-Priority reset: 26 October 2026. First get **one selectable x0x mod running in
-all three emulators**, with controls, p-locks and LFO targets connected to silent
-ASM callbacks. Sound synthesis is the next milestone. Existing component tests
-are useful groundwork. All three installed-mod milestones are accepted; DT retains
-the known reset-shortcut bug deferred to #78.
+The silent-first priority set on 26 October 2026 is complete: all three native
+mod milestones are accepted, with the DT reset bug deferred to #78. In #9, the
+[first audible 808 body](808-body.md) now runs in all three emulators. It is a
+fixed, uncalibrated damped sine; the next increments add control response and
+808 circuit detail while retaining these working integrations.
 
 The product remains one mod per device containing 808 and 909 behind a saved
 per-sound/track MODEL selector. Different tracks/voices can select different
@@ -26,14 +26,14 @@ model stage, CPU implementation and matrix cell.
 | Done, reset bug deferred | [#39](https://github.com/simonjohansson/x0x/issues/39) | Digitakt: select and exercise the silent combined mod in digiemu |
 | Done | [#40](https://github.com/simonjohansson/x0x/issues/40) | Digitone: select and exercise the silent combined mod in digiemu |
 | Done | [#7](https://github.com/simonjohansson/x0x/issues/7) | Digitone II: select and exercise the silent combined mod in Digikit |
-| Next | [#9](https://github.com/simonjohansson/x0x/issues/9) | Implement the 808 on both CPUs and integrate each increment into working mods |
+| In progress | [#9](https://github.com/simonjohansson/x0x/issues/9) | Implement the 808 on both CPUs and integrate each increment into working mods |
 | Then | [#25](https://github.com/simonjohansson/x0x/issues/25) | Implement the 909 on both CPUs alongside the 808 in those same mods |
 | Deferred by user | [#78](https://github.com/simonjohansson/x0x/issues/78) | Digitakt native reset defaults; fix upstream in Elekloader and consume here |
 | Deferred by user | [#2](https://github.com/simonjohansson/x0x/issues/2) | Reference VST captures and fidelity comparisons for both models |
 | After sound | [#20](https://github.com/simonjohansson/x0x/issues/20) | Combined-mod emulator regression and readiness review |
 
-The three silent device issues are closed. The next planned work is the 808
-engine in #9, integrated incrementally into the working mods. The DT reset
+The three silent device issues are closed. The 808 engine in #9 is underway:
+the basic body is integrated and audible on all three devices' emulators. The DT reset
 correction in #78 and reference work in #2 are deferred by the user. Use
 subagents for non-overlapping work when authorized; one blocked device does
 not stop useful work on another device.
@@ -90,8 +90,9 @@ standard non-strict configuration, labelled accurately.
 
 ## Add sound without another integration project
 
-In #9, start with an analytically checked 808 body and level/decay, then add the
-excitation, pitch/feedback and tone/output behavior as small tested commits.
+The first #9 increment supplies an analytically checked fixed 808 body on both
+CPUs and native audio captures from every device. Next add stock Decay feedback
+mapping and excitation, pitch/feedback and tone/output behavior as small commits.
 Each ready increment runs through the already-installed mod. #25 follows with
 909 body/tune, envelope and pulse/noise attack. Keep the same registration and
 saved controls throughout; both models must coexist, not become separate mods.

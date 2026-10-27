@@ -1,4 +1,4 @@
-"""Build the approved DN2 silent voice and check its actual SHARC callback."""
+"""Build the approved DN2 voice with the first 808 body and check its callback."""
 from __future__ import annotations
 
 import argparse
@@ -9,42 +9,14 @@ from pathlib import Path
 import struct
 import sys
 
-from . import cpu, firmware, sharc_callback as callback, sharc_selector as selector
+from . import cpu, firmware, sharc_body808 as body
 
 ROOT = cpu.ROOT
-SOURCE = ROOT / "targets/sharc/silence.s"
 FOLDER = ROOT / "out/dn2/silent"
 
 
 def component() -> tuple[dict, bytes]:
-    FOLDER.mkdir(parents=True, exist_ok=True)
-    code, entry, _ = callback.build(FOLDER, SOURCE)
-    from elekloader.sdk.sharc import machine_layout
-    callback.validate_layout(machine_layout("voice"), code, entry)
-    callback.decoded_instructions(code, entry)
-    inputs = selector.cases()
-    reference, provenance = selector.c_reference(FOLDER, inputs)
-    runner = selector.SelectorRunner(code, entry)
-    for row, expected in zip(inputs, reference, strict=True):
-        samples, state = runner.call_raw(row, state_writable=expected["notices"] == 1)
-        if state != expected["state"]:
-            raise AssertionError(row["label"] + ": silent selector state differs from C policy")
-        if row["input_present"] and samples != [0.0] * 32:
-            raise AssertionError(row["label"] + ": silent callback did not overwrite all output")
-    report = dict(status="passed", scope="actual assembled SHARC callback with synthetic SDK frames",
-                  project_revision=cpu.revision(ROOT),
-                  elekloader_revision=cpu.revision(ROOT / "vendor/elekloader"),
-                  emulator_revision=cpu.revision(ROOT / "vendor/digikit"),
-                  calls=runner.calls, code_bytes=len(code), state_bytes=callback.STATE_BYTES,
-                  worst_instructions=runner.worst_instructions,
-                  source_sha256=hashlib.sha256(SOURCE.read_bytes()).hexdigest(),
-                  image_sha256=hashlib.sha256(code).hexdigest(), c_reference=provenance,
-                  checked=["all 16 independent slots", "START-only MODEL latch", "mixed models",
-                           "all owned output samples zero", "state/output guards", "SDK context preservation"],
-                  unqualified=["coupled OS boot", "native UI/locks/LFO delivery", "save/reload",
-                               "native allocator ownership", "kick audio and real-device timing"])
-    (FOLDER / "component-report.json").write_text(json.dumps(report, indent=2) + "\n")
-    return report, code
+    return body.component()
 
 
 def build() -> dict:
@@ -61,7 +33,7 @@ def build() -> dict:
     manifest = json.loads((source_dir / "mod.json").read_text())
     manifest["sources"] = [str(source_dir / path) for path in manifest["sources"]]
     (stage / "mod.json").write_text(json.dumps(manifest, indent=2) + "\n")
-    artifact = voice_artifact(code, bytes(callback.STATE_BYTES), 0, 20, 0)
+    artifact = voice_artifact(code, bytes(body.STATE_BYTES), 0, 20, 0)
     (stage / "voice.sharc.json").write_text(json.dumps(artifact, indent=2) + "\n")
     artifacts = []
     for source in (ROOT / "vendor/elekloader/mods/core-dn2",
@@ -73,7 +45,7 @@ def build() -> dict:
     image = formats.main_image(stock, device)
     errors = link.check(mods, image)
     if errors:
-        raise AssertionError("silent DN2 mod does not link: " + "; ".join(errors))
+        raise AssertionError("DN2 mod does not link: " + "; ".join(errors))
     linked = link.link(mods, image, sharc_stream=stock.section(7))
     binding = next(record for record in sharc.parse(linked.sharc_stream, release.sharc)
                    if record.target == 0x20093e00)
@@ -84,7 +56,7 @@ def build() -> dict:
     for artifact_path in artifacts:
         command += ["--mod", artifact_path]
     cpu.command([*command, "--out", output, "--version", "X0X0"])
-    report = dict(status="passed", scope="SDK-verified silent DN2 firmware packaging; not an emulator boot",
+    report = dict(status="passed", scope="SDK-verified first-body DN2 firmware packaging; not an emulator boot",
                   firmware=str(output), firmware_sha256=hashlib.sha256(output.read_bytes()).hexdigest(),
                   stock=stock_report, component=component_report,
                   machine_id=20, sharc_entry_pc16=0xbc8400,
@@ -99,7 +71,7 @@ def full_os() -> dict:
     cpu.require_module("tools.control.digi_client", "digikit")
     from tools.control.digi_client import Emu
     from tools.emulator import digi_env, native_target
-    from tools.patchkit import pk_harness as H
+    from tools.patchkit import pk_harness as H, hook_ab
     import traceback
 
     package = build()
@@ -176,9 +148,18 @@ def full_os() -> dict:
             (out / "native-controls.png").write_bytes(emu.frame_png())
             report["selected_frame_hash"] = emu.frame_hash()
             report["before_note"] = emu.dsp_peek(0x20092000, 128)
+            emu.call("pcm.tap", action="capture", path=str(out / "native-808.wav"))
             emu.midi_in(bytes([0x90, 60, 100]))
-            target = emu.status()["dsp_frames"] + 100
+            target = emu.status()["dsp_frames"] + 750
             emu.run_until(frames=target, timeout_wall_s=120)
+            report["pcm_capture"] = emu.call("pcm.tap", action="capture_stop")
+            pcm = hook_ab.read_wav(out / "native-808.wav")
+            assert len(pcm) > 0 and all(math.isfinite(x) for x in pcm), "invalid native PCM"
+            pcm_peak = float(max(abs(pcm)))
+            report["body_audio"] = dict(capture=str(out / "native-808.wav"),
+                                      pcm_peak_fs=pcm_peak, sample_rate=48000,
+                                      frames=len(pcm) // 2, scope="isolated native 808 note")
+            assert 0 < pcm_peak < 1, "808 body did not reach bounded downstream PCM"
             report["after_note"] = emu.dsp_peek(0x20092000, 128)
             report["callback_frame"] = emu.dsp_peek(0x20093D00, 20)
             report["callback_params"] = emu.dsp_peek(0x20093D14, 160)
@@ -193,10 +174,18 @@ def full_os() -> dict:
                 for i in range(16)
                 if state[2 * i] > 0
             }
-            assert all(
-                bytes.fromhex(v["hex"]) == bytes(128)
-                for v in report["voice_outputs"].values()
-            ), report["voice_outputs"]
+            def check_outputs(outputs, selections, require_body=False):
+                audible = False
+                for key, value in outputs.items():
+                    samples = struct.unpack("<32f", bytes.fromhex(value["hex"]))
+                    assert all(math.isfinite(x) and abs(x) < .5 for x in samples), (key, samples)
+                    if selections[2 * int(key) + 1] == 2:
+                        assert samples == (0.0,) * 32, "909 branch must remain silent"
+                    elif any(samples):
+                        audible = True
+                if require_body:
+                    assert audible, "no nonzero actual 808 callback output"
+            check_outputs(report["voice_outputs"], state, require_body=True)
             controls = struct.unpack(
                 "<40I", bytes.fromhex(report["callback_params"]["hex"])
             )
@@ -257,8 +246,7 @@ def full_os() -> dict:
                 str(i): emu.dsp_peek(output_base + 128 * i, 128)
                 for i in range(16) if changed[2 * i] > 0
             }
-            assert all(bytes.fromhex(v["hex"]) == bytes(128)
-                       for v in report["switched_voice_outputs"].values()), report["switched_voice_outputs"]
+            check_outputs(report["switched_voice_outputs"], changed)
             (out / "native-model-909.png").write_bytes(emu.frame_png())
 
             def chord(*buttons):
@@ -322,8 +310,7 @@ def full_os() -> dict:
                 str(i): emu.dsp_peek(output_base + 128*i, 128)
                 for i in range(16) if mixed[2*i] > 0
             }
-            assert all(bytes.fromhex(v["hex"]) == bytes(128)
-                       for v in report["mixed_voice_outputs"].values()), report["mixed_voice_outputs"]
+            check_outputs(report["mixed_voice_outputs"], mixed, require_body=True)
             new_lanes = [i for i in range(16) if mixed[2*i] and not changed[2*i]]
             report["track2_voice_params"] = {
                 str(i): list(struct.unpack("<40H", bytes.fromhex(
@@ -500,7 +487,8 @@ def full_os() -> dict:
         report["traceback"] = traceback.format_exc()
     report["unqualified"] = [
         "persistence across emulator/device restart",
-        "kick sound and real-device timing",
+        "808 circuit fidelity and Tone/Decay response",
+        "909 audio and real-device timing",
     ]
     (out / "native-boot-report.json").write_text(json.dumps(report, indent=2) + "\n")
     return report
@@ -510,12 +498,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument(
-        "--build", action="store_true", help="also package latest-OS silent firmware"
+        "--build", action="store_true", help="also package latest-OS first-body firmware"
     )
     mode.add_argument(
         "--full-os",
         action="store_true",
-        help="run the installed silent mod in coupled Digikit",
+        help="run the installed first-body mod in coupled Digikit",
     )
     args = parser.parse_args()
     try:

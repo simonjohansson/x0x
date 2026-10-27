@@ -65,12 +65,14 @@ output checks. The old `:silent` command names remain compatibility aliases.
 | --- | --- | --- |
 | DT OS 1.54 | Nonzero owned Q31 output and stereo PCM; peak 4526/32768 in `out/dt/silent/native-808.wav` | 21,783 callbacks; only the known parameter/page resets in #78 fail |
 | DN OS 1.44 | 9,174 nonzero 808 blocks; stereo PCM peak 6478/32768 in `out/dn/silent/808-native.wav` | 13,951 callbacks; all checks pass, including 4,777 silent 909 blocks |
-| DN2 OS 1.12 | Native first-body check in progress | Pending |
+| DN2 OS 1.12 | Nonzero owned float output and stereo PCM; peak 0.021733 FS in `out/dn2/silent/native-808.wav` | 15,626 DSP frames; native controls, locks/LFO, project reload and stock coexistence pass; no halt/missing blocks |
 
 The captures are actual emulator output without normalization. Their different
 levels include each device's native downstream processing. Direct CPU comparisons
 above use the same raw internal scale and omit that processing. No duplicate
 velocity or saved LEVEL gain is applied by the body.
 
-#9 stays open for DN2 native evidence and the remaining circuit stages. #2
-reference captures and physical-device timing remain outside this increment.
+#9's first body is integrated in all three emulators. #9 stays open for stock
+Decay feedback mapping, excitation/pitch sigh, Tone/output coupling, calibrated
+scale and circuit-state retrigger behavior. #2 reference captures and
+physical-device timing remain outside this increment.

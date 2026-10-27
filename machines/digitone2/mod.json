@@ -2,7 +2,7 @@
   "id": "x0x",
   "version": "0.1",
   "title": "X0X KICKS",
-  "description": "Combined 808/909 controls with silent SHARC voice bring-up",
+  "description": "Combined kick controls with the first uncalibrated SHARC 808 body",
   "license": "GPL-2.0-or-later",
   "device": "digitone-mk2",
   "os": "1.12",
