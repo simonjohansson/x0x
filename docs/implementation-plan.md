@@ -270,3 +270,11 @@ missing forcing/retrigger stages next. Component agreement is not reference
 fidelity; do not close the full initial-pitch/excitation workstream on this
 isolated switch. The HTML remains unchanged. The continuation loop now
 advances existing ready work until concrete human input is required.
+
+Both CPU suites and all three native functional scenarios exercise the new
+initial stage. DT retains only known #78 resets; DN's current zero baselines
+pass without resolving historical #20; DN2 passes with no halt/missing blocks.
+Actual-CPU reference measurements confirm the trial: first 6 ms residuals
+improve, all first 25/150 ms windows worsen, and whole-clip default/short errors
+increase while long errors decrease. Keep the source switch as an incomplete
+development slice; companion retrigger/forcing is the next planned work.

@@ -90,6 +90,51 @@ join/live-control, retrigger/interleaving and existing 909 checks remain active.
 
 DT native functional checks pass across 39,779 callbacks and 28,969 observed
 initial-counter/coupling blocks, with every post-block value 0/32/.../256 seen.
-Only known #78 parameter/page resets fail. DN/DN2 native validation and the
-fresh actual-CPU five-setting comparison are still running at this increment;
-component passes do not qualify their pending results.
+Only known #78 parameter/page resets fail. DN passes 100,801 callbacks and
+92,420 observed counter/coupling blocks, with the same complete counter set
+and all three exact-zero capture baselines. The historical #20 residue remains
+unresolved; another waveform's passing baseline does not identify its cause.
+DN2's tested native scenario passes 31,879 DSP frames with no halt/missing
+blocks. The native counter bank is consumed after the settled note; exact
+1 ms drive / 6 ms frequency timing remains component proof. Native controls,
+locks/LFO, reload, mixed models, Tone/coupling and 909 checks remain passing.
+#80 is separately unqualified.
+
+## Actual-CPU reference diagnostic
+
+Fresh 96,000-sample renders on both CPUs retain the same fifteen verified
+fresh training references, scheduled MIDI at zero and one reference multiplier
+×4 to undo the known host gain. No fitted gain, normalization or alignment.
+The previous revision is the reference-informed Decay increment.
+
+| Setting | Whole-clip raw RMS FS, before / after | First 6 ms raw RMS FS, before / after |
+| --- | --- | --- |
+| Default | 0.02770 / 0.06564 | 0.33318 / 0.26926 |
+| Dark, short | 0.02034 / 0.02409 | 0.28472 / 0.21871 |
+| Bright, short | 0.02126 / 0.02516 | 0.31264 / 0.24848 |
+| Dark, long | 0.08514 / 0.06791 | 0.31949 / 0.23705 |
+| Bright, long | 0.08638 / 0.06912 | 0.35060 / 0.26723 |
+
+The source-selected first 6 ms window improves at every setting. The first 25 ms
+and first 150 ms windows worsen at every setting. Whole-clip default/short
+residuals also worsen; long clips improve. These are descriptive comparisons,
+not a fidelity pass or a justification to prefer only the favorable window.
+The missing companion/forcing stages are the next required work before
+claiming the attack is improved as a whole. Detailed windows, analyzer outputs,
+source/executable hashes and raw floats remain in
+`out/reference/808-initial/measurements.json`. The HTML remains unchanged.
+
+For the default, first 25 ms RMS rises 0.21302→0.28938 FS and first 150 ms RMS
+rises 0.09693→0.22422 FS. Do not judge the stage only by its first 6 ms or
+long-clip improvements. The gate currently applies on every START with fixed
+intrinsic excitation; accent-dependent behavior remains unmodeled.
+
+Full two-second model-error maxima are 1.409e-6 FS (ColdFire), 6.509e-7 FS
+(SHARC), and 2.005e-6 FS between CPUs, below the unchanged 1e-5 FS numeric
+limit. These do not resolve the software-reference regressions.
+
+Firmware SHA256 for the native runs:
+
+- DT: `8ccc3f59131218f6590e4bd06e07515b3fa81be271c79c84e1dc7df2bc191efb`.
+- DN: `87b25590e4782546f735aa8f8f19955f33e8fbd5f53b40db19045deea055a983`.
+- DN2: `f1b936a5601572df11e1fc88f6e2f263e196a5baa77bfd7f684fcee31906df7a`.
