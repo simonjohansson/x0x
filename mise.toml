@@ -222,3 +222,15 @@ run = "python -m x0x.cli analyze"
 [tasks.compare]
 description = "Compare fixture-matched render results against an independent oracle"
 run = "python -m x0x.cli compare"
+
+[tasks."test:808:coldfire"]
+description = "Render the first 808 body in actual ColdFire ASM against its analytic oracle"
+run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.coldfire_body808'
+
+[tasks."test:808:sharc"]
+description = "Render the first 808 body in actual SHARC ASM with callback guards"
+run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0x.sharc_body808'
+
+[tasks."test:808:body"]
+description = "Check both actual ASM bodies and compare matching unshifted samples"
+run = ["mise run test:808:coldfire", "mise run test:808:sharc", "python -m x0x.body808"]

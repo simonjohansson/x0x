@@ -43,6 +43,18 @@ arithmetic and complete EMAC context preservation. Its first direct run renders
 48,000 samples with maximum error 3.277e-7 FS, frequency 54.99999845 Hz and fitted
 time constant 0.250000535 s. This is component evidence, not an OS audio capture.
 
-SHARC and native DT/DN/DN2 audio checks are the next integration steps. #9 stays
-open for those results and the remaining circuit stages. #2 reference captures
-and hardware timing remain outside this increment.
+SHARC uses float32 `a=c-1` and `s`, advancing the equivalent small rotation
+increments `x_next=x+(a*x+s*y)` and `y_next=y+(a*y-s*x)`. This avoids bias from
+rounding the near-one coefficient c directly. Its 24,000-sample direct run has
+maximum error 2.675e-7 FS, frequency 54.99999754 Hz and fitted time constant
+0.250000204 s. All 944 callback cases pass with 560 code bytes, 256 state bytes
+and at most 649 instructions under the unchanged 1,000-instruction bound.
+The first 128 state bytes retain the selector metadata; sixteen x/y pairs occupy
+the next 128. This is private DSP RAM, not a saved-sound layout.
+
+Matching unshifted CPU samples differ by at most 3.968e-7 FS over 24,000 samples.
+Run `mise run test:808:body` for both components and the cross-CPU comparison.
+
+Native DT/DN/DN2 audio checks are the next integration steps. #9 stays open for
+those results and the remaining circuit stages. #2 reference captures and
+hardware timing remain outside this increment.

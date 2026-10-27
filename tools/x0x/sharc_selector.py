@@ -126,10 +126,17 @@ def raw_words(row: dict) -> dict[int, int]:
 class SelectorRunner(callback.CallbackRunner):
     """The existing SDK callback memory/context fixture, with raw invalid inputs."""
 
+    def __init__(self, code: bytes, entry: int, *, state_bytes=callback.STATE_BYTES,
+                 extra_slot_state_offset=None):
+        super().__init__(code, entry)
+        self.state_bytes = state_bytes
+        self.extra_slot_state_offset = extra_slot_state_offset
+        self.words = {callback.STATE + offset: 0 for offset in range(0, state_bytes, 4)}
+
     def call_raw(self, row: dict, state_writable: bool) -> tuple[list[float] | None, list[int]]:
         trace = self.trace
         pokes = {**self.words, **raw_words(row), callback.STATE - 4: callback.GUARD,
-                 callback.STATE + callback.STATE_BYTES: callback.GUARD}
+                 callback.STATE + self.state_bytes: callback.GUARD}
         registers = {name: 0x10203040 + index for index, name in enumerate(trace.UREG_NAMES)
                      if name.startswith(("R", "I", "M", "L", "B", "S")) and name[1:].isdigit()}
         registers.update(R4=callback.INPUT if row["input_present"] else 0,
@@ -188,6 +195,8 @@ class SelectorRunner(callback.CallbackRunner):
         ranges = [(callback.OUTPUT, 128)] if row["input_present"] else []
         if state_writable and row["input_present"] and row["slot"] < 16:
             ranges.append((callback.STATE + 8 * row["slot"], 8))
+            if self.extra_slot_state_offset is not None:
+                ranges.append((callback.STATE + self.extra_slot_state_offset + 8 * row["slot"], 8))
         owned = [(_canonical_dm_address(machine.state, low, 1, for_write=True), size)
                  for low, size in ranges]
         for event in machine.watch_log:
@@ -196,14 +205,14 @@ class SelectorRunner(callback.CallbackRunner):
                 raise AssertionError("selector wrote outside its slot/output: " + str(event))
         read = lambda at: trace._dm_read(machine.state, trace.Const(at), 4)
         for at, value in pokes.items():
-            if callback.STATE <= at < callback.STATE + callback.STATE_BYTES:
+            if callback.STATE <= at < callback.STATE + self.state_bytes:
                 continue
             if callback.OUTPUT <= at < callback.OUTPUT + 128 and row["input_present"]:
                 continue
             if read(at) != trace.Const(value):
                 raise AssertionError("selector changed immutable input/guard at " + hex(at))
         self.words = {callback.STATE + offset: read(callback.STATE + offset).value
-                      for offset in range(0, callback.STATE_BYTES, 4)}
+                      for offset in range(0, self.state_bytes, 4)}
         samples = None
         if row["input_present"]:
             words = [read(callback.OUTPUT + index * 4) for index in range(32)]
