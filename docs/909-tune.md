@@ -1,5 +1,8 @@
 # 909 Tune and pitch CV
 
+This `1c56fac` checkpoint precedes the [loaded ENV1/Q12 increment](909-vca.md).
+The measurements below retain their original model and firmware identities.
+
 The existing #25/#79 increment adds the C9/IC12 Tune path on both CPUs and
 routes approved control A to it on DT, DN and DN2. Tune changes the initial
 pitch sweep's discharge time rather than transposing the settled oscillator.
@@ -31,7 +34,7 @@ SHARC uses existing private allocation. No public SDK or saved-format changes.
 
 ## CPU and installed-emulator evidence
 
-The Tune/current-main host suite has 156 tests plus the independent C/UI suites.
+The Tune/current-main host suite has 155 tests plus the independent C/UI suites.
 Actual ColdFire and SHARC cover fractional/end-point Tune, live changes during
 charging/discharging, Decay, retrigger/interleaving and state/context guards.
 Maximum 909 model errors are 1.87e-6/5.84e-6 FS and paired difference 4.58e-6 FS,
@@ -63,8 +66,9 @@ normal built daemon, without a binary or fingerprint override.
 
 Actual half-second output from each CPU is compared against all three fresh
 training repetitions at each setting. Timing/gain remain raw, with only the
-audited reference ×4; no alignment, fitted gain or normalization. Mean raw RMS
-errors below are descriptive, not frozen fidelity acceptance:
+audited reference ×4; no alignment, fitted gain or normalization. First-repetition
+raw RMS errors below are descriptive; all repetitions remain in the JSON,
+without frozen fidelity acceptance:
 
 | Setting | Diode-only | Tune |
 | --- | ---: | ---: |

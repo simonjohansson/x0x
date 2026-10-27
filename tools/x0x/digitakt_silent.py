@@ -11,7 +11,7 @@ import sys
 import time
 import wave
 
-from . import audio, body808, coupling808, cpu, firmware
+from . import audio, body808, body909, coupling808, cpu, firmware
 from .digitakt_adapter import BASE, STACK, STOP
 
 ROOT = cpu.ROOT
@@ -179,7 +179,7 @@ def full_os():
                   stock=stock, firmware_sha256=hashlib.sha256(image.read_bytes()).hexdigest(),
                   digiemu_revision=cpu.revision(ROOT / "vendor/digiemu"),
                   companion_compatibility=compatibility,
-                  unqualified=["p-lock/LFO delivery", "save/reload", "strict-model qualification", "808 circuit fidelity/pot calibration", "909 diode shaping, Tune/Attack, complete VCA and Decay taper"])
+                  unqualified=["p-lock/LFO delivery", "save/reload", "strict-model qualification", "808 circuit fidelity/pot calibration", "909 transistor compression/physical diode parameters, Q11 reset, Attack and physical Decay taper"])
     session = None
     try:
         with (FOLDER / "native-boot.log").open("w") as log, contextlib.redirect_stdout(log):
@@ -194,7 +194,7 @@ def full_os():
         word = lambda at: int.from_bytes(uc.mem_read(at,4),"big")
         state = dict(active=None, callbacks=0, selected_callbacks=0, violations=[], controls=[],
                      body_peak=0, body909_peak=0, body909_callbacks=0, mixed_audible_blocks=0,
-                     capture909=False, started909=False, samples909=[], words909=[], tunes909=[], lock_edit=False, lock_display=[],
+                     capture909=False, started909=False, samples909=[], words909=[], tunes909=[], c8states909=[], lock_edit=False, lock_display=[],
                      pulse_blocks=0, pulse_counts=set(), decay_phase=None, decay_started=False, decay_samples=[], decay_words=[], tone_words=[])
         state.update(coupling_blocks=0, coupling_error=0.0, coupling_difference=0)
         returns = set()
@@ -246,6 +246,7 @@ def full_os():
                     state["body909_callbacks"] += 1
                     if track == 0 and state["capture909"] and state["started909"]:
                         state["samples909"].extend(words)
+                        state["c8states909"].append(word(names["body_state"]+4)/2**31)
                 else:
                     assert after[lo:hi] == bytes(128), "inactive callback was not silent"
             audible_models = set()
@@ -296,6 +297,7 @@ def full_os():
                 state["samples909"] = []
                 state["words909"] = []
                 state["tunes909"] = []
+                state["c8states909"] = []
             if owner == names["body_state"] and state["started909"]:
                 state["words909"].append(decay)
                 state["tunes909"].append(tune)
@@ -409,6 +411,19 @@ def full_os():
         state["capture909"] = False
         samples909 = [x/2**31 for x in state["samples909"]]
         from .body909 import reference
+        from . import vca909
+        def c8_proof(label, frames, decay_raw):
+            expected = [v*vca909.STATE_SCALE for v in vca909.envelope(frames,decay_raw)][31::32]
+            actual = state["c8states909"]
+            assert len(actual) == len(expected) and actual, label
+            assert all(0 <= v <= body909.GAIN for v in actual), (label,actual)
+            error = max(abs(a-b) for a,b in zip(actual,expected))
+            assert error <= 1e-5, (label,"C8 private capacitor",error)
+            path = FOLDER / f"909-c8-{label}.json"
+            path.write_text(json.dumps(dict(actual_scaled=actual,expected_scaled=expected,scale="C8 volts /64"))+"\n")
+            return dict(frames=frames,blocks=len(actual),maximum_error_scaled=error,
+                        peak_scaled=max(actual),final_scaled=actual[-1],trace=str(path),
+                        scope="private C8/64 capacitor, separate from clipped base-current gain and downstream PCM")
         assert len(samples909) >= 19200 and state["started909"]
         error909 = max(abs(x-y) for x,y in zip(samples909,reference(len(samples909))))
         assert error909 <= 1e-5 and set(state["words909"]) == {16384} and set(state["tunes909"]) == {16384}, error909
@@ -423,7 +438,8 @@ def full_os():
         report["body909_audio"] = dict(raw_peak_q31=state["body909_peak"],downstream_pcm_peak=pcm_peak,
             frames=len(samples909),waveform_peak_error_fs=error909,
             capture=str(FOLDER / "native-909.wav"),raw_capture=str(FOLDER / "raw-909.wav"),
-            scope="isolated native 909 PCM after START delivery; raw capture includes onset")
+            scope="isolated native 909 PCM after START delivery; raw capture includes onset",
+            c8=c8_proof("default",len(samples909),16384))
         screen("controls-909")
         assert report["808"] == [1, 0, 0] and report["pending"] == [1, 0, 0] and report["909"] == [1, 1, 0], report
         values = stored()[1]
@@ -451,7 +467,7 @@ def full_os():
                 wav.setparams((2,2,session.audio_cfg["rate"],0,"NONE","not compressed")); wav.writeframes(pcm)
             audio.write_wav(FOLDER / f"909-decay-{label}-raw.wav",samples,48000)
             report["decay_909"][label] = dict(raw=position*256,tune_raw=tune*256,frames=len(samples),maximum_error_fs=error,
-                native_peak_pcm16=peak,native_wav=str(path))
+                native_peak_pcm16=peak,native_wav=str(path),c8=c8_proof(label,len(samples),position*256))
         send([0x80,60,0,0xb0,17,64,0xb0,16,64])
         # Use the native destination list and depth control, not injected LFO state.
         tap("LFO")
@@ -517,7 +533,9 @@ def full_os():
             tap("DOWN")
         tap("YES")
         assert bytes(uc.mem_read(stored(1)[0] + 126, 1)) == bytes([80])
-        send([0xb1, 16, 64, 0xb1, 17, 64, 0xb1, 18, 64, 0xb1, 21, 0, 0x91, 60, 100])
+        # Trigger both models after setup; C8 no longer leaves the old long tail.
+        send([0xb1, 16, 64, 0xb1, 17, 64, 0xb1, 18, 64, 0xb1, 21, 0,
+              0x80, 60, 0, 0x90, 60, 100, 0x91, 60, 100])
         report["mixed_tracks"] = [selected(0), selected(1)]
         assert report["mixed_tracks"] == [[1, 1, 0], [1, 0, 0]], report
         assert state["mixed_audible_blocks"] > 0, "808/909 never produced audio in the same callback"
@@ -632,7 +650,7 @@ def full_os():
         assert state["active"] is None and state["selected_callbacks"] > 0 and not state["violations"], state
         report.update(callbacks=state["callbacks"], selected_callbacks=state["selected_callbacks"],
                       checked=["native machine selection", "native UART control delivery", "next-START MODEL latch",
-                               "808 body reaches native PCM", "native Decay changes the actual ASM tail", "native Tone changes actual filtered ASM output", "909 unshaped body and native Decay endpoints reach PCM", "other track blocks preserved",
+                               "808 body reaches native PCM", "native Decay changes the actual ASM tail", "native Tone changes actual filtered ASM output", "909 C9/diode/C8 output and native Tune/Decay endpoints reach PCM", "other track blocks preserved",
                                "native LFO destination and modulation", "native sequencer parameter lock",
                                "x0x-only defaults helper scope"])
         restored = report["save_reload"]["restored"]
@@ -648,7 +666,7 @@ def full_os():
             maximum_entry_recurrence_error_fs=state["coupling_error"],
             maximum_input_output_difference_q31=state["coupling_difference"],
             scope="actual coupling after Tone, owned state and START reset")
-        report["unqualified"] = ["strict-model qualification", "808 circuit fidelity/pot calibration", "909 diode shaping, Tune/Attack, complete VCA and Decay taper"] + ([] if restored else ["save/reload"])
+        report["unqualified"] = ["strict-model qualification", "808 circuit fidelity/pot calibration", "909 transistor compression/physical diode parameters, Q11 reset, Attack and physical Decay taper"] + ([] if restored else ["save/reload"])
         report["failed_checks"] = [name for name in ("defaults", "parameter_reset", "page_reset")
                                    if report[name]["status"] == "failed"]
         report["status"] = "passed" if not report["failed_checks"] and restored else "failed"

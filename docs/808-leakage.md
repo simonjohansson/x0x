@@ -6,6 +6,13 @@ anchors, shaped main/C39 inputs, voltage encoding and approved saved controls.
 It does not impose a generic pitch envelope. The main-input-only measurements
 in [the preceding checkpoint](808-main-input.md) remain historical.
 
+The native results below describe the original `d3ba46f` run. Its DN2 MIDI/missing
+note failures were subsequently resolved by the pinned upstream Digikit fix;
+[unchanged-firmware requalification](dn2-late-model.md) passes the full and
+original late-MODEL scenarios. The DN baseline remains open in #20, with
+[downstream attribution](dn-silence-residue.md). These native fixes do not change
+the 808 algorithm or qualify its remaining circuit/fidelity gaps.
+
 ## Circuit relationship and approximation
 
 S03 §8.2/Eqs.8–9 and S01 p.9 describe current through Q43 when Vcomm swings

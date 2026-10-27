@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import struct
 
-from . import audio, body909, tune909, cpu
+from . import audio, body909, tune909, vca909, cpu
 from .analysis import analyze
 from .coldfire_body808 import Runner
 
@@ -57,7 +57,8 @@ def run(folder=None):
     assert measures["onset_sample"] == 0 and measures["onset_polarity"] == 1
     assert measures["full_scale_samples"] == 0
     frequency, tau = measures["frequency"]["median_hz"], measures["decay_positive"]["time_constant_s"]
-    assert frequency is not None and abs(frequency-body909.FREQUENCY) <= .02, frequency
+    expected_frequency=analyze(body909.reference(frames),body909.SAMPLE_RATE)["frequency"]["median_hz"]
+    assert frequency is not None and expected_frequency is not None and abs(frequency-expected_frequency)<=.02,frequency
     expected_fit = analyze(body909.reference(frames),body909.SAMPLE_RATE)
     assert tau is not None and abs(tau-expected_fit["decay_positive"]["time_constant_s"]) <= .001, tau
     decay_cases=[]
@@ -73,9 +74,12 @@ def run(folder=None):
         assert peak_error<=1e-5,(raw,peak_error)
         fit=analyze(signal[:min(frames,int(5*body909.decay_tau(raw)*48000))],48000)
         wanted_fit=analyze(expected[:min(frames,int(5*body909.decay_tau(raw)*48000))],48000)
-        assert abs(fit["decay_positive"]["time_constant_s"]-wanted_fit["decay_positive"]["time_constant_s"])<=.001,(raw,fit)
+        actual_tau=fit["decay_positive"]["time_constant_s"]
+        expected_tau=wanted_fit["decay_positive"]["time_constant_s"]
+        if expected_tau is None: assert actual_tau is None,(raw,actual_tau)
+        else: assert actual_tau is not None and abs(actual_tau-expected_tau)<=.001,(raw,fit)
         (folder/f"samples_{raw}.json").write_text(json.dumps(signal)+"\n")
-        decay_cases.append(dict(raw=raw,maximum_error_fs=peak_error,expected_tau_s=body909.decay_tau(raw)))
+        decay_cases.append(dict(raw=raw,maximum_error_fs=peak_error,unloaded_rc_reference_tau_s=body909.decay_tau(raw),actual_audio_fit_s=actual_tau,expected_audio_fit_s=expected_tau))
     live_runner=TuneRunner(image)
     changes={4096:32512,8192:0}
     raw=16384
@@ -124,9 +128,9 @@ def run(folder=None):
     # Cover exact fold extrema, including positive unity's Q31 clamp.
     for phase, sign in ((0, -1), (0x80000000, 1)):
         edge = TuneRunner(image)
-        edge.uc.mem_write(edge.STATES,struct.pack(">II",(phase-body909.PHASE_STEP) & 0xffffffff,0x20000000))
+        edge.uc.mem_write(edge.STATES,struct.pack(">II",(phase-body909.PHASE_STEP) & 0xffffffff,round(12/64*2**31)))
         first = edge.render()[0] / 2**31
-        assert abs(first-sign * body909.diode_shape(1) * body909.GAIN * body909.RETENTION) <= 1e-9, first
+        assert abs(first-sign * body909.diode_shape(1) * body909.GAIN * vca909.gain(vca909.step(12.,16384,False))) <= 1e-9, first
     interleaved = TuneRunner(image)
     for block in range(80):
         interleaved.render(7, int(block % 5 == 0))
@@ -141,12 +145,12 @@ def run(folder=None):
     tail.render()
     assert amplitude == struct.unpack(">i",tail.uc.mem_read(tail.STATES + 4,4))[0]
     tail_peak = max(abs(x) for x in last) / 2**31
-    assert amplitude == 0 and tail_peak == 0, (amplitude,tail_peak)
+    assert amplitude <= round(vca909.BASE_V*vca909.STATE_SCALE*2**31) and tail_peak == 0, (amplitude,tail_peak)
     for raw in (0,16384,32512):
         residue = TuneRunner(image)
         residue.uc.mem_write(residue.STATES,struct.pack(">II",0x40000000,1))
         assert residue.render(decay_raw=raw) == [0]*32, raw
-        assert struct.unpack(">i",residue.uc.mem_read(residue.STATES+4,4))[0] == 0
+        assert struct.unpack(">i",residue.uc.mem_read(residue.STATES+4,4))[0] <= round(vca909.BASE_V*vca909.STATE_SCALE*2**31)
     samples_path = folder / "samples.json"
     samples_path.write_text(json.dumps(samples) + "\n")
     audio.write_wav(folder / "body909.wav",samples,body909.SAMPLE_RATE)
@@ -159,11 +163,11 @@ def run(folder=None):
         tune_cases=tune_cases,live_tune_maximum_error_fs=live_tune_error,reference_cases=reference_cases,
         onset_sample=measures["onset_sample"],peak_fs=measures["peak_fs"],
         maximum_instructions_per_block_with_wrapper=worst,
-        tail_after_seconds=4,tail_amplitude_q31=amplitude,tail_peak_fs=tail_peak,
+        tail_after_seconds=4,tail_amplitude_q31=max(amplitude-round(vca909.BASE_V*vca909.STATE_SCALE*2**31),0),tail_c8_state_q31=amplitude,tail_peak_fs=tail_peak,
         samples=str(samples_path),wav=str(folder / "body909.wav"),
-        checked=["zero-state silence","diode KCL shaper after analytic triangle and unloaded RC Decay corners/fractions", "live Decay without START","phase wrap and exact fold extrema",
+        checked=["zero-state silence","C9/diode/C8 waveform, finite charging and loaded base-current VCA corners/fractions", "live Decay without START","phase wrap and exact fold extrema",
                  "output/state/stack guards","callee registers and complete EMAC context",
-                 "independent interleaved voice","provisional START restart","exact silence after the rounding fixed point"],
+                 "independent interleaved voice","provisional START restart","exact audible silence below the modeled base knee; stored capacitor residue reported"],
         unqualified=["909 physical diode parameters and circuit envelopes","stock VCA/taper, Q11 reset, switch drops and Attack control",
                      "stock 909 fidelity","native OS integration","hardware timing"])
     (folder / "report.json").write_text(json.dumps(report,indent=2) + "\n")

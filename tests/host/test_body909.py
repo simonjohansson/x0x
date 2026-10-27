@@ -1,21 +1,23 @@
 import math
 import unittest
 
-from x0x import body909 as body, tune909
+from x0x import body909 as body, tune909, vca909
 from x0x.analysis import analyze
 
 
 class Body909Tests(unittest.TestCase):
-    def test_triangle_frequency_scale_decay_and_reset_baseline(self):
+    def test_body_combines_tune_and_finite_loaded_vca_without_changing_reset(self):
         samples = body.reference(48000)
         report = analyze(samples,body.SAMPLE_RATE)
-        self.assertAlmostEqual(report["frequency"]["median_hz"],body.FREQUENCY,delta=.001)
+        self.assertIsNotNone(report["frequency"]["median_hz"])
         short = body.reference(1001,0)
         long = body.reference(1001,32512)
-        self.assertAlmostEqual(short[1000]/long[1000],
-            math.exp(-1001/48000*(1/body.decay_tau(0)-1/body.decay_tau(32512))), places=12)
-        self.assertGreater(report["peak_fs"],body.GAIN*body.diode_shape(1)*.97)
-        self.assertLess(report["peak_fs"],body.GAIN*body.diode_shape(1))
+        short_gain=vca909.gain(vca909.envelope(1001,0)[-1])
+        long_gain=vca909.gain(vca909.envelope(1001,32512)[-1])
+        self.assertAlmostEqual(short[1000]/long[1000],short_gain/long_gain,places=12)
+        peak_gain=max(map(vca909.gain,vca909.envelope(48000)))
+        self.assertGreater(report["peak_fs"],0)
+        self.assertLessEqual(report["peak_fs"],body.GAIN*peak_gain*body.diode_shape(1))
         self.assertEqual(body.reference(32),samples[:32])
         self.assertEqual(report["onset_sample"],0)
         self.assertGreater(samples[0],0)
@@ -94,7 +96,7 @@ class Body909Tests(unittest.TestCase):
         # The shaper stays at its fixed oscillator operating point as the VCA falls.
         sample=119
         wave=body.reference(sample+1,32512)
-        expected=body.GAIN*math.exp(-(sample+1)/(48000*body.decay_tau(32512)))*body.shaped_triangle(tune909.reference(sample+1)[0][-1])
+        expected=body.GAIN*vca909.gain(vca909.envelope(sample+1,32512)[-1])*body.shaped_triangle(tune909.reference(sample+1)[0][-1])
         self.assertAlmostEqual(wave[sample],expected,places=13)
 
 
@@ -113,7 +115,7 @@ class Decay909Tests(unittest.TestCase):
         actual=body.reference(4096,0,{switch:32512})
         self.assertEqual(actual[:switch],baseline[:switch])
         n=2048
-        expected=body.GAIN*math.exp(-switch/(48000*body.decay_tau(0))
-            -(n+1-switch)/(48000*body.decay_tau(32512)))*body.shaped_triangle(tune909.reference(n+1)[0][-1])
+        c8=vca909.envelope(n+1,0,{switch:32512})[-1]
+        expected=body.GAIN*vca909.gain(c8)*body.shaped_triangle(tune909.reference(n+1)[0][-1])
         self.assertAlmostEqual(actual[n],expected,places=12)
         self.assertGreater(abs(actual[n]),abs(baseline[n]))

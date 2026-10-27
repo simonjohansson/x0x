@@ -65,10 +65,11 @@ def full_os():
                   digiemu_revision=cpu.revision(ROOT / "vendor/digiemu"),
                   unqualified=["strict-model qualification", "faithful 808 timbre, retrigger and pot tapers",
                                "complete loaded 808 output network including C49/buffer and C50",
-                               "909 shaping, pitch envelope and Tune/Attack response, complete VCA and Decay taper"])
+                               "909 transistor compression/physical diode parameters, Q11 reset, Attack and physical Decay taper"])
     state = dict(active=None, callbacks=0, starts=[], violations=[], observations=[], phase="", samples=[], decay_text=[],
                  body_nonzero=0, body_peak=0, triangle_nonzero=0, triangle_peak=0,
-                 triangle_error=0.0, triangle_state=[None] * 8, audio_capture=None,
+                 triangle_error=0.0, triangle_state=[None] * 8, c8_error=0.0, c8_blocks=0,
+                 mixed_frame=set(), mixed_counted=False, mixed_audible_blocks=0, audio_capture=None,
                  coupling_blocks=0, coupling_error=0.0, coupling_difference=0, pulse_blocks=0, pulse_counts=set())
     session = None
     try:
@@ -91,6 +92,10 @@ def full_os():
                     session.halted = "x0x callback assertion: " + str(error)
                     uc.emu_stop()
             return run
+        def frame_begin(*_):
+            state["mixed_frame"].clear()
+            state["mixed_counted"] = False
+        session.at(names["x0x_dn_begin"], checked(frame_begin))
         def returned(_uc, at, _size, _data):
             active = state["active"]
             if active is None or at != active["return"]: return
@@ -101,6 +106,11 @@ def full_os():
             assert selection[0] == 1, "real callback did not consume a settled frame/START"
             words = struct.unpack(">32i", after[lo:hi])
             peak = max(abs(v) for v in words)
+            if state["phase"] == "mixed" and peak:
+                state["mixed_frame"].add((active["track"],selection[1]))
+                if {(0,0),(1,1)} <= state["mixed_frame"] and not state["mixed_counted"]:
+                    state["mixed_audible_blocks"] += 1
+                    state["mixed_counted"] = True
             if selection[1] == 0:
                 # The coupling HP has L1 gain below two for quarter-scale input.
                 assert peak <= 1 << 30, "808 coupling output exceeded its half-scale bound"
@@ -128,8 +138,15 @@ def full_os():
                 assert reference_state is not None, "909 continuation has no observed START"
                 expected, state["triangle_state"][active["slot"]] = body909.continue_reference(
                     reference_state, active["decay909"], active["tune909"], 32)
+                actual_c8 = word(names["body"]+20*active["slot"]+4)/2**31
+                expected_c8 = state["triangle_state"][active["slot"]][3]
+                assert 0 <= actual_c8 <= body909.GAIN, ("C8 private capacitor bounds",actual_c8)
+                c8_error = abs(actual_c8-expected_c8)
+                assert c8_error <= 1e-5, ("909 native C8 capacitor differs from independent KCL",c8_error)
+                state["c8_error"] = max(state["c8_error"],c8_error)
+                state["c8_blocks"] += 1
                 error = max(abs(actual / 2**31 - wanted) for actual, wanted in zip(words, expected))
-                assert error <= 1e-5, ("909 native output differs from the independent C9/diode reference", error)
+                assert error <= 1e-5, ("909 native output differs from the independent C9/diode/C8 reference", error)
                 state["triangle_error"] = max(state["triangle_error"], error)
                 state["triangle_peak"] = max(state["triangle_peak"], peak)
                 state["triangle_nonzero"] += peak != 0
@@ -404,9 +421,6 @@ def full_os():
         for _ in range(16):
             if stored()[4] < 16384: break
             turn("F",-8)
-        session.press(session.code("9")); wait()
-        old = state["starts"][-1]
-        assert old["track"] == 0 and old["model"] == 0, old
         track0 = stored()
         session.press(session.code("T2")); wait(600); session.release(session.code("T2")); wait()
         tap("YES"); tap("RIGHT"); tap("YES"); controls()
@@ -415,10 +429,21 @@ def full_os():
             if stored(1)[4] >= 16384: break
             turn("F",8)
         mixed_begin = len(state["observations"])
-        session.press(session.code("11")); wait(150)
+        state["phase"] = "mixed"
+        # Both tracks are configured before either short body is triggered.
+        session.press(session.code("11")); wait(50)
+        fresh909 = state["starts"][-1]
+        assert fresh909["track"] == 1 and fresh909["model"] == 1, fresh909
+        session.press(session.code("T1")); wait(50); session.release(session.code("T1"))
+        session.press(session.code("9")); wait(50)
+        fresh808 = state["starts"][-1]
+        assert fresh808["track"] == 0 and fresh808["model"] == 0, fresh808
         mixed = {(v["track"],v["model"]) for v in state["observations"][mixed_begin:]}
         report["mixed_tracks"] = sorted(mixed)
+        report["mixed_audible_blocks"] = state["mixed_audible_blocks"]
         assert {(0,0),(1,1)} <= mixed and stored() == track0, (mixed,stored(),track0)
+        assert state["mixed_audible_blocks"] > 0, "808/909 produced no nonzero output in the same native frame"
+        state["phase"] = ""
         session.release(session.code("11")); session.release(session.code("9")); wait()
         tap("STOP"); tap("STOP")
         # A fresh third track has no LFO assignment from the earlier modulation check.
@@ -528,7 +553,7 @@ def full_os():
             pcm_peak = max(abs(v[0]) for v in struct.iter_unpack("<h", native))
             assert 0 < pcm_peak < 32767, "909 must reach native PCM without clipping"
             audio909 = dict(raw_frames=len(words), native_frames=len(native)//4, peak_pcm16=pcm_peak,
-                            decay_raw=raw, tune_raw=tune, expected_tau_s=body909.decay_tau(raw), maximum_error_fs=error,
+                            decay_raw=raw, tune_raw=tune, maximum_error_fs=error,
                             controls=stored(3), normalization="none", source="native 909 note",
                             pre_capture_pcm16_peak=baseline909)
             for kind, data, channels, width in (("raw", struct.pack(f"<{len(words)}i", *words), 1, 4),
@@ -548,6 +573,8 @@ def full_os():
         report["render_audio"] = dict(nonzero_808_blocks=state["body_nonzero"], peak_q31=state["body_peak"],
                                       nonzero_909_blocks=state["triangle_nonzero"], peak_909_q31=state["triangle_peak"],
                                       maximum_909_reference_error_fs=state["triangle_error"])
+        report["c8_909"] = dict(blocks=state["c8_blocks"],maximum_error_scaled=state["c8_error"],scale="C8 volts /64",
+            scope="private capacitor matched against independent per-voice KCL continuation; not output gain or downstream PCM")
         assert state["coupling_blocks"] > 0 and state["coupling_difference"] > 0
         report["coupling_808"] = dict(blocks=state["coupling_blocks"], maximum_entry_recurrence_error_fs=state["coupling_error"],
                                        maximum_input_output_difference_q31=state["coupling_difference"],
@@ -555,7 +582,7 @@ def full_os():
         report.update(status="passed" if not report["failed_checks"] else "failed", callbacks=state["callbacks"], starts=state["starts"],
                       checked=["native menu/defaults", "native first-page controls", "native encoder MODEL delivery",
                                "next-START MODEL latch", "real companion fresh/settled frame",
-                               "bounded nonzero 808 voice output", "native Decay changes raw and downstream decay time", "native Tone endpoints reach actual ASM and change filtered output", "808 coupling ASM after Tone with per-voice state and START reset", "909 ASM routing and analytic triangle output with native Decay endpoints", "downstream stereo PCM for both models with recorded pre-capture baselines", "other voices preserved", "native p-lock and held-lock display", "native LFO delivery", "native save/reload", "mixed 808/909 tracks"])
+                               "bounded nonzero 808 voice output", "native Decay changes raw and downstream decay time", "native Tone endpoints reach actual ASM and change filtered output", "808 coupling ASM after Tone with per-voice state and START reset", "909 C9/diode/C8 raw output with native Tune/Decay endpoints", "downstream stereo PCM for both models with recorded pre-capture baselines", "other voices preserved", "native p-lock and held-lock display", "native LFO delivery", "native save/reload", "mixed 808/909 tracks"])
         if report["failed_checks"]:
             report["unqualified"].append("exact-zero native pre-capture baseline / complete downstream capture isolation")
     except (AssertionError, ValueError) as error:

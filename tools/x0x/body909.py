@@ -1,8 +1,9 @@
-"""Independent 909 triangle, antiparallel diode shaper and provisional envelope.
+"""Independent 909 triangle, diode shaper and first-order loaded ENV1/Q12 VCA.
 
 S02 p4/p11 and S05 p3/p12 establish the triangle VCO and C9/IC12 Tune path.
-Settled 52.58 Hz is a separate training calibration; gain 0.25 and zero-crossing START remain provisional. Decay uses unloaded C8/VR5/R58,
-not the complete ENV1/Q12 VCA. The physical A taper remains uncalibrated.
+Settled52.58Hz is a separate training calibration; gain0.25 and zero-crossing
+START remain provisional. ENV1 uses finite C8 charge and Q12 base-current loading;
+transistor compression, subthreshold behavior and physical A taper remain open.
 """
 import math
 
@@ -24,6 +25,7 @@ TRIANGLE_VOLTS = COMPARATOR_SWING * R50 / (R49 + R50)
 LINEAR_VOLTS = TRIANGLE_VOLTS * (R53 + R43) / (R52 + R53 + R43)
 THEVENIN_OHMS = R52 * (R53 + R43) / (R52 + R53 + R43)
 SHAPER_SEGMENTS = 16
+from . import vca909
 
 
 def decay_tau(raw):
@@ -86,35 +88,31 @@ def shaper_coefficients():
 
 def reference(frames, decay_raw=DEFAULT_DECAY, changes=None,
               tune_raw=tune909.DEFAULT_TUNE, tune_changes=None):
-    changes = changes or {}
-    loss = -1 / (SAMPLE_RATE * decay_tau(decay_raw))
-    total = 0.0
     phases, _ = tune909.reference(frames, tune_raw, tune_changes)
-    result = []
-    for n in range(frames):
-        if n in changes:
-            loss = -1 / (SAMPLE_RATE * decay_tau(changes[n]))
-        total += loss
-        result.append(GAIN * math.exp(total) * shaped_triangle(phases[n]))
-    return result
+    voltages = vca909.envelope(frames, decay_raw, changes)
+    return [GAIN*vca909.gain(voltage)*shaped_triangle(phase)
+            for voltage,phase in zip(voltages,phases)]
 
 
-INITIAL_STATE = (0.0, 0.0, tune909.TRIGGER_SAMPLES, GAIN)
+INITIAL_STATE = (0.0, 0.0, tune909.TRIGGER_SAMPLES, 0.0)
 
 
 def continue_reference(state, decay_raw, tune_raw, frames):
-    """Continue physical phase/C9/count/amplitude from a private snapshot.
+    """Continue private phase/C9/count/C8 state, with capacitor volts encoded /64.
 
     START callers use INITIAL_STATE; native phase words map to cycles by
     uint32/2**32 minus .25. The diode shaper remains before the separate VCA.
     """
-    phase, voltage, remaining, amplitude = state
+    phase, voltage, remaining, c8_encoded = state
     phases, voltages, remaining = tune909.continue_reference(
         phase, voltage, remaining, tune_raw, frames)
-    loss = -1/(SAMPLE_RATE*decay_tau(decay_raw))
-    samples=[amplitude*math.exp((i+1)*loss)*shaped_triangle(value)
-             for i,value in enumerate(phases)]
-    return samples, (phases[-1], voltages[-1], remaining, amplitude*math.exp(frames*loss))
+    initial_remaining = state[2]
+    c8 = c8_encoded / vca909.STATE_SCALE
+    samples=[]
+    for i,value in enumerate(phases):
+        c8=vca909.step(c8,decay_raw,initial_remaining-i>0)
+        samples.append(GAIN*vca909.gain(c8)*shaped_triangle(value))
+    return samples, (phases[-1], voltages[-1], remaining, c8*vca909.STATE_SCALE)
 
 
 def compare():
@@ -136,7 +134,7 @@ def compare():
                       cross_cpu=max(abs(a-b) for a,b in zip(cf,sharc)))
         assert all(error <= 1e-5 for error in errors.values()), (setting, errors)
         cases.append(dict(raw=setting, maximum_errors_fs=errors))
-    report = dict(status="passed", scope="diode-shaped 909 triangle with unloaded RC Decay; no complete circuit fidelity claim",
+    report = dict(status="passed", scope="diode-shaped909 with finite C8 charge and first-order base-current VCA; no complete circuit fidelity claim",
                   frames=24000, sample_rate=SAMPLE_RATE, decay_cases=cases,
                   maximum_errors_fs={key:max(row["maximum_errors_fs"][key] for row in cases) for key in errors},
                   limit_fs=1e-5, alignment_samples=0, normalization=False)

@@ -7,14 +7,16 @@ CPUs. See [808 leakage](808-leakage.md) for the current waveform evidence and
 retained default/long pitch-trajectory regressions. Full feedback, loading,
 control taper and faithful residual-state retrigger remain incomplete in #9/#79.
 
-The 909 [diode shaper](909-shaping.md) and [C9/IC12 Tune path](909-tune.md)
-now run on both CPUs and all three emulators. Tune changes the initial sweep;
-settled pitch is separately training-calibrated to 52.58 Hz. The five-setting
-comparison improves default/high-short waveform error but worsens low-short
-and both long settings. Continue the existing loaded ENV1/Q12 envelope and
-Q11/C14 finite trigger/reset steps, then the separate Attack branch. Those
-increments are prepared independently and integrated serially through the
-shared DSP sources; no new ticket tree or feature scope.
+The 909 [diode shaper](909-shaping.md), [C9/IC12 Tune path](909-tune.md) and
+[loaded ENV1/Q12 VCA](909-vca.md) run on both CPUs and all three emulators.
+Tune changes the initial sweep; settled pitch is separately training-calibrated
+at52.58 Hz. Loaded finite C8 charging/base-current discharge improves all five
+whole-waveform residuals and default decay duration, while onset/peak/level
+regressions remain explicit. The combined finite Q11 reset trial worsens4/5
+settings and every early window, so it remains isolated pending source-justified
+operating-point/polarity checks. The next useful existing #25 integration is the
+missing Attack pulse, then filtered noise. Independent workers prepare those
+bounded pieces with serial shared-source integration; no new ticket tree.
 
 DT retains only deferred reset #78. DN's [one-count baseline investigation](dn-silence-residue.md)
 proves exact-zero x0x inputs into stock filters with nonzero native downstream
@@ -404,7 +406,7 @@ publication/qualification proceeds; shared DSP integration remains serial.
 
 The [C9/IC12 increment](909-tune.md) is integrated on both CPUs with exact
 native Tune delivery and interval-integrated phase. The independent RC/RK4
-model, 156 current host tests/C UI suites, both actual CPU suites and installed
+model, 155 current host tests/C UI suites, both actual CPU suites and installed
 DT/DN/DN2 scenarios complete. SHARC uses 4,866 code / 1,024 private bytes;
 maximum paired CPU difference is 4.58e-6 FS under unchanged 1e-5 FS.
 DT retains #78; DN retains #20; DN2 passes on the normal adopted Digikit pin.
@@ -412,3 +414,17 @@ Default settled pitch now matches 52.58 Hz reference, with default waveform
 RMS .10283→.08229 FS. Preserve low-short and both long regressions; current
 unloaded VCA and trigger/reset are the next planned source-model corrections.
 No saved layouts, public interfaces, HTML or held-out audio changed.
+
+## Loaded 909 ENV1/Q12 — 27 October 2026
+
+The [finite C8/base-current VCA](909-vca.md) replaces the unloaded envelope on
+both actual CPUs, with161 relevant host tests/C UI suites and guarded CPU
+comparisons. SHARC has5,534 code /1,664 private bytes; paired difference≤2.678e-6
+FS under unchanged1e-5. All three installed scenarios complete: DT47,190callbacks
+retains only#78; DN111,526callbacks proves62 audible mixed frames and retains
+#20's one-count baseline; DN2 passes37,815audio/37,816DSPframes. Corrected mixed
+scenes retain their timing while triggering both short sounds after setup.
+Default audio decay fit181.825→52.866ms versus57.323reference; all five whole
+residuals improve, but peak/global level mismatch and some onset windows worsen.
+Keep full fidelity open. Hold the regressing finite-R51 prototype; proceed with
+source-derived Attack pulse/noise work. HTML and held-out audio remain unchanged.

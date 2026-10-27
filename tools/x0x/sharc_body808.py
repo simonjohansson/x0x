@@ -12,7 +12,7 @@ from . import analysis, body808, body909, tune909, coupling808, cpu, tone808, sh
 
 SOURCE = cpu.ROOT / "targets/sharc/body808.s"
 FOLDER = cpu.ROOT / "out/sharc/body808"
-STATE_BYTES = 1024
+STATE_BYTES = 1664
 FRAMES = 24000
 
 
@@ -29,13 +29,12 @@ def component(folder=None) -> tuple[dict, bytes]:
     def runner():
         return selector.SelectorRunner(code, entry, state_bytes=STATE_BYTES,
                                        extra_slot_state_offset=128, tone_state_offset=256,
-                                       coupling_state_offset=320, pulse_state_offset=448, companion_state_offset=512, main_state_offset=576, coefficient_state_offset=640)
+                                       coupling_state_offset=320, pulse_state_offset=448, companion_state_offset=512, main_state_offset=576, coefficient_state_offset=640, vca_coefficient_state_offset=1024)
 
     policy = runner()
     inputs = selector.cases()
     expected, provenance = selector.c_reference(folder, inputs)
-    position909 = [0] * 16
-    attenuation909 = [0.0] * 16
+    c8_state909=[0.0]*16
     phase909, voltage909, trigger909 = [0.0]*16, [0.0]*16, [0]*16
     for row, reference in zip(inputs, expected, strict=True):
         samples, state = policy.call_raw(row, state_writable=reference["notices"] == 1)
@@ -48,23 +47,17 @@ def component(folder=None) -> tuple[dict, bytes]:
             elif state[2 * row["slot"] + 1] == 2:
                 slot = row["slot"]
                 if row["flags"]:
-                    position909[slot] = 0
-                    attenuation909[slot] = 0.0
                     phase909[slot], voltage909[slot], trigger909[slot] = 0.0, 0.0, 96
-                begin = position909[slot]
-                loss = -1 / (body909.SAMPLE_RATE * body909.decay_tau(row["params"][1]))
-                phases, voltages, trigger909[slot] = tune909.continue_reference(
-                    phase909[slot],voltage909[slot],trigger909[slot],row["params"][0],32)
-                wave = [body909.GAIN * math.exp(attenuation909[slot] + (j+1)*loss)
-                        * body909.shaped_triangle(phases[j])
-                        for j in range(32)]
-                attenuation909[slot] += 32*loss
-                assert max(abs(a-b) for a,b in zip(samples, wave)) < 1e-5, row["label"]
-                position909[slot] += 32
-                phase909[slot], voltage909[slot] = phases[-1], voltages[-1]
+                    c8_state909[slot]=0.
+                wave,current=body909.continue_reference(
+                    (phase909[slot],voltage909[slot],trigger909[slot],c8_state909[slot]),
+                    row["params"][1],row["params"][0],32)
+                assert max(abs(a-b) for a,b in zip(samples,wave))<1e-5,row["label"]
+                phase909[slot],voltage909[slot],trigger909[slot],c8_state909[slot]=current
                 phase_error=((state[32+2*slot]/2**32-.25-phase909[slot]+.5)%1)-.5
-                assert abs(phase_error)<=1e-5, row["label"]
-                assert state[112+slot] == trigger909[slot], row["label"]
+                assert abs(phase_error)<=1e-5,row["label"]
+                assert state[112+slot]==trigger909[slot],row["label"]
+
                 assert state[64 + slot] == 0, row["label"]
 
     def body_case(label, raw=16384, tone=16384, **kwargs):
@@ -150,13 +143,20 @@ def component(folder=None) -> tuple[dict, bytes]:
         assert error <= 1e-5, (raw, error)
         measured = analysis.analyze(result[:min(FRAMES, int(5*body909.decay_tau(raw)*48000))], 48000)
         expected_signal=body909.reference(FRAMES,raw)
-        assert abs(analysis.analyze(result,48000)["frequency"]["median_hz"]-analysis.analyze(expected_signal,48000)["frequency"]["median_hz"]) < .02
+        observed_frequency=analysis.analyze(result,48000)["frequency"]["median_hz"]
+        expected_frequency=analysis.analyze(expected_signal,48000)["frequency"]["median_hz"]
+        if expected_frequency is None: assert observed_frequency is None
+        else: assert observed_frequency is not None and abs(observed_frequency-expected_frequency)<.02
         expected_fit=analysis.analyze(expected_signal[:min(FRAMES,int(5*body909.decay_tau(raw)*48000))],48000)
-        assert abs(measured["decay_positive"]["time_constant_s"]-expected_fit["decay_positive"]["time_constant_s"]) < .001
+        actual_tau=measured["decay_positive"]["time_constant_s"]
+        expected_tau=expected_fit["decay_positive"]["time_constant_s"]
+        if expected_tau is None: assert actual_tau is None
+        else: assert actual_tau is not None and abs(actual_tau-expected_tau)<.001
         path = folder / f"samples_909_{raw}.f32"
         path.write_bytes(struct.pack(f"<{len(result)}f", *result))
         triangle_cases.append(dict(raw=raw, maximum_error_fs=error,
-                                   expected_tau_s=body909.decay_tau(raw)))
+            unloaded_rc_reference_tau_s=body909.decay_tau(raw),actual_audio_fit_s=actual_tau,
+            expected_audio_fit_s=expected_tau))
         triangle_runs.append(machine)
         if raw == 16384:
             triangle, triangle_samples, triangle_error, triangle_measured = machine, result, error, measured
@@ -267,7 +267,7 @@ def component(folder=None) -> tuple[dict, bytes]:
                            "continuous live DECAY edit", "source-derived Tone RC and continuous edits",
                            "unloaded C47 coupling after Tone", "48-sample excitation across callbacks", "provisional full-chain reset on every START", "all 16 independent slots",
                            "START-only MODEL latch", "provisional same-model retrigger",
-                           "model-change body clear", "909 diode KCL curve, unloaded RC Decay with live edits and independent mixed models", "invalid-input atomicity",
+                           "model-change body clear", "909 diode KCL curve, finite C8 charge/base-current VCA with live edits and independent mixed models", "invalid-input atomicity",
                            "state/output guards", "SDK context preservation"],
                   unqualified=["808/909 circuit fidelity", "909 physical diode parameters, Q11 reset, switch drops, Attack circuit, complete VCA and pot taper",
                                "stock 808 Decay circuit and Tone pot taper calibration", "loaded output/buffer/C49/C50 network", "native OS integration",

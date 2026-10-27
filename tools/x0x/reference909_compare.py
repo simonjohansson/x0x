@@ -12,9 +12,9 @@ from . import analysis, body909, cpu
 from .reference808_compare import digest, raw_position, residual
 
 ROOT=cpu.ROOT
-OUT=ROOT/'out/reference/909-tune'
+OUT=ROOT/'out/reference/909-vca'
 CAPTURES=ROOT/'research/reference/909/captures'
-COMPONENTS=ROOT/'out/909-tune'
+COMPONENTS=ROOT/'out/909-vca/full'
 RATE,FRAMES=48000,24000
 CASES={'default':(128,128),'low-tune-short':(0,0),'high-tune-short':(255,0),
        'low-tune-long':(0,255),'high-tune-long':(255,255)}
@@ -44,13 +44,14 @@ def project_gain(text):
 
 def source_hashes():
     return {p:digest(ROOT/p) for p in ('targets/coldfire/body909.s','targets/sharc/body808.s',
-            'tools/x0x/body909.py','tools/x0x/tune909.py','tools/x0x/coldfire_body808.py','tools/x0x/coldfire_body909.py','tools/x0x/sharc_body808.py',
+            'tools/x0x/body909.py','tools/x0x/tune909.py','tools/x0x/vca909.py',
+            'tools/x0x/coldfire_body808.py','tools/x0x/coldfire_body909.py','tools/x0x/sharc_body808.py','tools/x0x/sharc_selector.py',
             'tools/x0x/reference909_compare.py','tools/x0x/reference808_compare.py','tools/x0x/analysis.py','tools/x0x/comparison.py')}
 
 
 def component_audio(backend):
     """Reuse five actual guarded CPU outputs with their delivered Tune/Decay."""
-    folder=COMPONENTS/('coldfire' if backend=='coldfire' else 'sharc')
+    folder=COMPONENTS/f'{backend}-suite'
     metadata=json.loads((folder/'report.json').read_text())
     source=ROOT/('targets/coldfire/body909.s' if backend=='coldfire' else 'targets/sharc/body808.s')
     assert metadata['status']=='passed' and metadata['frames']==FRAMES
@@ -88,7 +89,7 @@ def component_audio(backend):
         sample_rate=RATE,frames=FRAMES,source_hashes=source_hashes(),cases=records,
         component_report=str((folder/'report.json').relative_to(ROOT)),component_report_sha256=digest(folder/'report.json'),
         executable_sha256=image_hash,project_revision=metadata.get('project_revision'),
-        control_limit='Nominal C9/IC12 Tune and settled-Hz calibration implemented; Attack absent, Q11/taper/VCA unqualified')
+        control_limit='C9/IC12 Tune and first-order loaded C8/base-current VCA implemented; Attack absent, Q11/taper/full transistor behavior unqualified')
     (OUT/f'{backend}.json').write_text(json.dumps(report,indent=2)+'\n')
     return result,report
 
@@ -174,7 +175,7 @@ def report():
                 coldfire_residual=residual(cf[label],corrected),sharc_residual=residual(sh[label],corrected),
                 coldfire_as_recorded_residual=residual(cf[label],take),sharc_as_recorded_residual=residual(sh[label],take),
                 early_residuals={name:dict(coldfire=residual(cf[label][:n],corrected[:n]),sharc=residual(sh[label][:n],corrected[:n]))
-                    for name,n in [('first_25ms',1200),('first_50ms',2400),('first_150ms',7200)]}))
+                    for name,n in [('first_6ms',288),('first_25ms',1200),('first_50ms',2400),('first_150ms',7200)]}))
         cross=max(abs(a-b) for a,b in zip(cf[label],sh[label]));assert cross<=1e-5
         rows[label]=dict(coldfire=measurements(cf[label]),sharc=measurements(sh[label]),repeats=repeats,cpu_maximum_error_fs=cross)
     assert frozen==source_hashes(),'source changed during comparison'
@@ -183,7 +184,7 @@ def report():
         sample_rate=RATE,frames=FRAMES,reference_gain=4,gain_reason='independently verified909projecttrack.25/master1; as-recorded errors retained',
         normalization=False,fitted_gain=False,alignment_samples=0,held_out_audio_read=False,source_hashes=frozen,
         reference_provenance=provenance,renders=dict(coldfire=cm,sharc=sm),cases=rows,
-        control_limit='Nominal C9/IC12 Tune is delivered at all five settings; Attack remains unimplemented, stock Q11/taper/VCA unqualified',
+        control_limit='C9/IC12 Tune and finite charged/loaded C8 gain are rendered at all five settings; Attack absent; ideal base cutoff, stock Q11/taper and full VCA behavior unqualified',
         fidelity_verdict='unqualified')
     (OUT/'measurements.json').write_text(json.dumps(result,indent=2,allow_nan=False)+'\n')
     return result

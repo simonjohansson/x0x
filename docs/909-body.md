@@ -1,10 +1,12 @@
-# 909 body, diode shaping, Tune and live Decay
+# 909 body, diode shaping, Tune and loaded Decay
 
-The current [Tune increment](909-tune.md) adds the stock C9/IC12 pitch CV on
-both CPUs, after the [diode-shaper increment](909-shaping.md). Settled pitch is
-training-calibrated to 52.58 Hz; Tune changes the initial sweep, not transposition.
-The five-setting comparison prioritizes loaded ENV1/Q12 and Q11 trigger/reset
-work. The unloaded Decay curve remains provisional.
+The current [finite-charge ENV1/Q12 increment](909-vca.md) replaces the unloaded
+Decay approximation on both CPUs, after the [Tune increment](909-tune.md) and
+[diode shaper](909-shaping.md). Settled pitch is training-calibrated to 52.58 Hz;
+Tune changes the initial sweep, not transposition. The five-setting comparison
+improves whole-waveform residuals while retaining onset/level regressions.
+The finite Q11 trigger/reset trial is held after measured regressions;
+the missing Attack pulse is next. Full transistor behavior remains open.
 Current native evidence and caveats are recorded with those increments; older
 measurements below preserve their original source/firmware identities.
 
@@ -24,8 +26,9 @@ the selected baseline. Source hashes/paths are recorded in
 
 The original triangle's fixed 50 Hz pitch is historical; current Tune/pitch
 evidence is above. Internal gain 0.25 and zero-crossing phase restart remain
-provisional audition values. Live DECAY uses the unloaded
-C8 discharge path described below; it is not the complete Roland ENV1/VCA. Unlike 808's resonant feedback loss, this amplitude
+provisional audition values. Live DECAY now uses finite C8 charging and Q12
+base-current loading; the [current first-order model](909-vca.md) is not the
+complete Roland ENV1/VCA. Unlike 808's resonant feedback loss, this amplitude
 multiplies a separate oscillator. Native AMP/velocity, filtering, effects and
 track volume remain downstream.
 
@@ -33,7 +36,7 @@ At 48 kHz, the historical unshaped foundation used
 
 `y[n] = 0.25 * exp(-sum(1/(48000*tau(d[k])), k=0..n)) * (2/pi) * asin(sin(2*pi*50*(n+1)/48000))`.
 
-### Unloaded C8 Decay increment
+### Historical unloaded C8 Decay increment
 
 S02 p.11 and S05 p.12 draw C8=0.33 µF, VR5=1 MΩ(A) wired as a rheostat,
 and R58=47 kΩ in the ENV1 discharge path. The first functional Decay mapping is
@@ -41,7 +44,7 @@ and R58=47 kΩ in the ENV1 discharge path. The first functional Decay mapping is
 Minimum/default/maximum time constants are 15.510/181.809/345.510 ms.
 The saved default remains 64; only its formerly provisional 250 ms sound changes.
 
-This is an **unloaded RC approximation**, with a provisional resistance-linear
+This was an **unloaded RC approximation**, with a provisional resistance-linear
 mapping. The physical A taper is uncalibrated. D8/R36/R22, loading through R54
 into Q12, charging/accent and the transistor VCA transfer remain missing. Thus
 the component values are source-derived but the complete audible envelope and

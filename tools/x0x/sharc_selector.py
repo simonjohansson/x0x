@@ -127,7 +127,7 @@ class SelectorRunner(callback.CallbackRunner):
     """The existing SDK callback memory/context fixture, with raw invalid inputs."""
 
     def __init__(self, code: bytes, entry: int, *, state_bytes=callback.STATE_BYTES,
-                 extra_slot_state_offset=None, tone_state_offset=None, coupling_state_offset=None, pulse_state_offset=None, companion_state_offset=None, main_state_offset=None, coefficient_state_offset=None):
+                 extra_slot_state_offset=None, tone_state_offset=None, coupling_state_offset=None, pulse_state_offset=None, companion_state_offset=None, main_state_offset=None, coefficient_state_offset=None, vca_coefficient_state_offset=None):
         super().__init__(code, entry)
         self.state_bytes = state_bytes
         self.extra_slot_state_offset = extra_slot_state_offset
@@ -137,6 +137,7 @@ class SelectorRunner(callback.CallbackRunner):
         self.companion_state_offset = companion_state_offset
         self.main_state_offset = main_state_offset
         self.coefficient_state_offset = coefficient_state_offset
+        self.vca_coefficient_state_offset = vca_coefficient_state_offset
         self.words = {callback.STATE + offset: 0 for offset in range(0, state_bytes, 4)}
 
     def call_raw(self, row: dict, state_writable: bool) -> tuple[list[float] | None, list[int]]:
@@ -216,6 +217,8 @@ class SelectorRunner(callback.CallbackRunner):
                 ranges.append((callback.STATE + self.main_state_offset + 4 * row["slot"], 4))
             if self.coefficient_state_offset is not None:
                 ranges.append((callback.STATE + self.coefficient_state_offset + 24 * row["slot"], 24))
+            if self.vca_coefficient_state_offset is not None:
+                ranges.append((callback.STATE + self.vca_coefficient_state_offset + 40 * row["slot"], 40))
         owned = [(_canonical_dm_address(machine.state, low, 1, for_write=True), size)
                  for low, size in ranges]
         for event in machine.watch_log:

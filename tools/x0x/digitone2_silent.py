@@ -9,7 +9,7 @@ from pathlib import Path
 import struct
 import sys
 
-from . import cpu, firmware, sharc_body808 as body, body808, body909, tone808, leakage808, tune909
+from . import cpu, firmware, sharc_body808 as body, body808, body909, tone808, leakage808, tune909, vca909
 
 ROOT = cpu.ROOT
 FOLDER = ROOT / "out/dn2/silent"
@@ -188,16 +188,18 @@ def full_os() -> dict:
                     assert all(math.isfinite(x) and abs(x) < .5 for x in samples), (key, samples)
                     assert model in (1, 2), (key, model)
                     if model == 2:
-                        phase, amplitude = struct.unpack("<If", bytes.fromhex(
+                        phase, c8 = struct.unpack("<If", bytes.fromhex(
                             emu.dsp_peek(0x20092080 + 8*slot, 8)["hex"]))
                         c9 = struct.unpack("<f", bytes.fromhex(
                             emu.dsp_peek(0x20092200 + 4*slot, 4)["hex"]))[0]
                         remaining = struct.unpack("<I", bytes.fromhex(
                             emu.dsp_peek(0x200921C0 + 4*slot, 4)["hex"]))[0]
-                        assert math.isfinite(amplitude) and 0 <= amplitude <= body909.GAIN
+                        assert math.isfinite(c8) and 0 <= c8 <= vca909.SOURCE_V*vca909.STATE_SCALE, (slot,c8)
                         assert math.isfinite(c9) and 0 <= c9 <= tune909.CHARGE_V/tune909.SUPPLY_V, (slot,c9)
                         assert remaining <= tune909.TRIGGER_SAMPLES, (slot,remaining)
-                        verified_909[key] = dict(phase=phase, amplitude=amplitude,
+                        verified_909[key] = dict(phase=phase, c8_encoded=c8,
+                                                c8_voltage_v=c8/vca909.STATE_SCALE,
+                                                audio_gain_fs=max(c8-vca909.BASE_V*vca909.STATE_SCALE,0),
                                                 c9_normalized=c9,trigger_remaining=remaining)
                     if any(samples):
                         audible.add(model)
@@ -315,7 +317,8 @@ def full_os() -> dict:
             tap("YES")
             tap("NO")
             (out / "native-track2-x0x.png").write_bytes(emu.frame_png())
-            emu.midi_in(bytes([0x91, 62, 100]))
+            # A finite C8 tail ends during the UI setup; excite both models together.
+            emu.midi_in(bytes([0x90,63,100,0x91,62,100]))
             emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
             mixed = struct.unpack(
                 "<32I", bytes.fromhex(emu.dsp_peek(0x20092000, 128)["hex"])
@@ -330,7 +333,7 @@ def full_os() -> dict:
                 for i in range(16) if mixed[2*i] > 0
             }
             report["mixed_output_checks"] = check_outputs(report["mixed_voice_outputs"], mixed, (1, 2))
-            new_lanes = [i for i in range(16) if mixed[2*i] and not changed[2*i]]
+            new_lanes = [i for i in range(16) if mixed[2*i] and mixed[2*i+1] == 1 and not changed[2*i]]
             report["track2_voice_params"] = {
                 str(i): list(struct.unpack("<40H", bytes.fromhex(
                     emu.dsp_peek(0x25C48C + 2*(0x6D + 0x49*i), 80)["hex"])))
@@ -635,25 +638,29 @@ def full_os() -> dict:
                               f"909-{label if label.startswith('tune-') else 'decay-'+label}-native.wav")
                 emu.call("pcm.tap", action="capture", path=str(path))
                 emu.midi_in(bytes([0x90,note,100]))
-                emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
+                capture_start = emu.status()["dsp_frames"]
+                # Observe at16ms, before minimum Decay crosses the physical Q12 knee.
+                emu.run_until(frames=capture_start + 24, timeout_wall_s=120)
                 ids = struct.unpack("<16H", bytes.fromhex(emu.dsp_peek(0x25C48C + 2*74, 32)["hex"]))
                 pitches = struct.unpack("<16H", bytes.fromhex(emu.dsp_peek(0x25C48C + 2, 32)["hex"]))
                 lanes = [i for i in range(16) if ids[i] == 20 and pitches[i] == note << 8]
                 assert len(lanes) == 1, (ids,pitches)
                 lane = lanes[0]
-                def oscillator_snapshot():
+                def oscillator_snapshot(require_audible):
                     state = struct.unpack("<32I", bytes.fromhex(emu.dsp_peek(0x20092000,128)["hex"]))
                     assert state[2*lane+1] == 2, state
                     native = struct.unpack("<40H", bytes.fromhex(
                         emu.dsp_peek(0x25C48C + 2*(0x6D+0x49*lane),80)["hex"]))
                     assert native[0] == tune_position*256 and native[1] == position*256, (label,native)
                     downstream = emu.dsp_peek(output_base+128*lane,128)
-                    checked = check_outputs({str(lane):downstream},state,(2,))
+                    checked = check_outputs({str(lane):downstream},state,(2,) if require_audible else ())
                     return dict(callbacks=state[2*lane],tune_raw=native[0],decay_raw=native[1],downstream_voice_buffer=downstream,
+                                downstream_nonzero=2 in checked["nonzero_models"],
                                 **checked["body909_state"][str(lane)])
-                early = oscillator_snapshot()
-                emu.run_until(frames=emu.status()["dsp_frames"] + 650, timeout_wall_s=120)
-                late = oscillator_snapshot()
+                early = oscillator_snapshot(True)
+                # Retain the original750-frame total capture, with an earlier first sample.
+                emu.run_until(frames=capture_start + 750, timeout_wall_s=120)
+                late = oscillator_snapshot(False)
                 emu.call("pcm.tap",action="capture_stop")
                 pcm = hook_ab.read_wav(path)
                 assert len(pcm) >= 48000 and all(math.isfinite(v) for v in pcm)
@@ -667,21 +674,36 @@ def full_os() -> dict:
                     early["tune_raw"],frames)
                 phase_error=abs((late["phase"]/2**32-.25-phases[-1]+.5)%1-.5)
                 c9_error=abs(late["c9_normalized"]-voltages[-1])
-                expected_amplitude=early["amplitude"]*math.exp(-frames/(body909.SAMPLE_RATE*body909.decay_tau(early["decay_raw"])))
-                amplitude_error=abs(late["amplitude"]-expected_amplitude)
-                assert phase_error<=1e-5 and c9_error<=1e-5 and amplitude_error<=1e-5, (label,phase_error,c9_error,amplitude_error)
+                expected_c8=early["c8_voltage_v"]
+                charging=min(frames,early["trigger_remaining"])
+                if charging:
+                    expected_c8=vca909.step(expected_c8,early["decay_raw"],True,charging/body909.SAMPLE_RATE)
+                if frames>charging:
+                    expected_c8=vca909.step(expected_c8,early["decay_raw"],False,(frames-charging)/body909.SAMPLE_RATE)
+                expected_encoded=expected_c8*vca909.STATE_SCALE
+                expected_gain=max(expected_encoded-vca909.BASE_V*vca909.STATE_SCALE,0)
+                c8_error=abs(late["c8_encoded"]-expected_encoded)
+                gain_error=abs(late["audio_gain_fs"]-expected_gain)
+                assert phase_error<=1e-5 and c9_error<=1e-5 and c8_error<=1e-5 and gain_error<=1e-5, (label,phase_error,c9_error,c8_error,gain_error)
                 assert late["trigger_remaining"]==remaining, (label,late,remaining)
-                tau = -frames/body909.SAMPLE_RATE/math.log(late["amplitude"]/early["amplitude"])
-                assert abs(tau-body909.decay_tau(position*256)) <= .001, (label,tau)
-                capture_report = dict(slot=lane,early=early,late=late,measured_tau_s=tau,
-                    expected_tau_s=body909.decay_tau(position*256),native_peak_fs=peak,native_wav=str(path),frames=len(pcm)//2,
+                if expected_gain>0:
+                    assert late["downstream_nonzero"], (label,expected_gain,late)
+                else:
+                    assert expected_c8<=vca909.BASE_V and late["audio_gain_fs"]==0, (label,expected_c8,late)
+                capture_report = dict(slot=lane,early=early,late=late,
+                    native_peak_fs=peak,native_wav=str(path),frames=len(pcm)//2,
                     prediction_samples=frames,phase_error_cycles=phase_error,c9_error_normalized=c9_error,
-                    expected_amplitude=expected_amplitude,amplitude_error_fs=amplitude_error,
-                    scope="constant native Tune/Decay continuation from actual C9/phase/envelope snapshots; lifetime count deltas, downstream voice buffer and PCM checked separately")
+                    expected_c8_voltage_v=expected_c8,c8_state_error_fs=c8_error,
+                    expected_audio_gain_fs=expected_gain,audio_gain_error_fs=gain_error,
+                    early_target_dsp_frames=24,total_capture_target_dsp_frames=750,
+                    scope="fixed native Tune/Decay; independent event-split C8 flow and separate Q12 gain from observed state; nonzero early downstream buffer/PCM, later silence only below the predicted physical knee")
                 report["tune_909" if label.startswith("tune-") else "decay_909"][label] = capture_report
                 emu.midi_in(bytes([0x80,note,0]))
                 emu.run_until(frames=emu.status()["dsp_frames"] + 1600, timeout_wall_s=120)
             assert report["tune_909"]["tune-high"]["early"]["c9_normalized"] > report["tune_909"]["tune-low"]["early"]["c9_normalized"]
+            assert (report["decay_909"]["long"]["early"]["c8_voltage_v"] >
+                    report["decay_909"]["default"]["early"]["c8_voltage_v"] >
+                    report["decay_909"]["short"]["early"]["c8_voltage_v"])
             report["body909_audio"] = report["decay_909"]["default"]
             report["final_status"] = emu.status()
             final = report["final_status"]
@@ -694,9 +716,9 @@ def full_os() -> dict:
         report["traceback"] = traceback.format_exc()
     report["unqualified"] = [
         "persistence across emulator/device restart",
-        "late post-STOP T2 MODEL MIDI delivery/START selection (separate unresolved probe)",
+        "late post-STOP MODEL not rerun for this DSP increment; original-order adopted-runtime proof separately qualified in #80",
         "808 circuit fidelity and pot calibration",
-        "909 shaping, Tune/Attack, full VCA/Decay taper and real-device timing",
+        "909 physical diode/pot calibration, Q11 reset, Attack, full transistor VCA and real-device timing",
     ]
     (out / "native-boot-report.json").write_text(json.dumps(report, indent=2) + "\n")
     return report
