@@ -13,6 +13,10 @@ detail follows within these integrations.
 mods. Its fixed pitch, envelope and START phase are provisional audition values;
 the source baseline establishes the triangle topology, not a faithful complete
 909. Shaping and the stock controls/envelopes follow as integrated increments.
+Actual 909 audio is captured on all three devices. A separate late DN2 T2
+MODEL edit did not reach a 909 START; [#80](https://github.com/simonjohansson/x0x/issues/80)
+owns tracing that native transition. The successful saved-909 T1 capture does
+not close it or establish the cause.
 
 The product remains one mod per device containing 808 and 909 behind a saved
 per-sound/track MODEL selector. Different tracks/voices can select different
@@ -24,7 +28,8 @@ the behavior and circuit details.
 ## The working backlog
 
 Eight consolidated issues replaced the previous 66; #78 records the deferred DT
-reset bug and #79 owns reference-model/schematic alignment. Small increments
+reset bug, #79 owns reference-model/schematic alignment, and #80 investigates
+the newly observed late DN2 MODEL transition. Small increments
 are commits and checklist steps inside these issues, rather than a ticket for
 every control, model stage, CPU implementation and matrix cell.
 
@@ -36,6 +41,7 @@ every control, model stage, CPU implementation and matrix cell.
 | Done | [#7](https://github.com/simonjohansson/x0x/issues/7) | Digitone II: select and exercise the silent combined mod in Digikit |
 | In progress | [#9](https://github.com/simonjohansson/x0x/issues/9) | Implement the 808 on both CPUs and integrate each increment into working mods |
 | In progress | [#25](https://github.com/simonjohansson/x0x/issues/25) | Implement the 909 on both CPUs alongside the 808 in those same mods |
+| Investigating | [#80](https://github.com/simonjohansson/x0x/issues/80) | Trace the late DN2 MODEL edit through stored target, native delivery and fresh START before deciding the responsible layer |
 | Alongside engines | [#79](https://github.com/simonjohansson/x0x/issues/79) | Inspect reference implementations/schematics and align both engines before later VST comparison |
 | Deferred by user | [#78](https://github.com/simonjohansson/x0x/issues/78) | Digitakt native reset defaults; fix upstream in Elekloader and consume here |
 | Deferred by user | [#2](https://github.com/simonjohansson/x0x/issues/2) | Reference VST captures and fidelity comparisons for both models |

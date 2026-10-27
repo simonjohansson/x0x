@@ -84,8 +84,8 @@ Component passes alone do not prove those native paths or downstream audio.
 | Device | First 909 native evidence | Full native regression |
 | --- | --- | --- |
 | DT 1.54 | 23200 raw samples at the actual C/ASM boundary match the oracle within 5.243e-7 FS; isolated post-START PCM peak 3306/32768; 123 callbacks contain nonzero 808 and 909 tracks together | 32108 callbacks complete; only deferred #78 parameter/page reset checks fail |
-| DN 1.44 | Native run in progress | Final isolated capture under investigation |
-| DN2 1.12 | Native run in progress | Combined controls/audio regression pending |
+| DN 1.44 | 38304 raw samples and 38400 stereo PCM frames; every observed 909 block matches the oracle within 5.243e-7 FS; PCM peak 7652/32768 | 47194 callbacks pass, including 41213 nonzero 808 and 5981 nonzero 909 blocks; no violations |
+| DN2 1.12 | Saved-909 T1 produces 24096 stereo PCM frames, peak 0.0201721 FS; owned phase advances exactly and amplitude gives tau 0.250000109 s | 23771 DSP frames pass the tested combined scenario, including both nonzero models, reload, stock coexistence and prior 808 controls; no halt/missing blocks. Separate late T2 MODEL transition remains open in #80 |
 
 DT's representative p-lock check obtains its exact expected value from the
 native held-step DECAY display and requires that word in the render callback,
@@ -94,5 +94,36 @@ encoder acceleration. The tested lock is raw 24064 and the base remains 16384.
 
 DT captures are `out/dt/silent/{raw,native}-909.wav`. Its firmware SHA256 is
 `df8bf16ac6521a4758b9892a8a5a9a520484e94a9b599f4ab45fa88f726f60d0`.
+DN captures are `out/dn/silent/909-{raw,native}.wav`, firmware SHA256
+`865055b037daa2fbe0e6c0d6578cdf0dc392796378c78af30af176ea2a63f481`.
+DN2 capture is `out/dn2/silent/native-909.wav`, firmware SHA256
+`d5b7c656ab0e0b58693010cf463ea8da0cd1669c5cfda77f8d75d08487c3b8e2`.
+All captures retain the native level without normalization.
+
+DN's isolated capture identifies the fresh START/physical slot before asserting
+the desired model. Older 808 preview tails on the same track retain their own
+latched model; they are not part of the newly triggered 909 capture. Callback
+assertion failures now halt the local runner and report their evidence instead
+of repeatedly stopping/re-entering the emulator without advancing time.
+
+DN2's inspected voice buffers have already passed through stock envelope/filter
+processing. They prove bounded, nonzero downstream output, not raw callback
+waveform matching. Raw waveform comparison stays in the actual-ASM component
+suite; native tests separately inspect owned phase/envelope state and PCM.
+The isolated T1 note's early/late amplitude errors are 1.484e-7/4.364e-10 FS.
+
+## Unresolved native transition
+
+[#80](https://github.com/simonjohansson/x0x/issues/80) tracks a separate failure:
+after the long native scenario and double STOP, T2 CC45=127 followed by fresh
+note76 still selected 808. CC45 worked earlier in the same run, but the failing
+case did not record its late stored target or fresh callback MODEL word, so a
+test/native-delivery/selector cause is not yet distinguished. Its failed evidence
+is preserved at `out/dn2/silent/late-model-transition-failure.{json,wav}`.
+
+The successful saved-909 T1 capture does not resolve or qualify that T2 path.
+Keep it open in #25/#20 and investigate the incoming value before changing DSP
+selection or adding a workaround. #9/#25/#79 also remain open for their circuit
+and complete-engine gates.
 
 VST references (#2) and physical-device testing are outside this increment.

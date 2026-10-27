@@ -2,7 +2,7 @@
   "id": "x0x",
   "version": "0.1",
   "title": "X0X KICKS",
-  "description": "Combined kick controls with the first uncalibrated SHARC 808 body",
+  "description": "Combined kick controls with provisional SHARC 808 and 909 bodies",
   "license": "GPL-2.0-or-later",
   "device": "digitone-mk2",
   "os": "1.12",

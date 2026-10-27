@@ -174,6 +174,8 @@ reports/samples live in `out/coldfire/{body808,tone808}` and `out/sharc/body808`
 native captures remain under `out/{dt,dn,dn2}/silent`. See [808-body.md](808-body.md)
 and [808-tone.md](808-tone.md) for 808 evidence; [909-body.md](909-body.md) records
 the triangle increment and its remaining circuit gaps.
+DN2's passing scenario uses its verified saved-909 T1 for the isolated capture;
+the separate late T2 MODEL transition is unqualified and tracked in #80.
 
 The silent milestone counts below describe the completed pre-audio versions.
 Current commands regenerate reports for the first-body implementation instead.

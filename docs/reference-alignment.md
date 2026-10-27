@@ -133,7 +133,8 @@ annotation must accompany the selected nominal population.
    and add the internal transient, preserving circuit state on retrigger as
    each stage lands. Then replace provisional Decay radius control with the
    source-derived feedback network. Keep the distinctions in the table current.
-3. The first unshaped 909 triangle is underway in #25. Add diode shaping, then
+3. The first unshaped 909 triangle runs on both CPUs and all three devices in
+   #25, with the separate late DN2 transition retained in #80. Add diode shaping, then
    derive the stock pitch/envelope/attack paths using the schematic baseline;
    use S44 as a secondary comparison, not an excuse to declare stock fidelity.
 4. Build reproducible executable reference calculations/harnesses and record

@@ -1,4 +1,4 @@
-"""Build the approved DN2 voice with the first 808 body and check its callback."""
+"""Build the approved DN2 voice with provisional 808/909 bodies and check its callback."""
 from __future__ import annotations
 
 import argparse
@@ -9,7 +9,7 @@ from pathlib import Path
 import struct
 import sys
 
-from . import cpu, firmware, sharc_body808 as body, body808, tone808
+from . import cpu, firmware, sharc_body808 as body, body808, body909, tone808
 
 ROOT = cpu.ROOT
 FOLDER = ROOT / "out/dn2/silent"
@@ -174,18 +174,35 @@ def full_os() -> dict:
                 for i in range(16)
                 if state[2 * i] > 0
             }
-            def check_outputs(outputs, selections, require_body=False):
-                audible = False
+            def check_outputs(outputs, selections, required_models=()):
+                audible = set()
+                verified_909 = {}
                 for key, value in outputs.items():
+                    slot = int(key)
+                    model = selections[2 * slot + 1]
                     samples = struct.unpack("<32f", bytes.fromhex(value["hex"]))
                     assert all(math.isfinite(x) and abs(x) < .5 for x in samples), (key, samples)
-                    if selections[2 * int(key) + 1] == 2:
-                        assert samples == (0.0,) * 32, "909 branch must remain silent"
-                    elif any(samples):
-                        audible = True
-                if require_body:
-                    assert audible, "no nonzero actual 808 callback output"
-            check_outputs(report["voice_outputs"], state, require_body=True)
+                    assert model in (1, 2), (key, model)
+                    if model == 2:
+                        phase, amplitude = struct.unpack("<If", bytes.fromhex(
+                            emu.dsp_peek(0x20092080 + 8*slot, 8)["hex"]))
+                        assert math.isfinite(amplitude) and 0 <= amplitude <= body909.GAIN
+                        assert phase % 4 == 0, phase
+                        # Same-model START retains the callback count; recover this body's age from phase.
+                        elapsed = (((phase-0x40000000) // 4) *
+                                   pow(body909.PHASE_STEP // 4, -1, 2**30)) % 2**30
+                        expected = body909.GAIN * math.exp(-elapsed/(body909.SAMPLE_RATE*body909.TAU))
+                        error = abs(amplitude-expected)
+                        assert error <= 1e-5, (key, error)
+                        verified_909[key] = dict(phase=phase, amplitude=amplitude,
+                            samples_since_start=elapsed, expected_amplitude=expected,
+                            amplitude_error_fs=error)
+                    if any(samples):
+                        audible.add(model)
+                assert set(required_models) <= audible, (required_models, audible)
+                return dict(nonzero_models=sorted(audible), body909_state=verified_909,
+                            buffer_stage="downstream voice buffer after stock envelope/filter processing")
+            report["voice_output_checks"] = check_outputs(report["voice_outputs"], state, (1,))
             controls = struct.unpack(
                 "<40I", bytes.fromhex(report["callback_params"]["hex"])
             )
@@ -246,7 +263,7 @@ def full_os() -> dict:
                 str(i): emu.dsp_peek(output_base + 128 * i, 128)
                 for i in range(16) if changed[2 * i] > 0
             }
-            check_outputs(report["switched_voice_outputs"], changed)
+            report["switched_output_checks"] = check_outputs(report["switched_voice_outputs"], changed, (2,))
             (out / "native-model-909.png").write_bytes(emu.frame_png())
 
             def chord(*buttons):
@@ -310,7 +327,7 @@ def full_os() -> dict:
                 str(i): emu.dsp_peek(output_base + 128*i, 128)
                 for i in range(16) if mixed[2*i] > 0
             }
-            check_outputs(report["mixed_voice_outputs"], mixed, require_body=True)
+            report["mixed_output_checks"] = check_outputs(report["mixed_voice_outputs"], mixed, (1, 2))
             new_lanes = [i for i in range(16) if mixed[2*i] and not changed[2*i]]
             report["track2_voice_params"] = {
                 str(i): list(struct.unpack("<40H", bytes.fromhex(
@@ -559,6 +576,42 @@ def full_os() -> dict:
                 emu.midi_in(bytes([0x81,note,0]))
             assert report["tone_audio"]["bright"]["coefficient"] > 10*report["tone_audio"]["dark"]["coefficient"]
             emu.midi_in(bytes([0xB1,cc["0"],64]))
+            tap("STOP"); tap("STOP")
+            emu.run_until(frames=emu.status()["dsp_frames"] + 3000, timeout_wall_s=120)
+            path = out / "native-909.wav"
+            emu.call("pcm.tap", action="capture", path=str(path))
+            # T1 retains the saved 909 selection checked by the project reload above.
+            emu.midi_in(bytes([0x90, 76, 100]))
+            emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
+            ids = struct.unpack("<16H", bytes.fromhex(emu.dsp_peek(0x25C48C + 2*74, 32)["hex"]))
+            pitches = struct.unpack("<16H", bytes.fromhex(emu.dsp_peek(0x25C48C + 2, 32)["hex"]))
+            lanes = [i for i in range(16) if ids[i] == 20 and pitches[i] == 76 << 8]
+            assert len(lanes) == 1, (ids, pitches)
+            lane = lanes[0]
+            def triangle_snapshot():
+                state = struct.unpack("<32I", bytes.fromhex(emu.dsp_peek(0x20092000, 128)["hex"]))
+                assert state[2*lane+1] == 2, state
+                downstream = emu.dsp_peek(output_base + 128*lane, 128)
+                checked = check_outputs({str(lane): downstream}, state, (2,))
+                return dict(callbacks=state[2*lane], downstream_voice_buffer=downstream,
+                            **checked["body909_state"][str(lane)])
+            early = triangle_snapshot()
+            emu.run_until(frames=emu.status()["dsp_frames"] + 650, timeout_wall_s=120)
+            late = triangle_snapshot()
+            emu.call("pcm.tap", action="capture_stop")
+            pcm = hook_ab.read_wav(path)
+            assert len(pcm) >= 48000 and all(math.isfinite(v) for v in pcm)
+            peak = float(max(abs(pcm)))
+            assert 0 < peak < 1, peak
+            frames = 32 * (late["callbacks"] - early["callbacks"])
+            assert frames > 0 and late["phase"] == (early["phase"] + frames*body909.PHASE_STEP) & 0xffffffff
+            ratio = late["amplitude"] / early["amplitude"]
+            tau = -frames / body909.SAMPLE_RATE / math.log(ratio)
+            assert abs(tau-body909.TAU) <= .001, tau
+            report["body909_audio"] = dict(slot=lane, early=early, late=late, measured_tau_s=tau,
+                native_peak_fs=peak, native_wav=str(path), frames=len(pcm)//2,
+                scope="native 909 note after STOP/note-off settling; owned phase/envelope state and downstream voice buffer checked separately")
+            emu.midi_in(bytes([0x80, 76, 0]))
             report["final_status"] = emu.status()
             final = report["final_status"]
             assert final["cf"]["ready"] and final["cf"]["error"] is None, final
@@ -570,8 +623,9 @@ def full_os() -> dict:
         report["traceback"] = traceback.format_exc()
     report["unqualified"] = [
         "persistence across emulator/device restart",
+        "late post-STOP T2 MODEL MIDI delivery/START selection (separate unresolved probe)",
         "808 circuit fidelity and pot calibration",
-        "909 audio and real-device timing",
+        "909 shaping/envelope/control fidelity and real-device timing",
     ]
     (out / "native-boot-report.json").write_text(json.dumps(report, indent=2) + "\n")
     return report
