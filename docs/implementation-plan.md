@@ -3,7 +3,8 @@
 Priority reset: 26 October 2026. First get **one selectable x0x mod running in
 all three emulators**, with controls, p-locks and LFO targets connected to silent
 ASM callbacks. Sound synthesis is the next milestone. Existing component tests
-are useful groundwork, but none of the three installed-mod milestones is complete.
+are useful groundwork. All three installed-mod milestones are accepted; DT retains
+the known reset-shortcut bug deferred to #78.
 
 The product remains one mod per device containing 808 and 909 behind a saved
 per-sound/track MODEL selector. Different tracks/voices can select different
@@ -14,18 +15,20 @@ the behavior and circuit details.
 
 ## The working backlog
 
-Eight working issues replace the previous 66. Small increments are commits and
-checklist steps inside these issues, rather than a ticket for every control,
+Eight consolidated issues replaced the previous 66; #78 records the deferred DT
+reset bug. Small increments are commits and checklist steps inside these issues,
+rather than a ticket for every control,
 model stage, CPU implementation and matrix cell.
 
 | Order | Issue | Deliverable |
 | --- | --- | --- |
 | Track | [#1](https://github.com/simonjohansson/x0x/issues/1) | Roadmap and milestone status |
-| Now | [#39](https://github.com/simonjohansson/x0x/issues/39) | Digitakt: select and exercise the silent combined mod in digiemu |
+| Done, reset bug deferred | [#39](https://github.com/simonjohansson/x0x/issues/39) | Digitakt: select and exercise the silent combined mod in digiemu |
 | Done | [#40](https://github.com/simonjohansson/x0x/issues/40) | Digitone: select and exercise the silent combined mod in digiemu |
 | Done | [#7](https://github.com/simonjohansson/x0x/issues/7) | Digitone II: select and exercise the silent combined mod in Digikit |
 | Next | [#9](https://github.com/simonjohansson/x0x/issues/9) | Implement the 808 on both CPUs and integrate each increment into working mods |
 | Then | [#25](https://github.com/simonjohansson/x0x/issues/25) | Implement the 909 on both CPUs alongside the 808 in those same mods |
+| Deferred by user | [#78](https://github.com/simonjohansson/x0x/issues/78) | Digitakt native reset defaults; fix upstream in Elekloader and consume here |
 | Deferred by user | [#2](https://github.com/simonjohansson/x0x/issues/2) | Reference VST captures and fidelity comparisons for both models |
 | After sound | [#20](https://github.com/simonjohansson/x0x/issues/20) | Combined-mod emulator regression and readiness review |
 
@@ -63,7 +66,7 @@ Existing tests stay, but adding more edge-case coverage is not the priority.
 
 | Device | Useful evidence already available | Work still needed for this milestone |
 | --- | --- | --- |
-| DT, OS 1.54 | Real ID80 mod boots; selection defaults, native controls, p-lock/LFO, save/reload, mixed models and silent owned output pass | Native knob/page reset still restores stock defaults; #39 remains open |
+| DT, OS 1.54 | Real ID80 mod boots; selection defaults, native controls, p-lock/LFO, save/reload, mixed models and silent owned output pass | Native knob/page reset still restores stock defaults; deferred to #78 when the user accepted #39 |
 | DN, OS 1.44 | Silent milestone passes: native controls/screen, p-lock/LFO, save/reload, mixed tracks and owned output | Actual kick models and broader qualification follow in #9/#25/#20 |
 | DN2, OS 1.12 | Silent milestone passes: native controls, p-lock/LFO, persistent project reload, mixed tracks and stock audio | Actual kick models and broader qualification follow in #9/#25/#20 |
 

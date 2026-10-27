@@ -61,7 +61,8 @@ The user explicitly approved an ID80-only build-copy companion correction on
 26 October 2026. It makes legacy-page selection defaults work without altering
 the vendor checkout, other machines or saved storage. Native selection and
 pattern/kit save/reload now pass. Native knob/page resets still bypass the range
-helper and restore stock defaults; #39 retains that failing gate. No switch
+helper and restore stock defaults; the user accepted #39 with that bug deferred
+to [#78](https://github.com/simonjohansson/x0x/issues/78). No switch
 callback overwrites loaded sounds and no extra saved slots are introduced.
 
 ## Small test increments
