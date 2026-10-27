@@ -169,9 +169,13 @@ the original 1e-5 FS limit. The shared SHARC suite passes 8820 calls, with 1084
 code bytes and unchanged 448 private state bytes. Instruction counts are
 informational, not acceptance limits.
 
-The new default ColdFire four-second amplitude floor is 4380 Q31 LSBs (peak
-2.040e-6 FS), still bounded rather than exact tail silence. Stock VCA/tail
-behavior remains open.
+The first live-Decay version exposed a default ColdFire rounding fixed point
+of 4380 Q31 LSBs (peak 2.040e-6 FS). The renderer now clears the amplitude only
+when its decay multiplication stops decreasing; the analytical RC should
+continue toward zero. This removes a permanent numerical residue, without
+adding a fitted amplitude threshold. The four-second default tail and one-LSB
+seeded residues at all three Decay settings reach exact zero. Stock VCA/tail
+and physical retrigger behavior remain open.
 
 ## Unresolved native transition
 

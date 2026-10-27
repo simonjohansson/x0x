@@ -95,7 +95,12 @@ def run(folder=None):
     tail.render()
     assert amplitude == struct.unpack(">i",tail.uc.mem_read(tail.STATES + 4,4))[0]
     tail_peak = max(abs(x) for x in last) / 2**31
-    assert 0 < tail_peak <= 1e-5, tail_peak
+    assert amplitude == 0 and tail_peak == 0, (amplitude,tail_peak)
+    for raw in (0,16384,32512):
+        residue = Runner(image)
+        residue.uc.mem_write(residue.STATES,struct.pack(">II",0x40000000,1))
+        assert residue.render(decay_raw=raw) == [0]*32, raw
+        assert struct.unpack(">i",residue.uc.mem_read(residue.STATES+4,4))[0] == 0
     samples_path = folder / "samples.json"
     samples_path.write_text(json.dumps(samples) + "\n")
     audio.write_wav(folder / "body909.wav",samples,body909.SAMPLE_RATE)
@@ -111,10 +116,9 @@ def run(folder=None):
         samples=str(samples_path),wav=str(folder / "body909.wav"),
         checked=["zero-state silence","streamed analytic triangle and unloaded RC Decay corners/fractions", "live Decay without START","phase wrap and exact fold extrema",
                  "output/state/stack guards","callee registers and complete EMAC context",
-                 "independent interleaved voice","provisional START restart","bounded long tail"],
+                 "independent interleaved voice","provisional START restart","exact silence after the rounding fixed point"],
         unqualified=["909 diode shaping and circuit envelopes","stock VCA/taper and Tune/Attack controls",
-                     "stock 909 fidelity","native OS integration","hardware timing"],
-        known_limit="nearest-even Q31 amplitude settles above zero; this is not exact tail silence")
+                     "stock 909 fidelity","native OS integration","hardware timing"])
     (folder / "report.json").write_text(json.dumps(report,indent=2) + "\n")
     return report
 

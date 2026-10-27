@@ -3,7 +3,7 @@
  * State is {unsigned phase, Q1.31 amplitude}; caller owns aligned disjoint extents.
  * shortcut: START resets to a rising zero crossing; replace the fixed pitch,
  * unloaded envelope/taper and restart when the full circuit is implemented.
- * Nearest-even envelope multiplication has a small nonzero Q31 tail floor.
+ * Clear a rounding-induced constant-amplitude fixed point to retain eventual silence.
  */
     .text
     .globl x0x_909_body
@@ -86,8 +86,14 @@ x0x_909_body:
 .L909multiply:
     moveq #0, %d0
     move.l %d0, %acc0
+    move.l %d5, %d7
     mac.l %d5, %d2, %acc0
     movclr.l %acc0, %d5
+    /* A decaying RC must not retain a constant quantization residue forever. */
+    cmp.l %d7, %d5
+    bne.s .L909decaying
+    moveq #0, %d5
+.L909decaying:
     mac.l %d5, %d3, %acc0
     movclr.l %acc0, %d0
     move.l %d0, (%a1)+
