@@ -5,6 +5,17 @@ any further engine changes. The two CPU implementations agree closely with each
 other; both still have substantial differences from the recordings. This is a
 diagnostic baseline, not a fidelity pass.
 
+This document preserves the `65aeaf7` measurements and the priorities they
+identified. The subsequent [lower-half 808 Decay correction](808-decay-lower-half.md)
+is qualified at `853bb77`: all 81 settings / 243 takes / 12-second tails and
+seven histories are compared on both CPUs. Eighteen settings improve, all nine
+Decay32 settings regress, and 54 remain byte identical. The correction record
+distinguishes the source/image-bound ColdFire execution from the fresh committed
+SHARC run, the fresh host/C/UI/ColdFire test rerun, and installed-emulator
+evidence. DT reset #78 and DN residue #20 remain failed; the DN2 run passes.
+Those current results do not replace the historical numbers below or close
+fidelity acceptance.
+
 | Engine | Training coverage | Actual CPU output per setting | Main measured gaps |
 | --- | --- | --- | --- |
 | 808 | 81 Tone/Decay settings, all 243 takes | Full 12-second tails on ColdFire and SHARC | Interior Decay response, amplitude-dependent pitch sigh, onset/peak and retrigger history |
@@ -12,7 +23,9 @@ diagnostic baseline, not a fidelity pass.
 
 Seven additional histories per engine are compared on a declared single component
 voice. They are not native allocator or faithful residual-charge acceptance tests.
-The 240 held-out recordings remain unused. The HTML report is unchanged.
+The 240 held-out recordings remain unused. The original HTML comparison report
+is unchanged. The separate website was cancelled before publication and does
+not change this frozen baseline.
 
 ## What the measurements say
 
@@ -46,7 +59,7 @@ whole-window figures are not a meaningful cross-engine quality ranking.
 All takes remain separate in the results, including the 909's varying early
 transients. Pitch and decay fits are descriptive, with unreliable fits omitted.
 
-## Next work in the existing plan
+## Work identified by this historical baseline
 
 1. **#9/#79: correct the 808 Decay/control surface and continuing pitch sigh.**
    Preserve the already matching settled pitch and rerun the full grid to expose
