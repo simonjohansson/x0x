@@ -292,3 +292,15 @@ Next derive the correct band-pass forcing and consistent voltage/state scale,
 then integrate that input on both CPUs and rerun all three native scenarios and
 the five training settings. Do not add a raw pulse to the current y input or fit
 away phase/gain errors. The HTML and held-out recordings remain untouched.
+
+## Physical 808 bridge inputs — 27 October 2026
+
+The [host reference](808-retrigger.md) now derives both main and companion
+forcing channels from C41/C42 capacitor voltages, including the resistance
+switch without a state reset. Exact held-input transitions pass independent
+inverse-Laplace and switched-ODE checks; 130 host tests and C/UI suites pass.
+This advances #9/#79's forcing derivation, without changing production audio.
+Next integrate the derived forcing/state with a documented fixed audio scale
+on both CPUs, then rerun native/five-setting checks. Feedback/loading remain
+explicit approximations for later planned increments. Existing regressions, #78/#20/#80 and all
+fidelity gates remain open. HTML and held-out recordings remain untouched.

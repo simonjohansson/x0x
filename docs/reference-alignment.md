@@ -182,7 +182,9 @@ The [initial frequency-switch increment](808-initial-pitch.md) selects S03's
 modal switch does not implement the companion retrigger or nonlinear pitch sigh.
 Reference regressions remain evidence for those missing stages, not fidelity passes.
 
-The [C39 companion-pulse reference](808-retrigger.md) now checks the isolated
-node's positive clamp and large negative falling pulse using capacitor charge.
-It is host-only: voltage-to-bridge forcing, loading and the DSP port are not
-qualified. It does not remove the current initial-switch reference regressions.
+The [C39 companion/bridge reference](808-retrigger.md) checks the isolated
+node's positive clamp and negative falling pulse, and now derives the main and
+companion bridge channels in physical capacitor-voltage states. Exact held-input
+transitions preserve charge across the resistance switch. This is host-only:
+mutual loading, feedback shelf, final audio scale and both ASM ports remain open.
+It does not remove the current initial-switch reference regressions.
