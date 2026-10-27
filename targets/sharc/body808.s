@@ -1,6 +1,6 @@
 // First provisional 808 resonator/Tone and unshaped 909 triangle bodies.
 // Per slot: {callback count since model change, selected code}; 0=inactive, 1=808, 2=909.
-// SDK input is in R4. Metadata is at L2 base, x/y pairs at +128, Tone states at +256.
+// SDK input is in R4. Metadata at L2 base; body +128, Tone +256, coupling pairs +320.
 .SECTION/SW callback_code;
 .GLOBAL sharc_voice_render.;
 sharc_voice_render.:
@@ -68,6 +68,13 @@ next_word:
     R13=LSHIFT R2 BY 2;
     R0=0x20092100;
     R13=R13+R0;
+    R0=LSHIFT R2 BY 3;
+    R1=0x20092140;
+    R0=R0+R1;
+    I3=R0;
+    R1=4;
+    R0=R0+R1;
+    I5=R0;
 
     R3=LSHIFT R2 BY 3;
     R6=0x20092000;
@@ -96,6 +103,8 @@ starting:
     I4=R13;
     R0=0;
     DM(I4,M5)=R0;
+    DM(I3,M5)=R0;
+    DM(I5,M5)=R0;
     R0=16384;
     COMP(R14,R0);
     IF LT JUMP select_808;
@@ -194,8 +203,16 @@ render_body:
     F11=F4*F6;
     I4=R13;
     R12=DM(I4,M5);
+    I0=R14;
+    I1=R15;
+    I2=R13;
+    // Unloaded C47=.47uF into fixed wide-open VR4=100k; full output loading remains open.
+    R14=0x3f7fe2f5;
+    R15=0x3f7ff17a;
+    R7=DM(I3,M5);
+    R10=DM(I5,M5);
     R9=32;
-    R10=4;
+    R13=4;
 body_sample:
     F4=F2*F0;
     F5=F3*F1;
@@ -210,17 +227,21 @@ body_sample:
     F4=F11*F4;
     F5=F12+F4;
     F12=F5+F4;
+    F4=F5-F7;
+    R7=R5;
+    F4=F15*F4;
+    F10=F14*F10;
+    F10=F10+F4;
     I4=R8;
-    DM(I4,M5)=R5;
-    R8=R8+R10;
+    DM(I4,M5)=R10;
+    R8=R8+R13;
     R9=R9-1;
     IF NE JUMP body_sample;
-    I4=R14;
-    DM(I4,M5)=R0;
-    I4=R15;
-    DM(I4,M5)=R1;
-    I4=R13;
-    DM(I4,M5)=R12;
+    DM(I0,M5)=R0;
+    DM(I1,M5)=R1;
+    DM(I2,M5)=R12;
+    DM(I3,M5)=R7;
+    DM(I5,M5)=R10;
     JUMP finish;
 body909:
     R0=124;

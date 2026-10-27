@@ -127,11 +127,12 @@ class SelectorRunner(callback.CallbackRunner):
     """The existing SDK callback memory/context fixture, with raw invalid inputs."""
 
     def __init__(self, code: bytes, entry: int, *, state_bytes=callback.STATE_BYTES,
-                 extra_slot_state_offset=None, tone_state_offset=None):
+                 extra_slot_state_offset=None, tone_state_offset=None, coupling_state_offset=None):
         super().__init__(code, entry)
         self.state_bytes = state_bytes
         self.extra_slot_state_offset = extra_slot_state_offset
         self.tone_state_offset = tone_state_offset
+        self.coupling_state_offset = coupling_state_offset
         self.words = {callback.STATE + offset: 0 for offset in range(0, state_bytes, 4)}
 
     def call_raw(self, row: dict, state_writable: bool) -> tuple[list[float] | None, list[int]]:
@@ -201,6 +202,8 @@ class SelectorRunner(callback.CallbackRunner):
                 ranges.append((callback.STATE + self.extra_slot_state_offset + 8 * row["slot"], 8))
             if self.tone_state_offset is not None:
                 ranges.append((callback.STATE + self.tone_state_offset + 4 * row["slot"], 4))
+            if self.coupling_state_offset is not None:
+                ranges.append((callback.STATE + self.coupling_state_offset + 8 * row["slot"], 8))
         owned = [(_canonical_dm_address(machine.state, low, 1, for_write=True), size)
                  for low, size in ranges]
         for event in machine.watch_log:

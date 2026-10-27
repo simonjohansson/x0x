@@ -49,28 +49,29 @@ def filter_reference(samples, tone_raw=DEFAULT_TONE, changes=None):
 
 
 def compare():
-    """Compare actual composed CPU output with the circuit/body reference."""
+    """Compare actual body/Tone/C47 output with the independent circuit reference."""
     import json
     from pathlib import Path
     import struct
+    from . import coupling808
 
     root = Path(__file__).resolve().parents[2]
     cases = {}
     settings = [(d, DEFAULT_TONE) for d in (0, body808.DEFAULT_DECAY, RAW_MAX)]
     settings += [(body808.DEFAULT_DECAY, t) for t in (0, RAW_MAX)]
     for decay, tone in settings:
-        cf = json.loads((root / f"out/coldfire/tone808/body_{decay}_{tone}.json").read_text())
+        cf = json.loads((root / f"out/coldfire/coupling808/body_{decay}_{tone}.json").read_text())
         raw = (root / f"out/sharc/body808/filtered_{decay}_{tone}.f32").read_bytes()
         sharc = struct.unpack(f"<{len(raw)//4}f", raw)
         frames = min(len(cf), len(sharc))
         assert frames >= 8192, "matching CPU output is too short"
-        expected = filter_reference(body808.reference(frames, decay), tone)
+        expected = coupling808.filter_reference(filter_reference(body808.reference(frames, decay), tone))
         errors = dict(coldfire_oracle=max(abs(a-b) for a,b in zip(cf[:frames], expected)),
                       sharc_oracle=max(abs(a-b) for a,b in zip(sharc[:frames], expected)),
                       cross_cpu=max(abs(a-b) for a,b in zip(cf[:frames], sharc[:frames])))
         assert all(math.isfinite(e) and e <= 1e-5 for e in errors.values()), (decay,tone,errors)
         cases[f"{decay}_{tone}"] = dict(frames=frames, maximum_errors_fs=errors)
-    report = dict(status="passed", scope="matching body plus source-derived Tone RC output",
+    report = dict(status="passed", scope="matching body, Tone RC and unloaded C47 coupling output",
                   cases=cases, sample_rate=SAMPLE_RATE, limit_fs=1e-5,
                   alignment_samples=0, normalization=False)
     (root / "out/808-body-comparison.json").write_text(json.dumps(report,indent=2)+'\n')

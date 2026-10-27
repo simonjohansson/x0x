@@ -14,6 +14,7 @@
     "../../targets/coldfire/selector.s",
     "../../targets/coldfire/body808.s",
     "../../targets/coldfire/tone808.s",
+    "../../targets/coldfire/coupling808.s",
     "../../targets/coldfire/body909.s",
     "../../targets/coldfire/silence.s"
   ],

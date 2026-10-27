@@ -46,7 +46,7 @@ def reference(frames, decay_raw=DEFAULT_DECAY, changes=None):
 
 
 def compare():
-    """Compare the current production body plus Tone stage on both CPUs."""
+    """Compare the current production body, Tone and coupling on both CPUs."""
     from .tone808 import compare as compare_tone
     return compare_tone()
 

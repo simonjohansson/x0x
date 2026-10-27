@@ -7,11 +7,11 @@ import math
 import struct
 import sys
 
-from . import analysis, body808, body909, cpu, tone808, sharc_callback as callback, sharc_selector as selector
+from . import analysis, body808, body909, coupling808, cpu, tone808, sharc_callback as callback, sharc_selector as selector
 
 SOURCE = cpu.ROOT / "targets/sharc/body808.s"
 FOLDER = cpu.ROOT / "out/sharc/body808"
-STATE_BYTES = 320
+STATE_BYTES = 448
 FRAMES = 24000
 
 
@@ -26,7 +26,8 @@ def component() -> tuple[dict, bytes]:
 
     def runner():
         return selector.SelectorRunner(code, entry, state_bytes=STATE_BYTES,
-                                       extra_slot_state_offset=128, tone_state_offset=256)
+                                       extra_slot_state_offset=128, tone_state_offset=256,
+                                       coupling_state_offset=320)
 
     policy = runner()
     inputs = selector.cases()
@@ -36,7 +37,8 @@ def component() -> tuple[dict, bytes]:
         samples, state = policy.call_raw(row, state_writable=reference["notices"] == 1)
         assert state[:32] == reference["state"], row["label"]
         if samples is not None:
-            assert all(math.isfinite(x) and abs(x) <= .25 for x in samples), row["label"]
+            bound = .25 if row["slot"] < 16 and state[2 * row["slot"] + 1] == 2 else .5
+            assert all(math.isfinite(x) and abs(x) <= bound for x in samples), row["label"]
             if not reference["notices"]:
                 assert samples == [0.0] * 32, row["label"]
             elif state[2 * row["slot"] + 1] == 2:
@@ -65,8 +67,9 @@ def component() -> tuple[dict, bytes]:
             current_tone = (tone_changes or {}).get(block * 32, current_tone)
             chunk, _ = machine.call_raw(body_case("body", current, current_tone, flags=int(block == 0)), True)
             result.extend(chunk)
-        expected = tone808.filter_reference(body808.reference(frames, decay_raw=raw, changes=changes),
-                                            tone_raw=tone, changes=tone_changes)
+        expected = coupling808.filter_reference(tone808.filter_reference(
+            body808.reference(frames, decay_raw=raw, changes=changes),
+            tone_raw=tone, changes=tone_changes))
         error = max(abs(a - b) for a, b in zip(result, expected, strict=True))
         assert error < 1e-5, (raw, changes, error)
         return machine, result, error
@@ -79,15 +82,20 @@ def component() -> tuple[dict, bytes]:
         measured = analysis.analyze(result, body808.SAMPLE_RATE)
         frequency = measured["frequency"]["median_hz"]
         decay = measured["decay_positive"]["time_constant_s"]
-        assert frequency is not None and abs(frequency - body808.FREQUENCY) < .02, (raw, frequency)
-        assert decay is not None and abs(decay - body808.decay_tau(raw)) < .001, (raw, decay)
+        expected_samples = coupling808.filter_reference(tone808.filter_reference(body808.reference(frames,raw)))
+        expected_fit = analysis.analyze(expected_samples,body808.SAMPLE_RATE)
+        expected_frequency = expected_fit["frequency"]["median_hz"]
+        expected_decay = expected_fit["decay_positive"]["time_constant_s"]
+        assert frequency is not None and abs(frequency - expected_frequency) < .02, (raw, frequency, expected_frequency)
+        assert decay is not None and abs(decay - expected_decay) < .001, (raw, decay, expected_decay)
         output = FOLDER / f"filtered_{raw}_16384.f32"
         packed = struct.pack(f"<{len(result)}f", *result)
         output.write_bytes(packed)
         (FOLDER / f"samples_{raw}.f32").write_bytes(packed)
         decay_cases.append(dict(raw=raw, frames=frames, maximum_error_fs=error,
                                frequency_hz=frequency, decay_time_constant_s=decay,
-                               expected_decay_time_constant_s=body808.decay_tau(raw),
+                               expected_decay_time_constant_s=expected_decay,
+                               raw_body_time_constant_s=body808.decay_tau(raw),
                                samples_path=str(output),
                                samples_sha256=hashlib.sha256(output.read_bytes()).hexdigest()))
         rendered[raw] = (machine, result, error)
@@ -135,7 +143,7 @@ def component() -> tuple[dict, bytes]:
     pending, state = stream.call_raw(body_case("pending-909", flags=0, model=32512), True)
     assert pending == samples[32:64] and state[1] == 1, "MODEL changed before START"
     switched, state = stream.call_raw(body_case("switch-909", model=32512), True)
-    assert switched == triangle_samples[:32] and state[1] == 2 and state[64] == 0
+    assert switched == triangle_samples[:32] and state[1] == 2 and state[64] == 0 and state[80:82] == [0,0]
     triangle_state = state[32:34]
     other, state = stream.call_raw(body_case("other-slot", slot=15), True)
     assert other == samples[:32] and state[1] == 2 and state[32:34] == triangle_state
@@ -179,12 +187,12 @@ def component() -> tuple[dict, bytes]:
                   c_reference=provenance,
                   checked=["analytic fixed-frequency damped-sine body", "provisional DECAY curve and fractions",
                            "continuous live DECAY edit", "source-derived Tone RC and continuous edits",
-                           "provisional body/Tone reset on every START", "all 16 independent slots",
+                           "unloaded C47 coupling after Tone", "provisional full-chain reset on every START", "all 16 independent slots",
                            "START-only MODEL latch", "provisional same-model retrigger",
                            "model-change body clear", "909 triangle and independent mixed models", "invalid-input atomicity",
                            "state/output guards", "SDK context preservation"],
                   unqualified=["808/909 circuit fidelity", "909 diode shaper, pitch/amp/attack circuits and controls",
-                               "stock 808 Decay circuit and Tone pot taper calibration", "native OS integration",
+                               "stock 808 Decay circuit and Tone pot taper calibration", "loaded output/buffer/C49/C50 network", "native OS integration",
                                "VST or hardware comparison", "real-device timing"])
     (FOLDER / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     return report, code
