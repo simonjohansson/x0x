@@ -12,10 +12,13 @@ The 909 [diode shaper](909-shaping.md), [C9/IC12 Tune path](909-tune.md) and
 Tune changes the initial sweep; settled pitch is separately training-calibrated
 at52.58 Hz. Loaded finite C8 charging/base-current discharge improves all five
 whole-waveform residuals and default decay duration, while onset/peak/level
-regressions remain explicit. The combined finite Q11 reset trial worsens4/5
-settings and every early window, so it remains isolated pending source-justified
-operating-point/polarity checks. The next useful existing #25 integration is the
-missing Attack pulse, then filtered noise. Independent workers prepare those
+regressions remain explicit. The initial wrong-sign Q11 trial remains rejected.
+Independent Q10/IC11a source checks justify the [finite reset/negative-output
+correction](909-trigger.md), now passing both CPU suites and all three native
+regression paths plus a separate DN2first32sample witness. All five whole errors
+improve, while default25/50ms windows regress. Attack pulse/noise remains the
+next source work; its first isolated pulse-only comparison worsens all measured
+windows, so no production pulse or fidelity claim follows from numeric agreement. Independent workers prepare those
 bounded pieces with serial shared-source integration; no new ticket tree.
 
 DT retains only deferred reset #78. DN's [one-count baseline investigation](dn-silence-residue.md)
@@ -428,3 +431,18 @@ Default audio decay fit181.825→52.866ms versus57.323reference; all five whole
 residuals improve, but peak/global level mismatch and some onset windows worsen.
 Keep full fidelity open. Hold the regressing finite-R51 prototype; proceed with
 source-derived Attack pulse/noise work. HTML and held-out audio remain unchanged.
+
+## Finite 909 reset and output polarity — 27 October 2026
+
+The [source-verified combined correction](909-trigger.md) resolves the wrong
+Q10type/output-sign assumption with fixed physical polarity, not fitted phase.
+169 relevant host cases/C UI suites and both full CPU suites pass unchanged
+1e-5FS. SHARC runs14,298calls,5,672code/1,664privatebytes, with nine808renders
+byte-identical; peer error≤2.605e-6FS. All five whole training errors improve;
+default first25/50ms and short/level/Attack gaps remain explicit. DT47,135 and
+DN110,123callbacks retain only#78/#20 respectively. DN2original regression
+passes37,815audio/37,816DSPframes; the first prefix observer was unqualified
+from chunk overshoot, then a separate unchanged-firmware focused probe qualifies
+age32/remaining64 inside the original24frame window. Keep those reports distinct.
+The future combined observer uses exact step jobs and the original120s watchdog;
+no claim of rerunning that revised full script. HTML and held-out audio unchanged.

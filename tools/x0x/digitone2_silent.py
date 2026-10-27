@@ -8,6 +8,7 @@ import math
 from pathlib import Path
 import struct
 import sys
+import time
 
 from . import cpu, firmware, sharc_body808 as body, body808, body909, tone808, leakage808, tune909, vca909
 
@@ -639,6 +640,55 @@ def full_os() -> dict:
                 emu.call("pcm.tap", action="capture", path=str(path))
                 emu.midi_in(bytes([0x90,note,100]))
                 capture_start = emu.status()["dsp_frames"]
+                if label == "default":
+                    observed=[]
+                    first_trigger=None
+                    # Frame jobs may overshoot a whole controller chunk. Existing exact
+                    # instruction-step jobs expose the prefix within the same24-frame window.
+                    previous_frame=capture_start
+                    observation_deadline=time.monotonic()+120
+                    while emu.status()["dsp_frames"] < capture_start+24:
+                        remaining_wall=observation_deadline-time.monotonic()
+                        if remaining_wall<=0:
+                            raise TimeoutError("first909trigger observation exceeded120s wall deadline")
+                        emu.step(10000,timeout_wall_s=remaining_wall)
+                        current_frame=emu.status()["dsp_frames"]
+                        if current_frame==previous_frame:
+                            continue
+                        previous_frame=current_frame
+                        ids=struct.unpack("<16H",bytes.fromhex(emu.dsp_peek(0x25C48C+2*74,32)["hex"]))
+                        pitches=struct.unpack("<16H",bytes.fromhex(emu.dsp_peek(0x25C48C+2,32)["hex"]))
+                        lanes=[i for i in range(16) if ids[i]==20 and pitches[i]==note<<8]
+                        row=dict(offset_dsp_frames=current_frame-capture_start,dsp_frames=current_frame,matching_slots=lanes)
+                        if len(lanes)==1:
+                            slot=lanes[0]
+                            metadata=struct.unpack("<32I",bytes.fromhex(emu.dsp_peek(0x20092000,128)["hex"]))
+                            remaining=struct.unpack("<I",bytes.fromhex(emu.dsp_peek(0x200921C0+4*slot,4)["hex"]))[0]
+                            row.update(slot=slot,model=metadata[2*slot+1],callbacks=metadata[2*slot],remaining=remaining)
+                            if metadata[2*slot+1]==2 and remaining in (64,32) and row["dsp_frames"]<=capture_start+24:
+                                native=struct.unpack("<40H",bytes.fromhex(emu.dsp_peek(0x25C48C+2*(0x6D+0x49*slot),80)["hex"]))
+                                assert native[0]==tune_position*256 and native[1]==position*256,(label,native)
+                                phase,c8=struct.unpack("<If",bytes.fromhex(emu.dsp_peek(0x20092080+8*slot,8)["hex"]))
+                                c9=struct.unpack("<f",bytes.fromhex(emu.dsp_peek(0x20092200+4*slot,4)["hex"]))[0]
+                                age=tune909.TRIGGER_SAMPLES-remaining
+                                _,predicted=body909.continue_reference(body909.INITIAL_STATE,native[1],native[0],age)
+                                phase_error=abs((phase/2**32-.25-predicted[0]+.5)%1-.5)
+                                c9_error=abs(c9-predicted[1])
+                                c8_error=abs(c8-predicted[3])
+                                assert predicted[2]==remaining,(row,predicted)
+                                assert phase_error<=1e-5 and c9_error<=1e-5 and c8_error<=1e-5,(row,phase_error,c9_error,c8_error)
+                                first_trigger=dict(status="passed",slot=slot,age_samples=age,remaining=remaining,
+                                    dsp_frames=row["dsp_frames"],native_tune_raw=native[0],native_decay_raw=native[1],
+                                    native_control_words=dict(tune=native[0],decay=native[1],attack=native[2],model=native[5]),
+                                    actual=dict(phase_word=phase,phase_cycles=phase/2**32-.25,c9_normalized=c9,c8_encoded=c8),
+                                    predicted=dict(phase_cycles=predicted[0],c9_normalized=predicted[1],c8_encoded=predicted[3]),
+                                    phase_error_cycles=phase_error,c9_error_normalized=c9_error,c8_state_error_fs=c8_error,
+                                    scope="fresh-hit private DSPstate during electrical trigger; age from96-minus-remaining, not lifetime callbacks; downstream PCM separate")
+                        observed.append(row)
+                        if first_trigger is not None:break
+                    report["first_trigger_909"] = first_trigger or dict(status="unqualified",
+                        reason="No unique fresh909 snapshot with remaining64or32 was visible inside the existing24frame window")
+                    report["first_trigger_909"]["observations"]=observed
                 # Observe at16ms, before minimum Decay crosses the physical Q12 knee.
                 emu.run_until(frames=capture_start + 24, timeout_wall_s=120)
                 ids = struct.unpack("<16H", bytes.fromhex(emu.dsp_peek(0x25C48C + 2*74, 32)["hex"]))
@@ -710,7 +760,8 @@ def full_os() -> dict:
             assert final["cf"]["ready"] and final["cf"]["error"] is None, final
             assert final["dsp"] == "sharc" and final["audio"]["halted"] is None, final
             assert final["audio"]["missing_blocks"] == 0, final
-            report["status"] = "passed"
+            report["regression_status"] = "passed"
+            report["status"] = "passed" if report["first_trigger_909"]["status"] == "passed" else "unqualified"
     except Exception as error:
         report["error"] = str(error)
         report["traceback"] = traceback.format_exc()
@@ -720,6 +771,8 @@ def full_os() -> dict:
         "808 circuit fidelity and pot calibration",
         "909 physical diode/pot calibration, Q11 reset, Attack, full transistor VCA and real-device timing",
     ]
+    if report.get("first_trigger_909",{}).get("status")=="unqualified":
+        report["unqualified"].append("first909trigger private-state snapshot not observed within the existing capture window")
     (out / "native-boot-report.json").write_text(json.dumps(report, indent=2) + "\n")
     return report
 

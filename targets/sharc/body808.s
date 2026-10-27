@@ -1209,13 +1209,6 @@ render909:
     R11=R11+R12;
     I4=R11;
     DM(I4,M5)=R4;
-    R4=0x4ba32848;
-    F4=F4*F5;
-    R11=I2;
-    R12=16;
-    R11=R11+R12;
-    I4=R11;
-    DM(I4,M5)=R4;
     R4=0x3cdcf92f;
     F4=F4*F5;
     R11=I2;
@@ -1223,8 +1216,36 @@ render909:
     R11=R11+R12;
     I4=R11;
     DM(I4,M5)=R4;
+    R3=0xb948d1bd;
+    F3=F3*F7;
+    R4=0x3aaed74f;
+    F3=F3+F4;
+    F3=F3*F7;
+    R4=0xbc024304;
+    F3=F3+F4;
+    F3=F3*F7;
+    R4=0x3d215259;
+    F3=F3+F4;
+    F3=F3*F7;
+    R4=0xbe1f17eb;
+    F3=F3+F4;
+    F3=F3*F7;
+    R4=0x3ee92c59;
+    F3=F3+F4;
+    F4=F3*F7;
+    R5=0x3f5e8b54;
+    F5=F5-F4;
+    R4=0x4ba32847;
+    F4=F4*F5;
+    R11=I2;
+    R12=16;
+    R11=R11+R12;
+    I4=R11;
+    DM(I4,M5)=R4;
     R4=0x490cd56d;
     F4=F4*F3;
+    R5=0x4a79a11e;
+    F4=F4+F5;
     R11=I2;
     R12=20;
     R11=R11+R12;
@@ -1248,8 +1269,6 @@ sample909:
     R11=0;
     JUMP tune909_flow;
 tune909_on:
-    R7=R7-1;
-    DM(I1,M5)=R7;
     R11=I2;
     R12=8;
     R11=R11+R12;
@@ -1268,14 +1287,31 @@ tune909_on:
 tune909_flow:
     F5=F5*F6;
     F5=F5+F11;
-    R11=0x4a8f9416;
-    F5=F5+F11;
     F3=F3*F6;
     F6=F6+F3;
     F6=F6+F4;
     DM(I0,M5)=R6;
-    R3=FIX F5;
-    R0=R0+R3;
+    R7=PASS R7;
+    IF EQ JUMP free909_phase;
+    R12=0x40000000;
+    R11=R0-R12;
+    R12=0;
+    F11=FLOAT R11 BY R12;
+    R12=0x3f40237b;
+    F11=F11*F12;
+    F5=F5+F11;
+    R12=FIX F5;
+    R0=0x40000000;
+    R0=R0+R12;
+    R7=R7-1;
+    DM(I1,M5)=R7;
+    JUMP ready909_phase;
+free909_phase:
+    R11=0x4a8f9416;
+    F5=F5+F11;
+    R12=FIX F5;
+    R0=R0+R12;
+ready909_phase:
 
     R4=LSHIFT R0 BY 1;
     R5=0x80000000;
@@ -1535,6 +1571,9 @@ vca909_apply:
     R5=0;
 vca909_gain_ready:
     F4=F4*F5;
+    // IC11a sums the Q12 body branch at its inverting input.
+    R5=0x80000000;
+    R4=R4 XOR R5;
     I4=R8;
     DM(I4,M5)=R4;
     R8=R8+R10;

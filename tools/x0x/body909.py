@@ -1,13 +1,14 @@
 """Independent 909 triangle, diode shaper and first-order loaded ENV1/Q12 VCA.
 
 S02 p4/p11 and S05 p3/p12 establish the triangle VCO and C9/IC12 Tune path.
+The forced HIGH branch makes raw C14 rise; Q12/IC11a inverts the audio.
 Settled52.58Hz is a separate training calibration; gain0.25 and zero-crossing
 START remain provisional. ENV1 uses finite C8 charge and Q12 base-current loading;
 transistor compression, subthreshold behavior and physical A taper remain open.
 """
 import math
 
-from . import tune909
+from . import tune909, trigger909
 
 SAMPLE_RATE = 48000
 FREQUENCY = tune909.SETTLED_HZ
@@ -88,9 +89,9 @@ def shaper_coefficients():
 
 def reference(frames, decay_raw=DEFAULT_DECAY, changes=None,
               tune_raw=tune909.DEFAULT_TUNE, tune_changes=None):
-    phases, _ = tune909.reference(frames, tune_raw, tune_changes)
+    phases, _, _ = trigger909.reference(frames, tune_raw,changes=tune_changes)
     voltages = vca909.envelope(frames, decay_raw, changes)
-    return [GAIN*vca909.gain(voltage)*shaped_triangle(phase)
+    return [-GAIN*vca909.gain(voltage)*shaped_triangle(phase)
             for voltage,phase in zip(voltages,phases)]
 
 
@@ -104,14 +105,15 @@ def continue_reference(state, decay_raw, tune_raw, frames):
     uint32/2**32 minus .25. The diode shaper remains before the separate VCA.
     """
     phase, voltage, remaining, c8_encoded = state
-    phases, voltages, remaining = tune909.continue_reference(
-        phase, voltage, remaining, tune_raw, frames)
+    phases, voltages, oscillator_state = trigger909.continue_reference(
+        (phase, voltage, remaining),tune_raw,frames)
+    remaining=oscillator_state[2]
     initial_remaining = state[2]
     c8 = c8_encoded / vca909.STATE_SCALE
     samples=[]
     for i,value in enumerate(phases):
         c8=vca909.step(c8,decay_raw,initial_remaining-i>0)
-        samples.append(GAIN*vca909.gain(c8)*shaped_triangle(value))
+        samples.append(-GAIN*vca909.gain(c8)*shaped_triangle(value))
     return samples, (phases[-1], voltages[-1], remaining, c8*vca909.STATE_SCALE)
 
 

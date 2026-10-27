@@ -1,9 +1,10 @@
-/* C9/IC12-controlled 909 triangle, passive diode shaper and loaded C8/Q12 VCA.
+/* C9/IC12-controlled 909 triangle, finite R51 reset and loaded C8/Q12 VCA.
  * void x0x_909_body(int32_t state[4], int32_t output[32], uint32_t start,
  *                   uint32_t decay_raw, uint32_t tune_raw).
  * State: phase Q32, C8/64 Q31, C9/15V Q31, trigger samples remaining.
- * shortcut: zero-crossing START, nominal switch drops and resistance-linear pots
- * remain provisional until Q11/physical taper/retrigger alignment is measured.
+ * Q10 PNP OFF on comparator HIGH makes raw C14 rise; IC11a inverts the audio.
+ * shortcut: START clears charges; switch drops, pot taper and retrigger
+ * circuit behavior remain provisional.
  */
     .text
     .globl x0x_909_body
@@ -135,14 +136,19 @@ x0x_909_body:
     movclr.l %acc0, %d7
     sub.l %d7, %d6
     move.l %d6, 88(%sp)
-    move.l #21385359, %d6
-    mac.l %d0, %d6, %acc0
-    movclr.l %acc0, %d7
-    sub.l %d7, %d6
+    bsr .L909reset_coeff
+    mac.l %d3, %d1, %acc0
+    movclr.l %acc0, %d0
+    move.l #1866836429, %d6
+    sub.l %d0, %d6
+    move.l #21385358, %d7
+    mac.l %d6, %d7, %acc0
+    movclr.l %acc0, %d6
     move.l %d6, 92(%sp)
     move.l #576855, %d6
     mac.l %d3, %d6, %acc0
     movclr.l %acc0, %d6
+    addi.l #4089927, %d6
     move.l %d6, 96(%sp)
     lea 100(%sp), %a5
     movea.l #32, %a6
@@ -161,14 +167,29 @@ x0x_909_body:
     move.l 88(%sp), %d1
     move.l 92(%sp), %d7
     move.l 96(%sp), %d3
-    subq.l #1, %a4
 .L909tune_flow:
     move.l %a3, %d6
     mac.l %d7, %d6, %acc0
     movclr.l %acc0, %d7
     add.l %d3, %d7
+    move.l %a4, %d3
+    tst.l %d3
+    beq.s .L909free_phase
+    move.l %d4, %d3
+    subi.l #0x40000000, %d3
+    move.l #1611775306, %d0
+    mac.l %d3, %d0, %acc0
+    movclr.l %acc0, %d3
+    move.l 84(%sp), %d0
+    add.l %d7, %d3
+    move.l #0x40000000, %d4
+    add.l %d3, %d4
+    subq.l #1, %a4
+    bra.s .L909phase_ready
+.L909free_phase:
     addi.l #4704779, %d7
     add.l %d7, %d4
+.L909phase_ready:
     mac.l %d0, %d6, %acc0
     movclr.l %acc0, %d0
     add.l %d1, %d0
@@ -261,6 +282,7 @@ x0x_909_body:
 .Lvca_amplitude_ready:
     mac.l %d7, %d3, %acc0
     movclr.l %acc0, %d0
+    neg.l %d0 /* Q12 conductance into IC11a's minus summing node. */
     move.l %d0, (%a1)+
     subq.l #1, %a6
     move.l %a6, %d6
@@ -312,6 +334,24 @@ x0x_909_body:
     movclr.l %acc0, %d6
     sub.l %d1, %d6
     addi.l #0x80000000, %d6
+    rts
+.L909reset_coeff:
+    move.l #-411278, %d3
+    mac.l %d3, %d1, %acc0
+    movclr.l %acc0, %d3
+    addi.l #2864596, %d3
+    mac.l %d3, %d1, %acc0
+    movclr.l %acc0, %d3
+    addi.l #-17073671, %d3
+    mac.l %d3, %d1, %acc0
+    movclr.l %acc0, %d3
+    addi.l #84579016, %d3
+    mac.l %d3, %d1, %acc0
+    movclr.l %acc0, %d3
+    addi.l #-333643103, %d3
+    mac.l %d3, %d1, %acc0
+    movclr.l %acc0, %d3
+    addi.l #977999427, %d3
     rts
     .balign 4
 .L909shape_table:

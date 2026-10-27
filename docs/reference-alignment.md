@@ -107,7 +107,7 @@ the diode stage retains explicit provisional operating assumptions.
 | Tune/pitch path | S02 ENV3/VR2/C9; S05 p.3 distinguishes stock Tune from added Pitch/Tune Depth | Loaded switched C9 RC and IC12 CV; Tune changes sweep discharge, settled 52.58 Hz is separately training-calibrated | Nominal RC/phase implemented on both CPUs; pot taper, operating points and Q11/C14 reset remain open |
 | Tonal Decay/VCA | S02 p.11 / S05 p.12 ENV1→Q12: C8, VR5/R58, switched D8/D9 charge and R54 base loading | Independent event-split capacitor KCL and both quarter-step ASM ports; output follows positive Q12 base current | First-order loaded VCA implemented; ideal base knee, physical pot taper, full transistor compression/loading, accent and output calibration remain unqualified. See [VCA model](909-vca.md) |
 | Attack pulse/noise | S02 p.4/p.11, ENV2→Q6; S05 p.12, VR3 and C12 | ATTK routed | Pulse, filtered continuous noise and VCA absent; Attack is branch level, not ADSR rise time |
-| Trigger/accent/retrigger | S02 pp.4–5 and BD Q11 clamp; separate accent and approximately 2 ms/5 V trigger | START restarts triangle phase/amplitude | Provisional restart, no circuit excitation/clamp-release or residual-state behavior |
+| Trigger/accent/retrigger | S02 pp.4–5 and Q7/Q11/R51/C14; Q10 PNP and inverting IC11a output | Both CPUs integrate finite72.6µs reset during96samples and use negative tonal output; actual native prefix32samples observed separately | Ideal-switch fresh reset implemented; START still clears charges. Intrinsic accent, nonideal switching and owned retained-charge retrigger remain unqualified |
 | Output sum/calibration | S02 p.4/p.11; S05 p.12 | Provisional 0.25 internal gain and native track volume | No calibrated tonal/attack sum or 909 internal scale yet |
 
 ## Resolved readings and explicit assumptions
@@ -154,9 +154,10 @@ numerator/resistor naming describes the unloaded node exactly.
    CPUs and all three devices in #25, with unloaded RC Decay. Its five-setting
    training comparison improves settled pitch; the loaded ENV1/Q12 increment
    then improves whole-window residuals but worsens peak/level and some onset
-   windows. A finite Q11 reset trial worsens4/5 settings and remains isolated
-   pending operating-point/polarity checks. Implement the missing Attack pulse
-   next, then noise/full VCA behavior; do not adopt the reset merely for ODE agreement;
+   windows. The initial wrong-sign reset trial is rejected. Independent Q10/IC11a
+   source checks justify the [combined finite reset/negative output](909-trigger.md),
+   now implemented and measured on both CPUs. Continue missing Attack pulse/noise
+   and full VCA behavior; keep the remaining default onset/short-tail errors;
    use S44 as a secondary comparison, not an excuse to declare stock fidelity.
 4. The pinned Plaits classes now have reproducible executable host renders and
    measured control/retrigger differences. Continue the stock-circuit models

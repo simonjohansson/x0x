@@ -1,12 +1,13 @@
 # 909 body, diode shaping, Tune and loaded Decay
 
-The current [finite-charge ENV1/Q12 increment](909-vca.md) replaces the unloaded
-Decay approximation on both CPUs, after the [Tune increment](909-tune.md) and
-[diode shaper](909-shaping.md). Settled pitch is training-calibrated to 52.58 Hz;
-Tune changes the initial sweep, not transposition. The five-setting comparison
-improves whole-waveform residuals while retaining onset/level regressions.
-The finite Q11 trigger/reset trial is held after measured regressions;
-the missing Attack pulse is next. Full transistor behavior remains open.
+The current [finite-trigger/output-polarity correction](909-trigger.md) combines
+R51/Q11 feedback with the independently verified inverting output boundary.
+It follows [loaded ENV1/Q12](909-vca.md), [Tune](909-tune.md) and
+[diode shaping](909-shaping.md) on both CPUs. All five whole-window training
+errors improve; default25/50ms onset windows still worsen. The earlier wrong-sign
+trial stays rejected. Settled pitch remains training-calibrated to52.58Hz;
+Tune changes the initial sweep, not transposition. Attack pulse/noise and full
+transistor/calibration/retrigger behavior remain open.
 Current native evidence and caveats are recorded with those increments; older
 measurements below preserve their original source/firmware identities.
 

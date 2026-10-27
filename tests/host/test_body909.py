@@ -1,7 +1,7 @@
 import math
 import unittest
 
-from x0x import body909 as body, tune909, vca909
+from x0x import body909 as body, vca909, trigger909
 from x0x.analysis import analyze
 
 
@@ -20,7 +20,7 @@ class Body909Tests(unittest.TestCase):
         self.assertLessEqual(report["peak_fs"],body.GAIN*peak_gain*body.diode_shape(1))
         self.assertEqual(body.reference(32),samples[:32])
         self.assertEqual(report["onset_sample"],0)
-        self.assertGreater(samples[0],0)
+        self.assertLess(samples[0],0)
 
     def test_body_continuation_preserves_independent_tune_and_envelope_history(self):
         expected=body.reference(6144,32512,tune_raw=0,tune_changes={32:32512,160:0})
@@ -96,7 +96,7 @@ class Body909Tests(unittest.TestCase):
         # The shaper stays at its fixed oscillator operating point as the VCA falls.
         sample=119
         wave=body.reference(sample+1,32512)
-        expected=body.GAIN*vca909.gain(vca909.envelope(sample+1,32512)[-1])*body.shaped_triangle(tune909.reference(sample+1)[0][-1])
+        expected=-body.GAIN*vca909.gain(vca909.envelope(sample+1,32512)[-1])*body.shaped_triangle(trigger909.reference(sample+1)[0][-1])
         self.assertAlmostEqual(wave[sample],expected,places=13)
 
 
@@ -116,6 +116,6 @@ class Decay909Tests(unittest.TestCase):
         self.assertEqual(actual[:switch],baseline[:switch])
         n=2048
         c8=vca909.envelope(n+1,0,{switch:32512})[-1]
-        expected=body.GAIN*vca909.gain(c8)*body.shaped_triangle(tune909.reference(n+1)[0][-1])
+        expected=-body.GAIN*vca909.gain(c8)*body.shaped_triangle(trigger909.reference(n+1)[0][-1])
         self.assertAlmostEqual(actual[n],expected,places=12)
         self.assertGreater(abs(actual[n]),abs(baseline[n]))

@@ -54,7 +54,7 @@ def run(folder=None):
     error = max(abs(a-b) for a,b in zip(samples,body909.reference(frames)))
     assert error <= 1e-5, f"909 waveform error {error} exceeds 1e-5 FS"
     measures = analyze(samples, body909.SAMPLE_RATE)
-    assert measures["onset_sample"] == 0 and measures["onset_polarity"] == 1
+    assert measures["onset_sample"] == 0 and measures["onset_polarity"] == -1
     assert measures["full_scale_samples"] == 0
     frequency, tau = measures["frequency"]["median_hz"], measures["decay_positive"]["time_constant_s"]
     expected_frequency=analyze(body909.reference(frames),body909.SAMPLE_RATE)["frequency"]["median_hz"]
@@ -130,7 +130,7 @@ def run(folder=None):
         edge = TuneRunner(image)
         edge.uc.mem_write(edge.STATES,struct.pack(">II",(phase-body909.PHASE_STEP) & 0xffffffff,round(12/64*2**31)))
         first = edge.render()[0] / 2**31
-        assert abs(first-sign * body909.diode_shape(1) * body909.GAIN * vca909.gain(vca909.step(12.,16384,False))) <= 1e-9, first
+        assert abs(first+sign * body909.diode_shape(1) * body909.GAIN * vca909.gain(vca909.step(12.,16384,False))) <= 1e-9, first
     interleaved = TuneRunner(image)
     for block in range(80):
         interleaved.render(7, int(block % 5 == 0))
