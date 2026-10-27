@@ -116,13 +116,33 @@ The isolated T1 note's early/late amplitude errors are 1.484e-7/4.364e-10 FS.
 
 [#80](https://github.com/simonjohansson/x0x/issues/80) tracks a separate failure:
 after the long native scenario and double STOP, T2 CC45=127 followed by fresh
-note76 still selected 808. CC45 worked earlier in the same run, but the failing
-case did not record its late stored target or fresh callback MODEL word, so a
-test/native-delivery/selector cause is not yet distinguished. Its failed evidence
-is preserved at `out/dn2/silent/late-model-transition-failure.{json,wav}`.
+note76 still selects 808. Follow-up probes locate the loss above the selector:
+
+| Probe | Stored MODEL after CC | Delivered value | Selection |
+| --- | --- | --- | --- |
+| Immediate post-STOP CC, diagnostic copy | 0 | START pitch76, MODEL0, flags1 | 808 |
+| Extra idle pause before CC, diagnostic copy | 32512 | START pitch76, MODEL32512, flags1 | 909 |
+| Original ordering plus PCM tap, unchanged production | 0 | Fresh native parameter5 remains0 | 808; bounded acknowledgement fails |
+
+The diagnostic copy only logs into its explicitly allocated temporary 768-byte
+private state area; production remains at 320 bytes. It is separate evidence,
+not production audio qualification. Its source/firmware hashes are recorded in
+`out/dn2/late-model-probe{,-immediate}/provenance.json`.
+
+The unmodified production reproduction uses the canonical firmware hash above.
+Its explicit failed verdict and observations are in
+`out/dn2/late-model-production/{verdict,probe-observations,production-probe-report}.json`.
+The original failure remains at
+`out/dn2/silent/late-model-transition-failure.{json,wav}`. The earlier native
+scenario's passing setup checks do not change this failed transition verdict.
+
+The selector follows the MODEL it actually receives. Whether native control
+handling drops the immediate CC or applies and then overwrites it during STOP
+cleanup remains unproved; firmware/SDK/emulator responsibility is not assigned.
+The extra idle pause is diagnostic evidence, not an adopted product workaround.
 
 The successful saved-909 T1 capture does not resolve or qualify that T2 path.
-Keep it open in #25/#20 and investigate the incoming value before changing DSP
+Keep it open in #25/#20 and trace native CC/store handling before changing DSP
 selection or adding a workaround. #9/#25/#79 also remain open for their circuit
 and complete-engine gates.
 

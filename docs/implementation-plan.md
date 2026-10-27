@@ -15,8 +15,10 @@ the source baseline establishes the triangle topology, not a faithful complete
 909. Shaping and the stock controls/envelopes follow as integrated increments.
 Actual 909 audio is captured on all three devices. A separate late DN2 T2
 MODEL edit did not reach a 909 START; [#80](https://github.com/simonjohansson/x0x/issues/80)
-owns tracing that native transition. The successful saved-909 T1 capture does
-not close it or establish the cause.
+owns that native transition. Probes show the immediate CC does not survive into
+T2's stored MODEL, and the selector correctly follows the delivered 808 value.
+Tracing native CC handling versus STOP cleanup is still needed. The successful
+saved-909 T1 capture does not close this failed path.
 
 The product remains one mod per device containing 808 and 909 behind a saved
 per-sound/track MODEL selector. Different tracks/voices can select different
@@ -41,7 +43,7 @@ every control, model stage, CPU implementation and matrix cell.
 | Done | [#7](https://github.com/simonjohansson/x0x/issues/7) | Digitone II: select and exercise the silent combined mod in Digikit |
 | In progress | [#9](https://github.com/simonjohansson/x0x/issues/9) | Implement the 808 on both CPUs and integrate each increment into working mods |
 | In progress | [#25](https://github.com/simonjohansson/x0x/issues/25) | Implement the 909 on both CPUs alongside the 808 in those same mods |
-| Investigating | [#80](https://github.com/simonjohansson/x0x/issues/80) | Trace the late DN2 MODEL edit through stored target, native delivery and fresh START before deciding the responsible layer |
+| Investigating | [#80](https://github.com/simonjohansson/x0x/issues/80) | Immediate post-STOP CC does not survive into the stored MODEL; trace native CC/store handling before assigning SDK/firmware/emulator responsibility |
 | Alongside engines | [#79](https://github.com/simonjohansson/x0x/issues/79) | Inspect reference implementations/schematics and align both engines before later VST comparison |
 | Deferred by user | [#78](https://github.com/simonjohansson/x0x/issues/78) | Digitakt native reset defaults; fix upstream in Elekloader and consume here |
 | Deferred by user | [#2](https://github.com/simonjohansson/x0x/issues/2) | Reference VST captures and fidelity comparisons for both models |
