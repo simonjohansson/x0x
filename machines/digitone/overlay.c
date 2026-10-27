@@ -7,7 +7,7 @@
 #error "KEYVAR_AT must match Digitone OS 1.44"
 #endif
 
-static void *x0z_dn_brain;
+static void *x0x_dn_brain;
 static uint32_t trigs;
 /* shortcut: ordinary grid input is covered; qualify modifier flows in #20. */
 static int32_t grid_record, func_down, rec_down;
@@ -19,12 +19,12 @@ static int32_t shown(void)
 {
     void *bottom, *top, *manager, *view;
     int32_t track = fw_active_track;
-    if (!x0z_dn_brain || track < 0 || track >= 4 || !fw_kit ||
+    if (!x0x_dn_brain || track < 0 || track >= 4 || !fw_kit ||
             (FW_SOUND_SLOT(fw_kit, track, 0) >> 8) != 80 ||
             *(volatile int32_t *)KEYVAR_AT != 2)
         return 0;
-    bottom = *(void *volatile *)((uint8_t *)x0z_dn_brain + 0x54);
-    top = *(void *volatile *)((uint8_t *)x0z_dn_brain + 0x5c);
+    bottom = *(void *volatile *)((uint8_t *)x0x_dn_brain + 0x54);
+    top = *(void *volatile *)((uint8_t *)x0x_dn_brain + 0x5c);
     if (!bottom || bottom != top)
         return 0;
     manager = *(void *volatile *)((uint8_t *)bottom + 8);
@@ -34,10 +34,10 @@ static int32_t shown(void)
     return view && *(volatile int32_t *)((uint8_t *)view + 144) == 0;
 }
 
-int x0z_dn_key(void *owner, void *event)
+int x0x_dn_key(void *owner, void *event)
 {
     if (owner)
-        x0z_dn_brain = owner;
+        x0x_dn_brain = owner;
     if (event) {
         int32_t key = *(int32_t *)((uint8_t *)event + 12);
         int32_t flags = *(int32_t *)((uint8_t *)event + 16);
@@ -85,7 +85,7 @@ static void number(int32_t raw, char text[4])
     text[at] = 0;
 }
 
-void x0z_dn_draw(void *bitmap, void *control)
+void x0x_dn_draw(void *bitmap, void *control)
 {
     (void)control;
     if (!shown())
@@ -103,7 +103,7 @@ void x0z_dn_draw(void *bitmap, void *control)
     }
 }
 
-void x0z_dn_tick(void *control)
+void x0x_dn_tick(void *control)
 {
     static int32_t valid, track = -1, values[4];
     int32_t dirty;

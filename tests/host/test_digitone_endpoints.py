@@ -3,7 +3,7 @@ import sys
 import unittest
 from unittest.mock import patch
 
-from x0z import digitone_endpoints as endpoints
+from x0x import digitone_endpoints as endpoints
 
 
 class DigitoneEndpointTests(unittest.TestCase):

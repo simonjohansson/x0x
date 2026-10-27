@@ -1,8 +1,8 @@
 """Selector fixture/trace checks require no emulator or target toolchain."""
 import unittest
 
-from x0z.sharc_selector import cases, parse_reference, raw_words
-from x0z import sharc_callback as callback
+from x0x.sharc_selector import cases, parse_reference, raw_words
+from x0x import sharc_callback as callback
 
 
 class SelectorTraceTests(unittest.TestCase):

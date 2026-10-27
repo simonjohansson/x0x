@@ -10,17 +10,17 @@ struct reference {
     uint32_t initialize, changed, clear;
 };
 
-static void control(void *context, uint32_t slot, enum x0z_control kind,
-                     struct x0z_position position)
+static void control(void *context, uint32_t slot, enum x0x_control kind,
+                     struct x0x_position position)
 {
     struct reference *reference = context;
-    assert(slot < 16 && kind < X0Z_STRENGTH && position.denominator == 32512);
-    assert(kind != X0Z_LEVEL);
+    assert(slot < 16 && kind < X0X_STRENGTH && position.denominator == 32512);
+    assert(kind != X0X_LEVEL);
     ++reference->controls;
     reference->sum += position.numerator;
 }
 
-static void notice(void *context, const struct x0z_dn2_control_notice *event)
+static void notice(void *context, const struct x0x_dn2_control_notice *event)
 {
     struct reference *reference = context;
     uint32_t slot = event->delivered.slot;
@@ -36,9 +36,9 @@ static void notice(void *context, const struct x0z_dn2_control_notice *event)
 
 int main(void)
 {
-    struct x0z_dn2_controls state;
+    struct x0x_dn2_controls state;
     struct reference reference = {0};
-    x0z_dn2_controls_init(&state);
+    x0x_dn2_controls_init(&state);
     uint32_t slot, pitch, flags, params_present, input_present;
     while (scanf("%u %u %u %u %u", &slot, &pitch, &flags,
                   &params_present, &input_present) == 5) {
@@ -48,7 +48,7 @@ int main(void)
         reference.controls = reference.notices = reference.sum = reference.numerator = 0;
         reference.initialize = reference.changed = reference.clear = 0;
         struct dn2_voice_input input = {0, slot, pitch, flags, params_present ? params : 0};
-        int valid = x0z_dn2_controls_deliver(&state, input_present ? &input : 0,
+        int valid = x0x_dn2_controls_deliver(&state, input_present ? &input : 0,
                                              control, notice, &reference);
         printf("%u %u %u %u %u %u %u", valid, reference.notices, reference.controls,
                reference.initialize, reference.changed, reference.clear, reference.numerator);

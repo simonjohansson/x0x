@@ -1,6 +1,6 @@
 # Implementation plan: one combined mod, silent first
 
-Priority reset: 26 October 2026. First get **one selectable x0z mod running in
+Priority reset: 26 October 2026. First get **one selectable x0x mod running in
 all three emulators**, with controls, p-locks and LFO targets connected to silent
 ASM callbacks. Sound synthesis is the next milestone. Existing component tests
 are useful groundwork, but none of the three installed-mod milestones is complete.
@@ -20,14 +20,14 @@ model stage, CPU implementation and matrix cell.
 
 | Order | Issue | Deliverable |
 | --- | --- | --- |
-| Track | [#1](https://github.com/simonjohansson/x0z/issues/1) | Roadmap and milestone status |
-| Now | [#39](https://github.com/simonjohansson/x0z/issues/39) | Digitakt: select and exercise the silent combined mod in digiemu |
-| Done | [#40](https://github.com/simonjohansson/x0z/issues/40) | Digitone: select and exercise the silent combined mod in digiemu |
-| Done | [#7](https://github.com/simonjohansson/x0z/issues/7) | Digitone II: select and exercise the silent combined mod in Digikit |
-| Next | [#9](https://github.com/simonjohansson/x0z/issues/9) | Implement the 808 on both CPUs and integrate each increment into working mods |
-| Then | [#25](https://github.com/simonjohansson/x0z/issues/25) | Implement the 909 on both CPUs alongside the 808 in those same mods |
-| Deferred by user | [#2](https://github.com/simonjohansson/x0z/issues/2) | Reference VST captures and fidelity comparisons for both models |
-| After sound | [#20](https://github.com/simonjohansson/x0z/issues/20) | Combined-mod emulator regression and readiness review |
+| Track | [#1](https://github.com/simonjohansson/x0x/issues/1) | Roadmap and milestone status |
+| Now | [#39](https://github.com/simonjohansson/x0x/issues/39) | Digitakt: select and exercise the silent combined mod in digiemu |
+| Done | [#40](https://github.com/simonjohansson/x0x/issues/40) | Digitone: select and exercise the silent combined mod in digiemu |
+| Done | [#7](https://github.com/simonjohansson/x0x/issues/7) | Digitone II: select and exercise the silent combined mod in Digikit |
+| Next | [#9](https://github.com/simonjohansson/x0x/issues/9) | Implement the 808 on both CPUs and integrate each increment into working mods |
+| Then | [#25](https://github.com/simonjohansson/x0x/issues/25) | Implement the 909 on both CPUs alongside the 808 in those same mods |
+| Deferred by user | [#2](https://github.com/simonjohansson/x0x/issues/2) | Reference VST captures and fidelity comparisons for both models |
+| After sound | [#20](https://github.com/simonjohansson/x0x/issues/20) | Combined-mod emulator regression and readiness review |
 
 The three device issues are independent. Start with DT, whose existing full-OS
 observer already reaches the render hook. Use subagents for non-overlapping
@@ -39,7 +39,7 @@ working devices while the blocked device retains its open gate.
 
 Each device issue owns the same short, end-to-end acceptance scenario:
 
-- Build the latest supported firmware with one registered `X0Z KICKS` machine;
+- Build the latest supported firmware with one registered `X0X KICKS` machine;
   boot it in the required emulator and select it using the native machine UI.
 - Show TNTUN, DECAY, ATTK and MODEL with their approved defaults. Verify
   each control reaches the actual render callback. ATTK is ignored in 808 mode.
@@ -68,9 +68,9 @@ Existing tests stay, but adding more edge-case coverage is not the priority.
 | DN2, OS 1.12 | Silent milestone passes: native controls, p-lock/LFO, persistent project reload, mixed tracks and stock audio | Actual kick models and broader qualification follow in #9/#25/#20 |
 
 The user explicitly approved the combined DT/DN saved layouts on 26 October:
-ID 80 `X0Z KICKS`. The subsequently approved compact layout on all three
+ID 80 `X0X KICKS`. The subsequently approved compact layout on all three
 devices is A TNTUN=64, B DECAY=64, C ATTK=64, F MODEL=0; D/E/G/H blank.
-There is no x0z LEVEL knob: native track level handles volume and the renderer
+There is no x0x LEVEL knob: native track level handles volume and the renderer
 uses fixed internal output calibration. DT uses SRC and DN uses SYN2. See the
 [DT contract](dt-controls-proposal.md) and [DN contract](dn-controls-proposal.md)
 for exact native slots. [DN2 ID 20 and its layout](dn2-packaging-proposal.md)

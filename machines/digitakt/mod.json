@@ -1,14 +1,14 @@
 {
-  "id": "x0z",
+  "id": "x0x",
   "version": "0.1",
-  "title": "X0Z KICKS",
+  "title": "X0X KICKS",
   "description": "Combined 808/909 kick controls with silent DSP bring-up",
   "license": "GPL-2.0-or-later",
   "device": "digitakt-mk1",
   "os": "1.54",
   "sources": ["machine.c", "../../targets/coldfire/selector.s", "../../targets/coldfire/silence.s"],
-  "machines": [{"id": 80, "descriptor": "x0z_dt_machine"}],
-  "subscribe": [{"event": "ev_render_voices", "fn": "x0z_dt_render", "order": 20}],
+  "machines": [{"id": 80, "descriptor": "x0x_dt_machine"}],
+  "subscribe": [{"event": "ev_render_voices", "fn": "x0x_dt_render", "order": 20}],
   "requires": ["core", "machine-pages"],
   "resources": {"core": "4.1", "names": ["machine:80"]}
 }

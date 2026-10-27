@@ -1,6 +1,6 @@
-# Digitone combined x0z controls: approved saved layout
+# Digitone combined x0x controls: approved saved layout
 
-**One x0z mod contains both engines**, selected per sound/track with MODEL.
+**One x0x mod contains both engines**, selected per sound/track with MODEL.
 Mixed 808/909 voices must coexist in the same installed build. The earlier
 separate ID-80/ID-90 engine proposal is superseded. See the
 [common product contract](render-contract.md#one-combined-mod-on-every-device).
@@ -9,13 +9,13 @@ separate ID-80/ID-90 engine proposal is superseded. See the
 then revised it to remove LEVEL, move the sound controls to A/B/C and keep
 MODEL in F. The table below is the current approved layout.**
 Implementation and emulator acceptance belong to
-[#40](https://github.com/simonjohansson/x0z/issues/40). Approval does not establish
+[#40](https://github.com/simonjohansson/x0x/issues/40). Approval does not establish
 working native defaults or persistence. Scope: DN OS 1.44,
 Elekloader PR #200 pin `2ab5f424c4721e4277d2112a5ae755d9938f50d6`.
 
 ## One registration and shared controls
 
-Use the approved shared ID **80**, name `X0Z KICKS`; ID 90 is unassigned.
+Use the approved shared ID **80**, name `X0X KICKS`; ID 90 is unassigned.
 Check the selected mods' `dnmachine:<id>` resources before adoption. Native
 sound slot 0 stores the one identity as `id << 8`; MODEL stores the chosen drum.
 
@@ -55,15 +55,15 @@ retrigger follows the circuit's separately tested residual-state policy.
 
 Descriptor flags stay 0: the companion applies AMP and velocity once; neither
 `DNM_OWN_ENV` nor `DNM_PAGES2` is enabled. Intrinsic kick decay remains a model control. Native track level handles
-volume, with fixed internal output calibration and no x0z LEVEL knob. Ordinary note pitch does not make the stock 808 chromatic, and
+volume, with fixed internal output calibration and no x0x LEVEL knob. Ordinary note pitch does not make the stock 808 chromatic, and
 909 Tune is not semitone transpose.
 
 `set_knobs` applies defaults when selecting a different native machine, not on
-same-machine reselection. Switching 808/909 uses MODEL inside x0z, so it must
+same-machine reselection. Switching 808/909 uses MODEL inside x0x, so it must
 not invoke machine-selection defaults or overwrite saved controls. Native
-selection, reset, FM/x0z switching and save/load still need emulator coverage.
+selection, reset, FM/x0x switching and save/load still need emulator coverage.
 
-The delivery work formerly tracked in [#75](https://github.com/simonjohansson/x0z/issues/75)
+The delivery work formerly tracked in [#75](https://github.com/simonjohansson/x0x/issues/75)
 now belongs to #40, including MODEL: `dnm_knob` currently supplies target words rather
 than the observed final smoothed/controller/LFO frame. C-only declaration tests
 do not resolve that transport gap. Connect the existing tested private
@@ -85,5 +85,5 @@ final-frame reader to the installed mod as part of #40.
 
 - [Pinned DN machine SDK](../vendor/elekloader/elekloader/sdk/include/digitone-mk1/machines.h): descriptor fields, 16-knob/default arrays, flags and ranges.
 - [Actual companion](../vendor/elekloader/mods/machines-dn1/machines.c): `knob_id`, `param_rec`, `dnm_knob_range`, `set_knobs`, `machines_pick`, `dnm_render`, `envelope`.
-- [Core OS 1.44 parameter-table export](../vendor/elekloader/mods/core-dn1/mod.json), [verified firmware manifest](../firmware/manifest.json), [native probe and table extraction](../tools/x0z/digitone_adapter.py), [current evidence limits](development.md).
+- [Core OS 1.44 parameter-table export](../vendor/elekloader/mods/core-dn1/mod.json), [verified firmware manifest](../firmware/manifest.json), [native probe and table extraction](../tools/x0x/digitone_adapter.py), [current evidence limits](development.md).
 - [SDK DN sine example](../vendor/elekloader/examples/dn-sine-machine/sine.c) supplies the real DN descriptor pattern. ModelDigi's inspected `machines/digitone/README.md` is still a placeholder and points to that example; its implemented Digitakt layout must not be copied as a DN range/layout contract.

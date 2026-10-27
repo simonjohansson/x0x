@@ -13,7 +13,7 @@ from . import cpu
 
 def diagnose() -> dict:
     root = cpu.ROOT
-    with tempfile.TemporaryDirectory(prefix="x0z-dn2-controls-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="x0x-dn2-controls-") as tmp:
         executable = Path(tmp) / "controls"
         cpu.command([*shlex.split(os.environ.get("CC", "clang")), "-std=c99", "-O2",
                      "-Wall", "-Wextra", "-Werror", "-I", root / "include",

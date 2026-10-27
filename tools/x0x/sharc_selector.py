@@ -262,7 +262,7 @@ def mutations(folder: Path, inputs: list[dict], reference: list[dict]) -> list[d
 
 
 def verify() -> dict:
-    with tempfile.TemporaryDirectory(prefix="x0z-sharc-selector-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="x0x-sharc-selector-") as tmp:
         folder = Path(tmp)
         inputs = cases()
         reference, provenance = c_reference(folder, inputs)

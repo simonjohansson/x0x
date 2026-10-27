@@ -1,8 +1,8 @@
 /* Private diagnostic: void render(int32_t *out, int32_t sample_word). */
     .text
-    .globl x0z_diagnostic
-    .type x0z_diagnostic, @function
-x0z_diagnostic:
+    .globl x0x_diagnostic
+    .type x0x_diagnostic, @function
+x0x_diagnostic:
     movea.l 4(%sp), %a0
     move.l 8(%sp), %d0
     moveq #31, %d1
@@ -11,4 +11,4 @@ x0z_diagnostic:
     subq.l #1, %d1
     bpl.s .Lsample
     rts
-    .size x0z_diagnostic, .-x0z_diagnostic
+    .size x0x_diagnostic, .-x0x_diagnostic

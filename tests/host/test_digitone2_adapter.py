@@ -2,7 +2,7 @@ import copy
 import unittest
 from types import SimpleNamespace
 
-from x0z.digitone2_adapter import CASES, check_bridge_writes, validate_trace
+from x0x.digitone2_adapter import CASES, check_bridge_writes, validate_trace
 
 
 def trace():

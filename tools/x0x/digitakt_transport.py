@@ -23,30 +23,30 @@ DRIVER = r'''
 #include <stdint.h>
 #include "digitakt-mk1/core3.h"
 #include "machines/digitakt/adapter.h"
-extern void x0z_diagnostic(int32_t *, int32_t);
+extern void x0x_diagnostic(int32_t *, int32_t);
 struct observation {
     uint32_t valid, calls;
-    struct x0z_dt_snapshot snapshot;
-    enum x0z_control control;
-    struct x0z_position position;
+    struct x0x_dt_snapshot snapshot;
+    enum x0x_control control;
+    struct x0x_position position;
     int32_t output[32];
 };
 struct record { uint32_t block, before; struct observation observation; uint32_t after; };
 struct record transport_records[64];
 uint32_t transport_counters[3]; /* callbacks, START records, overflow */
-static void receive(void *context, uint32_t track, enum x0z_control control,
-                    struct x0z_position position)
+static void receive(void *context, uint32_t track, enum x0x_control control,
+                    struct x0x_position position)
 {
     struct observation *o = context;
     (void)track;
     ++o->calls;
     o->control = control;
     o->position = position;
-    x0z_diagnostic(o->output, (int32_t)(position.numerator << 16));
+    x0x_diagnostic(o->output, (int32_t)(position.numerator << 16));
 }
 void transport_render(int32_t *blocks)
 {
-    static const struct x0z_dt_binding binding = {0, X0Z_DECAY, 0, 32512};
+    static const struct x0x_dt_binding binding = {0, X0X_DECAY, 0, 32512};
     (void)blocks;
     ++transport_counters[0];
     uint32_t starts = fw_voice_start;
@@ -58,7 +58,7 @@ void transport_render(int32_t *blocks)
         r->before = 0x13579bdf;
         r->after = 0x2468ace0;
         r->observation.calls = 0;
-        r->observation.valid = x0z_dt_capture(track, X0Z_808, &binding, 1,
+        r->observation.valid = x0x_dt_capture(track, X0X_808, &binding, 1,
             &r->observation.snapshot, receive, &r->observation);
     }
 }
@@ -83,7 +83,7 @@ def build(folder: Path) -> tuple[Path, dict]:
     mod = folder / "mod"
     mod.mkdir(parents=True, exist_ok=True)
     (mod / "driver.c").write_text(DRIVER)
-    descriptor = dict(id="x0z-transport-probe", version="0.0", title="Transport probe",
+    descriptor = dict(id="x0x-transport-probe", version="0.0", title="Transport probe",
                       device="digitakt-mk1", os="1.54", license="GPL-2.0-or-later",
                       sources=["driver.c", str(ROOT / "machines/digitakt/adapter.c"),
                                str(ROOT / "src/controls.c"), str(ROOT / "targets/coldfire/diagnostic.s")],
@@ -96,11 +96,11 @@ def build(folder: Path) -> tuple[Path, dict]:
     image = folder / "transport.syx"
     artifacts = [ROOT / "out/dt/deps/core-4.1-os1.54.elemod",
                  ROOT / "out/dt/deps/machine-pages-1.5-os1.54.elemod",
-                 folder / "deps/x0z-transport-probe-0.0.elemod"]
+                 folder / "deps/x0x-transport-probe-0.0.elemod"]
     command = [sys.executable, "-m", "elekloader.patch", "--stock", stock["image"]]
     for artifact in artifacts:
         command += ["--mod", artifact]
-    cpu.command([*command, "--out", image, "--version", "X0ZT"])
+    cpu.command([*command, "--out", image, "--version", "X0XT"])
     return image, stock
 
 
@@ -226,7 +226,7 @@ def verify() -> dict:
                           stock=stock, firmware_sha256=hashlib.sha256(image.read_bytes()).hexdigest(),
                           digiemu_revision=cpu.revision(ROOT / "vendor/digiemu"),
                           project_revision=cpu.revision(ROOT), input_event=event,
-                          compiled_sources=json.loads((folder / "deps/x0z-transport-probe-0.0.elemod").read_text())["build"]["sources"],
+                          compiled_sources=json.loads((folder / "deps/x0x-transport-probe-0.0.elemod").read_text())["build"]["sources"],
                           delivered=observed, callbacks=callbacks, guest_writes_checked=writes,
                           render_blocks=read32(counters) - initial_blocks,
                           emulated_ms=session.ms, pcm_bytes=len(session.pcm),

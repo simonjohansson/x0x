@@ -34,7 +34,7 @@ different claims and must have separate results.
 | Reference sound | Versioned, dry VST captures first. Original hardware evidence remains desirable but is not required to begin. |
 | Platform assumption | Use the existing Digitakt/Digitone custom-engine paths. For Digitone II, assume Elekloader PRs [197][U197] and [200][U200] merge. Pin and revalidate each target's headers, adapter and behavior before implementation. |
 | Sharing boundary | One model per drum, two CPU backends, three C device adapters; Digitakt and Digitone reuse each ColdFire engine kernel. Select targets at build time. |
-| Product packaging | One x0z mod per supported device contains both engines behind a saved per-sound/track MODEL selector. Mixed 808/909 voices coexist in the same installed build. The six cells are test slices, not separate mods or one-engine variants. |
+| Product packaging | One x0x mod per supported device contains both engines behind a saved per-sound/track MODEL selector. Mixed 808/909 voices coexist in the same installed build. The six cells are test slices, not separate mods or one-engine variants. |
 | Memory | Record current code/data usage. The user explicitly allows upstream memory expansion if needed; current limits must not silently dictate fidelity compromises. |
 | Progress | Establish shared interfaces/tests and each target's harness/adapter first. Then advance six device/engine cells independently through small audible slices, with independent C UI and ASM DSP suites. No final all-at-once integration milestone. |
 
@@ -108,7 +108,7 @@ whole-circuit accuracy there. Its semiconductor substitutions also mean that
 agreement with its SPICE experiment is not an original-unit calibration.
 [S04, §§3.3, 4.4 and conclusion p.181][S04]
 
-**Implication for x0z:** first make the body decay analytically testable, then add
+**Implication for x0x:** first make the body decay analytically testable, then add
 the excitation, internal attack event, nonlinear coupling and output network one
 at a time. Each addition needs a waveform/feature comparison and a small audible
 integration check. A single oscillator with two unrelated exponential envelopes
@@ -133,7 +133,7 @@ the circuit, but are outside our first stock target. The appended schematic is
 the original circuit, not a schematic of his modified instrument. [S05, pp.2–3,
 12][S05]
 
-**Implication for x0z:** independently validate oscillator frequency, waveform
+**Implication for x0x:** independently validate oscillator frequency, waveform
 shaping, pitch control, tonal amplitude and attack contribution. Build the
 tonal branch first. A sine oscillator can be a test scaffold, but replacing the
 documented triangle/shaper path needs an explicit comparison before acceptance.
@@ -353,7 +353,7 @@ where necessary, against a converged high-rate reference. Account for the
 decimator's delay and passband response. Oversample the smallest interacting
 nonlinear subsystem that preserves the comparison; measure whole-voice cost
 before choosing. No oversampling factor or alias threshold has been validated
-for x0z yet.
+for x0x yet.
 
 Delivered controls are block snapshots. Interpolating raw values, physical
 parameters and filter coefficients produces different trajectories. Test a
@@ -696,7 +696,7 @@ identifiable independently. Digitakt II has no active cell or delivery dependenc
   depend on expanded upstream registration? Do not treat memory expansion as
   proof that this separate registration constraint has disappeared.
 - Which nonlinear blocks need oversampling or a different discretization? There
-  is no measured x0z CPU, aliasing, memory or stack result yet. What fidelity and
+  is no measured x0x CPU, aliasing, memory or stack result yet. What fidelity and
   voice count can each device sustain, especially the main-CPU ColdFire paths?
 - What exact original-component substitutions matter audibly? Neither modern
   datasheets nor matching a published SPICE model settle that question.

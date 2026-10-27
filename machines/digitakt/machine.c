@@ -1,18 +1,18 @@
 #include "digitakt-mk1/core3.h"
 
-#define X0Z_ID 80
+#define X0X_ID 80
 
 /* Existing private selector ABI: eight {initialized, model, tail} lanes. */
 static uint32_t selection[8][3];
-extern int x0z_selector(uint32_t bank[8][3], uint32_t notice[4],
+extern int x0x_selector(uint32_t bank[8][3], uint32_t notice[4],
                         const uint32_t input[4]);
-extern void x0z_silence(int32_t output[32]);
+extern void x0x_silence(int32_t output[32]);
 
-void x0z_dt_render(int32_t *blocks)
+void x0x_dt_render(int32_t *blocks)
 {
     static const int32_t parameters[] = {0, 1, 2, 5};
     for (uint32_t track = 0; track < 8; ++track) {
-        if (fw_render_machine[track] != X0Z_ID) {
+        if (fw_render_machine[track] != X0X_ID) {
             selection[track][0] = selection[track][1] = selection[track][2] = 0;
             continue;
         }
@@ -25,9 +25,9 @@ void x0z_dt_render(int32_t *blocks)
         uint32_t notice[4];
         const uint32_t input[] = {track, (uint32_t)values[3],
                                  (fw_voice_start >> track) & 1u, valid};
-        (void)x0z_selector(selection, notice, input);
+        (void)x0x_selector(selection, notice, input);
         /* shortcut: both selected engines remain silent until their DSP lands. */
-        x0z_silence(blocks + 32 * track);
+        x0x_silence(blocks + 32 * track);
     }
 }
 
@@ -52,12 +52,12 @@ static const struct cm_ui page = {
     },
 };
 
-const struct cm_machine x0z_dt_machine = {
-    .id = X0Z_ID,
-    .name = "X0Z KICKS",
+const struct cm_machine x0x_dt_machine = {
+    .id = X0X_ID,
+    .name = "X0X KICKS",
     .sname = "KICKS",
     .params = 3,
-    .render = X0Z_ID,
+    .render = X0X_ID,
     .tag = CM_UI_TAG,
     .ui = &page,
 };

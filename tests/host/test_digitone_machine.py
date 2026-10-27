@@ -4,7 +4,7 @@ import sys
 import unittest
 from unittest.mock import patch
 
-from x0z import digitone_machine as machine
+from x0x import digitone_machine as machine
 
 
 class DigitoneMachineTests(unittest.TestCase):

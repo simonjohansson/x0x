@@ -1,7 +1,7 @@
 """Host validation does not import or require either emulator."""
 import unittest
 
-from x0z.sharc_callback import input_words, negative_immediate_shifts, validate_layout
+from x0x.sharc_callback import input_words, negative_immediate_shifts, validate_layout
 
 
 class CallbackFixtureTests(unittest.TestCase):

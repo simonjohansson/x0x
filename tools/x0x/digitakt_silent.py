@@ -57,7 +57,7 @@ def component():
                      "-c", source, "-o", obj])
         objects.append(obj)
     elf, binary = FOLDER / "component.elf", FOLDER / "component.bin"
-    cpu.command([prefix + "ld", "-T", linker, "-e", "x0z_dt_render", *objects, "-o", elf])
+    cpu.command([prefix + "ld", "-T", linker, "-e", "x0x_dt_render", *objects, "-o", elf])
     cpu.command([prefix + "objcopy", "-O", "binary", elf, binary])
     symbols = {words[2]: int(words[0], 16) for line in cpu.command([prefix + "nm", elf]).splitlines()
                if len(words := line.split()) == 3}
@@ -98,7 +98,7 @@ def component():
                 illegal.append((at, size))
         hook = uc.hook_add(UC_HOOK_MEM_WRITE, written)
         try:
-            harness.call(machine, address("x0z_dt_render"), [address("blocks")],
+            harness.call(machine, address("x0x_dt_render"), [address("blocks")],
                          ret_magic=STOP, stack_top=STACK, limit=10000)
         finally:
             uc.hook_del(hook)
@@ -122,7 +122,7 @@ def component():
 
 
 def full_os():
-    """Native panel/UART smoke using the approved x0z-only default correction."""
+    """Native panel/UART smoke using the approved x0x-only default correction."""
     cpu.require_module("emu.session", "digiemu")
     from emu import panel
     from emu.bootstrap import first_run
@@ -153,11 +153,11 @@ def full_os():
                                  "--stock", stock["image"], "--out", FOLDER / "deps"]))
         suffix = "-os" + stock["version"] if meta["os"] != stock["version"] else ""
         artifacts.append(FOLDER / "deps" / f'{meta["id"]}-{meta["version"]}{suffix}.elemod')
-    image = FOLDER / "x0z.syx"
+    image = FOLDER / "x0x.syx"
     command = [sys.executable, "-m", "elekloader.patch", "--stock", stock["image"]]
     for artifact in artifacts:
         command += ["--mod", artifact]
-    logs.append(cpu.command([*command, "--out", image, "--version", "X0Z0"]))
+    logs.append(cpu.command([*command, "--out", image, "--version", "X0X0"]))
     (FOLDER / "build.log").write_text("\n".join(logs))
     names = {k: int(v, 0) for k, v in json.loads(Path(str(image) + ".map.json").read_text()).items()}
     report = dict(status="failed", scope="standard full-OS digiemu Session; native panel and UART",
@@ -193,7 +193,7 @@ def full_os():
             after = bytes(uc.mem_read(names["fw_track_blocks"], 1024))
             for track, machine in enumerate(active["machines"]):
                 lo, hi = 128 * track, 128 * (track + 1)
-                assert after[lo:hi] == (bytes(128) if machine == 80 else active["before"][lo:hi]), "callback changed an unowned block or failed to silence x0z"
+                assert after[lo:hi] == (bytes(128) if machine == 80 else active["before"][lo:hi]), "callback changed an unowned block or failed to silence x0x"
             state["callbacks"] += 1
             state["selected_callbacks"] += int(80 in active["machines"])
             if active["machines"][0] == 80:
@@ -209,7 +209,7 @@ def full_os():
                                    machines=bytes(uc.mem_read(names["fw_render_machine"], 8)),
                                    controls=list(struct.unpack(">8h", uc.mem_read(names["fw_voice_params"], 16))))
             state["active"]["return"] = ret
-        session.at(names["x0z_dt_render"], checked(entered))
+        session.at(names["x0x_dt_render"], checked(entered))
         def wait(ms=80):
             session.run_ms(ms)
             assert not session.halted and not state["violations"], (session.halted, state["violations"])
@@ -249,7 +249,7 @@ def full_os():
         screen("machine-menu")
         tap("YES")
         sound, values = stored()
-        assert bytes(uc.mem_read(sound + 126, 1)) == bytes([80]), "native menu did not select x0z"
+        assert bytes(uc.mem_read(sound + 126, 1)) == bytes([80]), "native menu did not select x0x"
         screen("default-controls")
         report["defaults"] = dict(actual=[values[i] for i in (17, 18, 19, 22)],
                                   expected=[16384, 16384, 16384, 0])
@@ -368,9 +368,9 @@ def full_os():
         assert state["active"] is None and state["selected_callbacks"] > 0 and not state["violations"], state
         report.update(callbacks=state["callbacks"], selected_callbacks=state["selected_callbacks"],
                       checked=["native machine selection", "native UART control delivery", "next-START MODEL latch",
-                               "x0z blocks zero", "other track blocks preserved",
+                               "x0x blocks zero", "other track blocks preserved",
                                "native LFO destination and modulation", "native sequencer parameter lock",
-                               "x0z-only defaults helper scope"])
+                               "x0x-only defaults helper scope"])
         restored = report["save_reload"]["restored"]
         if restored:
             report["checked"].append("native project save and pattern reload")

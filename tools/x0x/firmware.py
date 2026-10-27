@@ -72,15 +72,15 @@ def main(argv=None):
                     artifacts = sorted(output.glob("*.elemod"))
                     if len(artifacts) != len(mods):
                         raise ValueError("unexpected/stale dependency artifacts; inspect " + str(output))
-                    image = output.parent / "x0z-baseline.syx"
+                    image = output.parent / "x0x-baseline.syx"
                     command = [sys.executable, "-m", "elekloader.patch", "--stock", report["image"]]
                     for artifact in artifacts:
                         command += ["--mod", str(artifact)]
-                    command += ["--out", str(image), "--version", "X0Z0"]
+                    command += ["--out", str(image), "--version", "X0X0"]
                     subprocess.run(command, check=True)
                     report["baseline_image"] = str(image)
                     report["baseline_sha256"] = hashlib.sha256(image.read_bytes()).hexdigest()
-                    report["scope"] = "Core/companion baseline only; no x0z kick machine"
+                    report["scope"] = "Core/companion baseline only; no x0x kick machine"
                     write_json(output.parent / "baseline-build.json", report)
             reports.append(report)
         print(json.dumps(dict(status="passed", reports=reports)))

@@ -25,7 +25,7 @@ custom engine or device workload.
 Recheck the official page before changing the baseline. A newer official OS
 requires a matching reviewed SDK/profile and integration evidence. Do not fall
 back to an older supported profile when the latest OS needs a port. Historical
-profiles present in a dependency do not expand x0z's supported OS set.
+profiles present in a dependency do not expand x0x's supported OS set.
 
 Host tests and bounded instruction diagnostics do not require stock firmware.
 Firmware integration commands currently report unavailable rather than claiming

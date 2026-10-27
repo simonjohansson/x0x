@@ -6,7 +6,7 @@ import struct
 import unittest
 from unittest.mock import patch
 
-from x0z import cpu
+from x0x import cpu
 
 
 class DiagnosticBoundaryTests(unittest.TestCase):

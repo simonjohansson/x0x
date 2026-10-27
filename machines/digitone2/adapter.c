@@ -1,7 +1,7 @@
 #include "adapter.h"
 
-static void ignore(void *context, uint32_t voice, enum x0z_control control,
-                   struct x0z_position position)
+static void ignore(void *context, uint32_t voice, enum x0x_control control,
+                   struct x0x_position position)
 {
     (void)context;
     (void)voice;
@@ -19,15 +19,15 @@ static int valid_knob(const struct mk2_param *knob)
     return length > 0 && length <= 5 && !knob->label[length];
 }
 
-static int valid_bindings(enum x0z_instrument instrument,
-                           const struct x0z_dn2_binding *bindings, uint32_t count)
+static int valid_bindings(enum x0x_instrument instrument,
+                           const struct x0x_dn2_binding *bindings, uint32_t count)
 {
     if (!bindings || !count || count > DN2_VOICE_PARAMS)
         return 0;
     for (uint32_t index = 0; index < count; ++index) {
-        const struct x0z_dn2_binding *binding = &bindings[index];
+        const struct x0x_dn2_binding *binding = &bindings[index];
         if (binding->parameter >= DN2_VOICE_PARAMS || !valid_knob(binding->knob) ||
-                !x0z_send_control(instrument, 0, binding->control, 0, 32512, ignore, 0))
+                !x0x_send_control(instrument, 0, binding->control, 0, 32512, ignore, 0))
             return 0;
         for (uint32_t earlier = 0; earlier < index; ++earlier)
             if (bindings[earlier].parameter == binding->parameter ||
@@ -37,8 +37,8 @@ static int valid_bindings(enum x0z_instrument instrument,
     return 1;
 }
 
-int x0z_dn2_pages(enum x0z_instrument instrument,
-                  const struct x0z_dn2_binding *bindings, uint32_t count,
+int x0x_dn2_pages(enum x0x_instrument instrument,
+                  const struct x0x_dn2_binding *bindings, uint32_t count,
                   struct mk2_page *pages, uint32_t page_count)
 {
     if (!pages || !page_count || page_count > 5 || !valid_bindings(instrument, bindings, count))
@@ -56,9 +56,9 @@ int x0z_dn2_pages(enum x0z_instrument instrument,
     return 1;
 }
 
-int x0z_dn2_deliver(enum x0z_instrument instrument, const struct dn2_voice_input *input,
-                    const struct x0z_dn2_binding *bindings, uint32_t count,
-                    x0z_control_receiver controls, x0z_dn2_notice_receiver notice,
+int x0x_dn2_deliver(enum x0x_instrument instrument, const struct dn2_voice_input *input,
+                    const struct x0x_dn2_binding *bindings, uint32_t count,
+                    x0x_control_receiver controls, x0x_dn2_notice_receiver notice,
                     void *context)
 {
     if (!input || !input->param || input->slot >= 16 || input->pitch > 0xffff ||
@@ -70,12 +70,12 @@ int x0z_dn2_deliver(enum x0z_instrument instrument, const struct dn2_voice_input
             return 0;
     /* Apply settled parameter values before a same-boundary START notification. */
     for (uint32_t index = 0; index < count; ++index) {
-        const struct x0z_dn2_binding *binding = &bindings[index];
-        x0z_send_control(instrument, input->slot, binding->control,
+        const struct x0x_dn2_binding *binding = &bindings[index];
+        x0x_send_control(instrument, input->slot, binding->control,
                          input->param[binding->parameter], 32512, controls, context);
     }
-    struct x0z_dn2_notice delivered = {input->slot, input->pitch,
-        input->flags & DN2_VOICE_START ? X0Z_DN2_START_UNCLASSIFIED : X0Z_DN2_CONTINUE};
+    struct x0x_dn2_notice delivered = {input->slot, input->pitch,
+        input->flags & DN2_VOICE_START ? X0X_DN2_START_UNCLASSIFIED : X0X_DN2_CONTINUE};
     notice(context, &delivered);
     return 1;
 }

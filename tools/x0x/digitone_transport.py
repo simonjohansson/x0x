@@ -30,13 +30,13 @@ STRICT_LIMIT = ("Unqualified: under the separate strict-stop model, both baselin
 DRIVER = r'''
 #include <stdint.h>
 #include "adapter.h"
-struct x0z_dn_frame probe_frame;
-struct x0z_dn_adapter probe_adapter;
-const struct x0z_dn_frame_mapping probe_mapping[] = {{X0Z_LEVEL, 119}};
+struct x0x_dn_frame probe_frame;
+struct x0x_dn_adapter probe_adapter;
+const struct x0x_dn_frame_mapping probe_mapping[] = {{X0X_LEVEL, 119}};
 int32_t probe_status, probe_model, probe_output[32];
 uint32_t probe_seen[7];
-extern void x0z_diagnostic(int32_t *, int32_t);
-static void receive(void *context, const struct x0z_dn_input *in)
+extern void x0x_diagnostic(int32_t *, int32_t);
+static void receive(void *context, const struct x0x_dn_input *in)
 {
     (void)context;
     probe_seen[0] = in->value[0].raw;
@@ -45,18 +45,18 @@ static void receive(void *context, const struct x0z_dn_input *in)
     probe_seen[3] = in->value[0].position.numerator;
     probe_seen[4] = in->value[0].position.denominator;
     probe_seen[5] = in->slot; probe_seen[6] = in->track;
-    x0z_diagnostic(probe_output, in->value[0].raw);
+    x0x_diagnostic(probe_output, in->value[0].raw);
 }
 volatile uint32_t probe_count[6], probe_pending, probe_capture_block, probe_pre_value;
 volatile int16_t probe_copy[632];
 void probe_in(void)
 {
-    x0z_dn_frame_begin(&probe_frame);
+    x0x_dn_frame_begin(&probe_frame);
     probe_status = 0; probe_pending = 0; ++probe_count[0];
 }
 void probe_pre(int16_t *words)
 {
-    x0z_dn_frame_capture(&probe_frame, words);
+    x0x_dn_frame_capture(&probe_frame, words);
     probe_pending = (uint32_t)words;
     probe_capture_block = probe_count[0];
     probe_pre_value = (uint16_t)words[79 * 3 + 27];
@@ -69,22 +69,22 @@ void probe_late(int32_t *voices)
     int32_t minimum, maximum;
     const struct dnm_voice voice = {60 << 16, 37, 1, 2, 1};
     (void)voices;
-    x0z_dn_frame_ready(&probe_frame);
-    probe_status = x0z_dn_frame_read(&probe_frame, 3, 124, &probe_model, &minimum, &maximum) &&
-        x0z_dn_render_frame(&probe_adapter, 3, probe_output, &voice, X0Z_808,
+    x0x_dn_frame_ready(&probe_frame);
+    probe_status = x0x_dn_frame_read(&probe_frame, 3, 124, &probe_model, &minimum, &maximum) &&
+        x0x_dn_render_frame(&probe_adapter, 3, probe_output, &voice, X0X_808,
                             &probe_frame, probe_mapping, 1, receive, 0);
     if (!words || probe_capture_block != probe_count[0]) {
-        x0z_dn_frame_end(&probe_frame);
+        x0x_dn_frame_end(&probe_frame);
         ++probe_count[3]; probe_pending = 0; return;
     }
     for (i = 0; i < 632; ++i) probe_copy[i] = words[i];
     ++probe_count[2];
     probe_pending = 0;
 }
-void probe_end(void) { x0z_dn_frame_end(&probe_frame); }
+void probe_end(void) { x0x_dn_frame_end(&probe_frame); }
 void probe_out(void)
 {
-    x0z_dn_frame_end(&probe_frame);
+    x0x_dn_frame_end(&probe_frame);
     if (probe_pending) ++probe_count[5];
     probe_pending = 0; ++probe_count[4];
 }
@@ -122,7 +122,7 @@ def build(folder=FOLDER, adapter_source=None, machine_driver=None, assembly_sour
     mod = folder / "observer"
     mod.mkdir(parents=True, exist_ok=True)
     (mod / "probe.c").write_text(machine_driver if machine_driver is not None else DRIVER)
-    descriptor = dict(id="x0z-dn-transport-probe", version="0.0", title="DN test observer",
+    descriptor = dict(id="x0x-dn-transport-probe", version="0.0", title="DN test observer",
                       device="digitone-mk1", os="1.44", license="GPL-2.0-or-later",
                       sources=["probe.c", str(adapter_source or ROOT / "machines/digitone/adapter.c"),
                                str(ROOT / "src/controls.c"), str(assembly_source or ROOT / "targets/coldfire/diagnostic.s")],
@@ -154,7 +154,7 @@ def build(folder=FOLDER, adapter_source=None, machine_driver=None, assembly_sour
     command = [sys.executable, "-m", "elekloader.patch", "--stock", stock["image"]]
     for artifact in artifacts:
         command += ["--mod", artifact]
-    logs.append(cpu.command([*command, "--out", image, "--version", "X0ZR"]))
+    logs.append(cpu.command([*command, "--out", image, "--version", "X0XR"]))
     (folder / "build.log").write_text("\n".join(logs))
     names = {key: int(value, 0) for key, value in json.loads(
         image.with_suffix(".syx.map.json").read_text()).items()}

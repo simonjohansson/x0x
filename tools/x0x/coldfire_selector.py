@@ -198,7 +198,7 @@ def reject_mutations(folder):
 
 
 def diagnose():
-    with tempfile.TemporaryDirectory(prefix="x0z-coldfire-selector-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="x0x-coldfire-selector-") as tmp:
         folder = Path(tmp)
         image, _ = cpu.build_coldfire(folder, SOURCE)
         cases = check_cases(image)

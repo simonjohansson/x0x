@@ -2,7 +2,7 @@
 import struct
 import unittest
 
-from x0z.digitakt_adapter import decode_observation
+from x0x.digitakt_adapter import decode_observation
 
 
 class DigitaktAdapterReportTests(unittest.TestCase):

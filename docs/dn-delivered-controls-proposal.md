@@ -1,8 +1,8 @@
 # DN delivered controls: pinned investigation and private adapter
 
-Investigation for [#75](https://github.com/simonjohansson/x0z/issues/75),
+Investigation for [#75](https://github.com/simonjohansson/x0x/issues/75),
 26 October 2026. **Existing-event private implementation; no new public SDK
-hook or firmware patch.** [#40](https://github.com/simonjohansson/x0z/issues/40)
+hook or firmware patch.** [#40](https://github.com/simonjohansson/x0x/issues/40)
 remains open. Scope is Digitone mk1 OS **1.44**, Elekloader PR 200 commit
 `2ab5f424c4721e4277d2112a5ae755d9938f50d6` and digiemu
 `f57c2f237e84b8ff91bc3adb2a2931bccf9928e9`.
@@ -14,7 +14,7 @@ remains a separate integration gate. The tests below establish bank lifetime,
 event ordering and invalidation within their exact pinned diagnostic scope; it does not create a public lifetime promise. If the
 existing route cannot satisfy those checks, propose one read-only final-parameter event
 at the site below. Do not privately patch firmware or recreate its modulation
-arithmetic in x0z.
+arithmetic in x0x.
 
 ## What is established
 
@@ -28,7 +28,7 @@ transport limitation, not acceptance of delivered controls.
 
 Reproduce with `mise run test:dn:native`. The ignored report is
 `out/dn-adapter-native-report.json`; the tracked test is
-[digitone_adapter.py](../tools/x0z/digitone_adapter.py). A recompiled observer
+[digitone_adapter.py](../tools/x0x/digitone_adapter.py). A recompiled observer
 that substitutes the target accessor for the frame is rejected. This test
 does not boot the OS, establish locks/controllers/LFO delivery, or measure
 the DSP-to-audio lag.
@@ -57,7 +57,7 @@ promise for a public callback argument.
 
 ## Exact native ordering
 
-These are probe/review addresses, not proposed hard-coded x0z addresses.
+These are probe/review addresses, not proposed hard-coded x0x addresses.
 
 | OS 1.44 site | Instructions / behavior |
 | --- | --- |
@@ -85,7 +85,7 @@ stage calls with injected state produced fractional final values distinct from
 target 12345; a deliberately missing capture failed closed and recovered in
 the next block. These are observer experiments, not production adapter or
 native lock/lifecycle acceptance. The tracked reusable harness is now
-[digitone_transport.py](../tools/x0z/digitone_transport.py), with
+[digitone_transport.py](../tools/x0x/digitone_transport.py), with
 `mise run test:dn:frame` for bounded stages and `mise run test:dn:transport`
 for the separate standard full-OS observer. Its generated subscriber, firmware
 and reports stay in ignored `out/dn/transport`.
@@ -110,7 +110,7 @@ Inspect the SRAM bank ownership and every relevant event path at the matched
 pin, then test them in the emulator. No lifetime across interrupts is needed,
 and no new public SDK contract is implied by this private implementation proof.
 
-If supported, x0z can privately capture that pointer, read it inside its
+If supported, x0x can privately capture that pointer, read it inside its
 machine render callback, and clear it at render entry/exit so missing callbacks
 cannot reuse a previous bank. Use the documented Core events, including
 `ev_render_in/out`, rather than recovering `a6`, a bank index or a firmware
@@ -120,7 +120,7 @@ records and the reviewed knob mapping. The existing adapter's current
 `dnm_knob` call must not be presented as having acquired this behavior merely
 because a frame pointer was captured elsewhere.
 
-This is a private x0z adapter follow-up after lifetime review and tests; it
+This is a private x0x adapter follow-up after lifetime review and tests; it
 does not change `dnm_knob`, a machine ID, a saved slot or an engine contract.
 If the bank cannot be consumed safely within that interrupt, stop this approach
 instead of retaining an invalid pointer. An upstream documentation clarification
@@ -128,13 +128,13 @@ could make a wider promise, but is not a prerequisite invented by this project.
 
 ## Private adapter increment
 
-`x0z_dn_frame_begin/capture/ready/end` confines reads to the current late voices
+`x0x_dn_frame_begin/capture/ready/end` confines reads to the current late voices
 pass. The generated subscriber opens at `ev_render_in`, captures once at
 `ev_render_params`, marks ready at voices order 40, closes at order 60 and
-clears again at render exit. `x0z_dn_render_frame` resolves caller-supplied
+clears again at render exit. `x0x_dn_render_frame` resolves caller-supplied
 native parameter IDs through `fw_params`, validates the resolved slot/range,
 and stages exact fractions before committing assignment state or calling a
-receiver. `x0z_dn_frame_read` also exposes raw MODEL without adding MODEL to
+receiver. `x0x_dn_frame_read` also exposes raw MODEL without adding MODEL to
 continuous control semantics. The old target-accessor diagnostic remains a
 separate path; failed frame delivery never falls back to it.
 
@@ -294,9 +294,9 @@ unchanged. Existing `ev_render_params` writers retain their present semantics.
 
 Upstream would own this one firmware site, event registration, an appropriate
 new Core capability/version requirement, SDK declarations and documentation.
-x0z would copy only its approved control words into private state for the
+x0x would copy only its approved control words into private state for the
 later machine callback. No private parallel patch or silent fallback to
-targets should be added. OS 1.43 is outside x0z's latest-only scope; any wider
+targets should be added. OS 1.43 is outside x0x's latest-only scope; any wider
 upstream OS support requires its own verified sites and tests.
 
 ## Block ownership and acceptance gates

@@ -3,8 +3,8 @@
 #include <string.h>
 #include "digitakt-mk1/core3.h"
 
-extern const struct cm_machine x0z_dt_machine;
-extern void x0z_dt_render(int32_t *blocks);
+extern const struct cm_machine x0x_dt_machine;
+extern void x0x_dt_render(int32_t *blocks);
 volatile uint8_t fw_render_machine[8];
 volatile uint32_t fw_voice_start;
 const char cm_ui_v3[] = "test";
@@ -18,7 +18,7 @@ int32_t cm_src_value(int32_t track, int32_t parameter)
     return values[track][parameter];
 }
 
-int x0z_selector(uint32_t bank[8][3], uint32_t notice[4], const uint32_t input[4])
+int x0x_selector(uint32_t bank[8][3], uint32_t notice[4], const uint32_t input[4])
 {
     assert(bank && notice && input[0] < 8 && input[3] == 1);
     ++calls[input[0]];
@@ -27,13 +27,13 @@ int x0z_selector(uint32_t bank[8][3], uint32_t notice[4], const uint32_t input[4
     return 1;
 }
 
-void x0z_silence(int32_t output[32]) { memset(output, 0, 32 * sizeof *output); }
+void x0x_silence(int32_t output[32]) { memset(output, 0, 32 * sizeof *output); }
 
 int main(void)
 {
-    const struct cm_machine *m = &x0z_dt_machine;
+    const struct cm_machine *m = &x0x_dt_machine;
     assert(m->id == 80 && m->render == 80 && m->params == 3 && m->tag == CM_UI_TAG);
-    assert(strcmp(m->name, "X0Z KICKS") == 0 && strcmp(m->sname, "KICKS") == 0);
+    assert(strcmp(m->name, "X0X KICKS") == 0 && strcmp(m->sname, "KICKS") == 0);
     assert(m->ui->abi == cm_ui_v3 && m->ui->page_from == 3 && !m->ui->on_switch);
     const char *names[] = {"TNTUN", "DECAY", "ATTK", 0, 0, "MODEL", 0, 0};
     const int32_t defaults[] = {16384, 16384, 16384, 0, 0, 0, 0, 0};
@@ -53,7 +53,7 @@ int main(void)
     fw_voice_start = 1u << 7;
     values[0][5] = 16383;
     values[7][5] = 16384;
-    x0z_dt_render(blocks);
+    x0x_dt_render(blocks);
     for (unsigned track = 0; track < 8; ++track) {
         int active = track == 0 || track == 7;
         assert(reads[track] == (active ? 0x27 : 0));

@@ -79,11 +79,11 @@ def build() -> dict:
                    if record.target == 0x20093e00)
     if binding.raw[16:] != struct.pack("<II", 0xbc8400, 20):
         raise AssertionError("installed SHARC binding does not select the approved ID20 callback")
-    output = FOLDER / "x0z.syx"
+    output = FOLDER / "x0x.syx"
     command = [sys.executable, "-m", "elekloader.patch", "--stock", stock_report["image"]]
     for artifact_path in artifacts:
         command += ["--mod", artifact_path]
-    cpu.command([*command, "--out", output, "--version", "X0Z0"])
+    cpu.command([*command, "--out", output, "--version", "X0X0"])
     report = dict(status="passed", scope="SDK-verified silent DN2 firmware packaging; not an emulator boot",
                   firmware=str(output), firmware_sha256=hashlib.sha256(output.read_bytes()).hexdigest(),
                   stock=stock_report, component=component_report,
@@ -205,7 +205,7 @@ def full_os() -> dict:
             )
             names = {
                 k: int(v, 0)
-                for k, v in json.loads((out / "x0z.syx.map.json").read_text()).items()
+                for k, v in json.loads((out / "x0x.syx.map.json").read_text()).items()
             }
             cc = {
                 str(k): (emu.peek32(names["dn2_t1"] + 60 * (321 + k) + 24) >> 16)
@@ -307,7 +307,7 @@ def full_os() -> dict:
                 tap("DOWN")
             tap("YES")
             tap("NO")
-            (out / "native-track2-x0z.png").write_bytes(emu.frame_png())
+            (out / "native-track2-x0x.png").write_bytes(emu.frame_png())
             emu.midi_in(bytes([0x91, 62, 100]))
             emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
             mixed = struct.unpack(

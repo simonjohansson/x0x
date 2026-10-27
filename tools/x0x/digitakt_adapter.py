@@ -30,26 +30,26 @@ ENGINE = 0x800014F0
 
 DRIVER = '''#include <stdint.h>
 #include "machines/digitakt/adapter.h"
-extern void x0z_diagnostic(int32_t *output, int32_t sample);
-struct configuration { uint32_t track; enum x0z_instrument instrument; struct x0z_dt_binding binding; };
-struct observation { uint32_t valid, calls; struct x0z_dt_snapshot snapshot;
-                     enum x0z_control control; struct x0z_position position; int32_t output[32]; };
+extern void x0x_diagnostic(int32_t *output, int32_t sample);
+struct configuration { uint32_t track; enum x0x_instrument instrument; struct x0x_dt_binding binding; };
+struct observation { uint32_t valid, calls; struct x0x_dt_snapshot snapshot;
+                     enum x0x_control control; struct x0x_position position; int32_t output[32]; };
 volatile struct configuration probe_config;
 struct observation probe_observation;
-static void receive(void *context, uint32_t track, enum x0z_control control, struct x0z_position position)
+static void receive(void *context, uint32_t track, enum x0x_control control, struct x0x_position position)
 {
     struct observation *observation = context;
     (void)track;
     ++observation->calls;
     observation->control = control;
     observation->position = position;
-    x0z_diagnostic(observation->output, (int32_t)(position.numerator << 16));
+    x0x_diagnostic(observation->output, (int32_t)(position.numerator << 16));
 }
-void x0z_dt_probe(void)
+void x0x_dt_probe(void)
 {
     struct configuration config = probe_config;
     probe_observation.calls = 0;
-    probe_observation.valid = x0z_dt_capture(config.track, config.instrument, &config.binding, 1,
+    probe_observation.valid = x0x_dt_capture(config.track, config.instrument, &config.binding, 1,
                                            &probe_observation.snapshot, receive, &probe_observation);
 }
 '''
@@ -86,7 +86,7 @@ def build(folder: Path, exports: dict | None = None) -> tuple[bytes, dict]:
     if exports is not None:
         for name in ("cm_src_value", "fw_voice_note", "fw_voice_vel", "fw_voice_start", "fw_amp_env"):
             definitions += ["--defsym", f"{name}={exports[name]}"]
-    cpu.command([cpu.require_program(prefix + "ld"), "-T", linker_script, "-e", "x0z_dt_probe",
+    cpu.command([cpu.require_program(prefix + "ld"), "-T", linker_script, "-e", "x0x_dt_probe",
                  *definitions, *objects, asm, "-o", elf])
     cpu.command([cpu.require_program(prefix + "objcopy"), "-O", "binary", elf, binary])
     symbols = {}
@@ -126,7 +126,7 @@ def verify_component() -> dict:
     harness = cpu.require_module("emu.harness", "digiemu")
     from unicorn import UC_HOOK_MEM_WRITE
     from unicorn.m68k_const import UC_M68K_REG_PC, UC_M68K_REG_SR
-    with tempfile.TemporaryDirectory(prefix="x0z-dt-component-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="x0x-dt-component-") as temporary:
         code, symbols = build(Path(temporary))
         machine = harness.Machine()
         machine.ensure(BASE)
@@ -154,7 +154,7 @@ def verify_component() -> dict:
                         illegal.append((at, length))
                 hook = uc.hook_add(UC_HOOK_MEM_WRITE, write)
                 try:
-                    harness.call(machine, symbols["x0z_dt_probe"][0], [], ret_magic=STOP, stack_top=STACK, limit=LIMIT)
+                    harness.call(machine, symbols["x0x_dt_probe"][0], [], ret_magic=STOP, stack_top=STACK, limit=LIMIT)
                 finally:
                     uc.hook_del(hook)
                 if illegal or uc.reg_read(UC_M68K_REG_PC) != STOP:
@@ -187,7 +187,7 @@ def verify() -> dict:
     stock_report = firmware.verify_entry(entries["digitakt-mk1"], ROOT / "firmware", sdk_revision)
     if stock_report["version"] != "1.54":
         raise ValueError("the bounded Digitakt native probe requires the latest OS 1.54 profile")
-    baseline = ROOT / "out/dt/x0z-baseline.syx"
+    baseline = ROOT / "out/dt/x0x-baseline.syx"
     mapping_path = baseline.with_suffix(".syx.map.json")
     if not baseline.is_file() or not mapping_path.is_file():
         raise cpu.Unavailable("build the latest baseline with mise run firmware:dt")
@@ -199,7 +199,7 @@ def verify() -> dict:
     image = formats.main_image(formats.parse(baseline, device), device)
     exports = load_json(mapping_path)
     address = {name: int(value, 0) for name, value in exports.items()}
-    with tempfile.TemporaryDirectory(prefix="x0z-digitakt-adapter-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="x0x-digitakt-adapter-") as temporary:
         code, symbols = build(Path(temporary), exports)
         machine = harness.Machine()
         machine.load(image, device.main_load)
@@ -268,7 +268,7 @@ def verify() -> dict:
                     writes.append((at, length))
             hook = uc.hook_add(UC_HOOK_MEM_WRITE, write)
             try:
-                native(symbols["x0z_dt_probe"][0], [])
+                native(symbols["x0x_dt_probe"][0], [])
             finally:
                 uc.hook_del(hook)
             if writes:

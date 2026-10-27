@@ -4,7 +4,7 @@ import sys
 import unittest
 from unittest.mock import patch
 
-from x0z import digitone_transport as transport
+from x0x import digitone_transport as transport
 
 
 class DigitoneTransportTraceTests(unittest.TestCase):

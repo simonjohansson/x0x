@@ -1,6 +1,6 @@
 # Private instrument and render contract
 
-This is the development contract for [issue #4](https://github.com/simonjohansson/x0z/issues/4).
+This is the development contract for [issue #4](https://github.com/simonjohansson/x0x/issues/4).
 It defines one instrument behavior for the ColdFire and SHARC+ implementations.
 It does not define a firmware ABI, permanent machine ID or saved-sound format.
 The [research](kick-drum-research.md) remains the source for the circuit model;
@@ -8,7 +8,7 @@ the [implementation plan](implementation-plan.md) assigns its implementation.
 
 ## One combined mod on every device
 
-Digitakt, Digitone and Digitone II each run one x0z mod containing both engines
+Digitakt, Digitone and Digitone II each run one x0x mod containing both engines
 under one native machine identity. MODEL is saved per sound/track and latched
 per active voice at its trigger boundary. Different tracks can therefore play
 808 and 909 kicks concurrently in the same installed build. There is no global
@@ -39,7 +39,7 @@ device adapter and must be tested before they feed this boundary.
 | --- | --- | --- |
 | 808 Tone | Position in the stock output-tone network | Component/pot curve and network coefficients |
 | 808 Decay | Position controlling the resonator feedback network | Feedback mapping and coupled decay behavior; it is not assumed to be seconds |
-| 808/909 Level (reference/internal only) | Linear amplitude gain for model comparisons; production uses fixed calibration and native track level | No separate x0z LEVEL knob, extra saved gain or normalization per hit |
+| 808/909 Level (reference/internal only) | Linear amplitude gain for model comparisons; production uses fixed calibration and native track level | No separate x0x LEVEL knob, extra saved gain or normalization per hit |
 | 909 Tune | Position controlling the stock pitch-control path | CV/envelope time-course mapping; it is not semitone transpose |
 | 909 Decay | Position controlling the tonal amplitude-decay path | Envelope/VCA mapping |
 | 909 Attack | Level of the separate pulse/noise attack branch | Branch gain and stock pot curve; it is not ADSR attack time |

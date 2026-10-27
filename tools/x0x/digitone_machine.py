@@ -29,13 +29,13 @@ PRESSURE_RAW, PRESSURE_TABLE = 0x80004630, 0x80004670
 DRIVER = r'''
 #include <stdint.h>
 #include "adapter.h"
-struct x0z_dn_frame probe_frame;
-struct x0z_dn_adapter probe_adapter;
-const struct x0z_dn_frame_mapping probe_mapping[] = {{X0Z_LEVEL, 119}};
+struct x0x_dn_frame probe_frame;
+struct x0x_dn_adapter probe_adapter;
+const struct x0x_dn_frame_mapping probe_mapping[] = {{X0X_LEVEL, 119}};
 int32_t probe_status[8], probe_model[8];
 uint32_t probe_seen[8][10], probe_count[5];
-extern void x0z_diagnostic(int32_t *, int32_t);
-static void receive(void *context, const struct x0z_dn_input *in)
+extern void x0x_diagnostic(int32_t *, int32_t);
+static void receive(void *context, const struct x0x_dn_input *in)
 {
     uint32_t *seen = probe_seen[in->slot];
     (void)context;
@@ -45,14 +45,14 @@ static void receive(void *context, const struct x0z_dn_input *in)
     seen[3] = in->slot; seen[4] = in->track; seen[5] = in->generation;
     seen[6] = in->flags; seen[7] = in->pitch;
     seen[8] = in->velocity; seen[9] = in->gate;
-    x0z_diagnostic(in->output, in->value[0].raw);
+    x0x_diagnostic(in->output, in->value[0].raw);
 }
 void probe_machine_render(int32_t slot, int32_t *block, const struct dnm_voice *voice)
 {
     int32_t raw, minimum, maximum;
     probe_status[slot] = 0;
-    if (!x0z_dn_frame_read(&probe_frame, slot, 124, &raw, &minimum, &maximum)) return;
-    if (x0z_dn_render_frame(&probe_adapter, slot, block, voice, X0Z_808,
+    if (!x0x_dn_frame_read(&probe_frame, slot, 124, &raw, &minimum, &maximum)) return;
+    if (x0x_dn_render_frame(&probe_adapter, slot, block, voice, X0X_808,
                             &probe_frame, probe_mapping, 1, receive, 0)) {
         probe_model[slot] = raw;
         probe_status[slot] = 1;
@@ -60,13 +60,13 @@ void probe_machine_render(int32_t slot, int32_t *block, const struct dnm_voice *
 }
 static const struct dnm_knob knobs[DNM_KNOBS] = {{0}};
 const struct dnm_machine probe_machine = {
-    127, "X0Z TEST", 0, knobs, probe_machine_render, DNM_OWN_ENV, 0
+    127, "X0X TEST", 0, knobs, probe_machine_render, DNM_OWN_ENV, 0
 };
-void probe_in(void) { x0z_dn_frame_begin(&probe_frame); ++probe_count[0]; }
-void probe_pre(int16_t *words) { x0z_dn_frame_capture(&probe_frame, words); ++probe_count[1]; }
-void probe_late(int32_t *voices) { (void)voices; x0z_dn_frame_ready(&probe_frame); ++probe_count[2]; }
-void probe_end(void) { x0z_dn_frame_end(&probe_frame); ++probe_count[3]; }
-void probe_out(void) { x0z_dn_frame_end(&probe_frame); ++probe_count[4]; }
+void probe_in(void) { x0x_dn_frame_begin(&probe_frame); ++probe_count[0]; }
+void probe_pre(int16_t *words) { x0x_dn_frame_capture(&probe_frame, words); ++probe_count[1]; }
+void probe_late(int32_t *voices) { (void)voices; x0x_dn_frame_ready(&probe_frame); ++probe_count[2]; }
+void probe_end(void) { x0x_dn_frame_end(&probe_frame); ++probe_count[3]; }
+void probe_out(void) { x0x_dn_frame_end(&probe_frame); ++probe_count[4]; }
 '''
 
 
@@ -651,10 +651,10 @@ def bounded(image_path, names, stock, omit_live_store=False, omit_lock_store=Fal
 def verify():
     image, names, stock = transport.build(FOLDER, machine_driver=DRIVER)
     result = bounded(image, names, stock)
-    marker = "if (!x0z_dn_frame_read(&probe_frame, slot, 124, &raw, &minimum, &maximum)) return;"
+    marker = "if (!x0x_dn_frame_read(&probe_frame, slot, 124, &raw, &minimum, &maximum)) return;"
     if DRIVER.count(marker) != 1:
         raise ValueError("machine missing-frame mutation marker is not unique")
-    altered = DRIVER.replace(marker, """if (!x0z_dn_frame_read(&probe_frame, slot, 124, &raw, &minimum, &maximum)) {
+    altered = DRIVER.replace(marker, """if (!x0x_dn_frame_read(&probe_frame, slot, 124, &raw, &minimum, &maximum)) {
         volatile int32_t *value = &probe_model[slot];
         int32_t saved = *value;
         *value = 12345; *value = saved;
@@ -717,7 +717,7 @@ def verify():
                   adapter_sha256=hashlib.sha256((ROOT / "machines/digitone/adapter.c").read_bytes()).hexdigest(),
                   adapter_header_sha256=hashlib.sha256((ROOT / "machines/digitone/adapter.h").read_bytes()).hexdigest(),
                   controls_sha256=hashlib.sha256((ROOT / "src/controls.c").read_bytes()).hexdigest(),
-                  controls_header_sha256=hashlib.sha256((ROOT / "include/x0z/controls.h").read_bytes()).hexdigest(),
+                  controls_header_sha256=hashlib.sha256((ROOT / "include/x0x/controls.h").read_bytes()).hexdigest(),
                   firmware_sha256=hashlib.sha256(image.read_bytes()).hexdigest(),
                   fixture_machine_id=127, production_machine_id_adopted=False,
                   live_edit_source="actual SDK/stock live setter with injected kit and voice ownership; not a UI/MIDI gesture",

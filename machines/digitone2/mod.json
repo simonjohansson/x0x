@@ -1,7 +1,7 @@
 {
-  "id": "x0z",
+  "id": "x0x",
   "version": "0.1",
-  "title": "X0Z KICKS",
+  "title": "X0X KICKS",
   "description": "Combined 808/909 controls with silent SHARC voice bring-up",
   "license": "GPL-2.0-or-later",
   "device": "digitone-mk2",
@@ -11,7 +11,7 @@
   "requires": ["core", "machines-dn2"],
   "resources": {"core": "0.1"},
   "contribute": [
-    {"to": "mk2_voice_synths", "data": "00000000", "relocs": [[0, "abs32", "sym:x0z_dn2_synth", 0]]},
-    {"to": "mk2_voice_pages", "data": "00000000", "relocs": [[0, "abs32", "sym:x0z_dn2_voice_pages", 0]]}
+    {"to": "mk2_voice_synths", "data": "00000000", "relocs": [[0, "abs32", "sym:x0x_dn2_synth", 0]]},
+    {"to": "mk2_voice_pages", "data": "00000000", "relocs": [[0, "abs32", "sym:x0x_dn2_voice_pages", 0]]}
   ]
 }

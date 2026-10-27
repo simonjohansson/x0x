@@ -1,7 +1,7 @@
 # DN2 packaging and persistence proposal
 
 **Approved packaging and saved-control contract for
-[#23](https://github.com/simonjohansson/x0z/issues/23), 26 October 2026.**
+[#23](https://github.com/simonjohansson/x0x/issues/23), 26 October 2026.**
 The user selected one synth with a selector and explicitly approved ID 20
 and switching at START with old-model tail clearing. The later explicit
 revision removes LEVEL, moves the sound controls to A/B/C and keeps MODEL
@@ -43,7 +43,7 @@ Inspected Elekloader PR #200 head
   knob `k` persists in sound slot `25 + 8p + k`, and arrives as
   `param[8p+k]`, unsigned 8.8 **0..32512**, after native processing. The current
   companion allocates **five custom pages in total**, through `used_pages` and
-  `ADDED=40`; x0z's one shared page fits that capacity. Empty positions have
+  `ADDED=40`; x0x's one shared page fits that capacity. Empty positions have
   stored data too; they are not safe implicit
   version markers or guaranteed-zero future controls.
 - A callback receives one of sixteen voice slots, pitch, START and forty knob
@@ -53,25 +53,25 @@ Inspected Elekloader PR #200 head
 
 ## Packaging decision
 
-| Design | Status for x0z |
+| Design | Status for x0x |
 | --- | --- |
 | One registered machine containing both engines, with a saved selector per sound | Required on DT, DN and DN2; mixed 808/909 voices share one installed build. |
 | Separate one-engine firmware variants or separate 808/909 machines | Superseded and excluded from the delivery plan. |
 
 The earlier alternative IDs 18/19 were never adopted. They are not future
-registrations for x0z. Both kernels belong in the same ID-20 SHARC payload.
+registrations for x0x. Both kernels belong in the same ID-20 SHARC payload.
 
 With `machines-dn2` retained, an absent synth ID 5..31 is preserved on load,
 reported as MISSING by name accessors and mapped to silent MIDI DSP type.
 Missing synth CC/NRPN lookups do not target MIDI-track values. Removing the
 companion restores stock loading behavior, which may clamp the unknown ID to
-FM TONE. These are inspected implementation paths, not a completed x0z
+FM TONE. These are inspected implementation paths, not a completed x0x
 project/sound round-trip qualification. Do not overwrite the only saved copy
 while checking missing registrations.
 
 ## Approved layout
 
-Approved **ID 20**, name **`X0Z KICKS`**, short label **`KICKS`**,
+Approved **ID 20**, name **`X0X KICKS`**, short label **`KICKS`**,
 clone/default type **0 (FM TONE)** and one SYN page. Clone 0 selects stock
 defaults, permissions and positional MIDI mapping; it does not make the kick
 use FM DSP. Its AMP/filter defaults and track assignment behavior still need
@@ -90,7 +90,7 @@ emulator checks.
 These are initial positions, not calibrated Roland factory presets: 64 means
 64/127 of the eventual physical control mapping. Native track level handles
 volume; the renderer uses fixed internal output calibration, with no separate
-x0z LEVEL knob or saved gain. Trigger strength
+x0x LEVEL knob or saved gain. Trigger strength
 is deferred to native velocity/accent and downstream AMP research; E stays
 undeclared. Fixed strength belongs in test fixtures only and does not establish
 a production strength policy. Ordinary note pitch must not turn the 808 into a
@@ -121,7 +121,7 @@ note locks, model changes during release and slot reuse require explicit tests.
 
 ## Preserving the first 808 sounds
 
-No released x0z sounds require migration. The explicitly approved compact-layout
+No released x0x sounds require migration. The explicitly approved compact-layout
 revision supersedes the earlier development-only LEVEL/B/C/D layout; existing
 local development sounds must be recreated rather than silently reinterpreted.
 IDs 18/19 remain unadopted alternatives. Preserve the current approved ID, selector encoding,

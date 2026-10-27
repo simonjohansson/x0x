@@ -87,7 +87,7 @@ def build_coldfire(folder: Path, source: Path | None = None) -> tuple[bytes, Pat
     objcopy = require_program(prefix + "objcopy")
     obj, executable, binary = [folder / name for name in ("diagnostic.o", "diagnostic.elf", "diagnostic.bin")]
     command([assembler, "-mcpu=54455", source, "-o", obj])
-    command([linker, "-Ttext=0x40000400", "-e", "x0z_diagnostic", obj, "-o", executable])
+    command([linker, "-Ttext=0x40000400", "-e", "x0x_diagnostic", obj, "-o", executable])
     command([objcopy, "-O", "binary", executable, binary])
     return binary.read_bytes(), source
 
@@ -142,7 +142,7 @@ def build_sharc(folder: Path, source: Path | None = None) -> tuple[bytes, int, P
     obj, executable = folder / "diagnostic.doj", folder / "diagnostic.dxe"
     command([tools / "selas", "-proc", "ADSP-21569", "-o", obj, source])
     command([tools / "seld", "-proc", "ADSP-21569", "-T",
-             ROOT / "targets/sharc/diagnostic.ldf", "-entry", "x0z_diagnostic.",
+             ROOT / "targets/sharc/diagnostic.ldf", "-entry", "x0x_diagnostic.",
              "-o", executable, obj])
     raw = executable.read_bytes()
     code, entry = sharc_code(raw)
@@ -203,7 +203,7 @@ def run_sharc(code: bytes, entry: int, word: int) -> tuple[list[float], int]:
 
 
 def diagnose(backend: str) -> dict:
-    with tempfile.TemporaryDirectory(prefix=f"x0z-{backend}-") as temp:
+    with tempfile.TemporaryDirectory(prefix=f"x0x-{backend}-") as temp:
         folder = Path(temp)
         if backend == "coldfire":
             image, source = build_coldfire(folder)

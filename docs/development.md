@@ -11,7 +11,7 @@ The synthetic probe is test equipment, not an 808/909 implementation or a VST
 reference. The silent mod callbacks use assembly. Native pages, packaging and
 full-OS coverage are recorded per device below; neither kick model is implemented.
 
-The product is one combined x0z mod per device, containing both engines behind
+The product is one combined x0x mod per device, containing both engines behind
 a saved MODEL selector. Different tracks can run 808 and 909 concurrently.
 Model-specific test commands and incomplete diagnostic builds are development
 slices; they do not define separate products or releasable one-engine variants.
@@ -152,7 +152,7 @@ Digikit's instruction interpreter and the host/C tests ran inside the sandbox.
 
 ## Silent Digitakt mod
 
-The real ID80 `X0Z KICKS` registration now builds from `machines/digitakt`.
+The real ID80 `X0X KICKS` registration now builds from `machines/digitakt`.
 It uses the approved A TNTUN/B DECAY/C ATTK/F MODEL layout, existing ColdFire
 selector and a 32-sample ASM zeroing routine. Native track level handles volume;
 D/E/G/H have no semantic control. Hidden D retains the SDK's `CM_NOT_SAMPLE`
@@ -165,13 +165,13 @@ mise run test:dt:silent:full-os  # build firmware, native panel/UART smoke
 ```
 
 Eight component scenarios pass, including mixed tracks, next-START switching,
-invalid delivery and leaving/re-entering x0z. The standard full-OS run boots
+invalid delivery and leaving/re-entering x0x. The standard full-OS run boots
 the latest-OS mod and selects ID80 through the native menu. Across 21,260 real
-callbacks, 19,745 with x0z selected, selected buffers are zero and other track
+callbacks, 19,745 with x0x selected, selected buffers are zero and other track
 buffers are unchanged. Native UART controls and next-START MODEL switching pass.
 The native LFO yields 1,101 distinct delivered values over 0..32512; a sequencer
 DECAY lock delivers 21504 while preserving base 16384. Native project save and
-pattern/kit reload retain all four controls and ID80. Two x0z tracks retain
+pattern/kit reload retain all four controls and ID80. Two x0x tracks retain
 different models without changing each other's sound.
 
 The user explicitly approved `machines/digitakt/legacy-defaults.patch` on
@@ -206,7 +206,7 @@ callbacks with zero owned output and unchanged other voice buffers.
 
 A small OS1.44-gated screen overlay follows the inspected OB-1 pattern, because
 stock SYN envelope artwork is not replaced by parameter metadata. It draws only
-the x0z SYN2 first page and leaves native input delivery intact. The smoke enters
+the x0x SYN2 first page and leaves native input delivery intact. The smoke enters
 SYN1 then SYN2: pressing SYN2 again would toggle to the deliberately unused
 second page. No SDK/vendor or saved-layout change is involved.
 
@@ -250,7 +250,7 @@ callback as `[25599,2562,20480]` after300frames. These are observed native-smoot
 values for requested targets `[25600,2560,20480]`; the test preserves fractions
 and compares the two real delivery points rather than assuming instant settling.
 T1 909 and T2 808 run concurrently. A stock T3 note uses machine0, has nonzero
-finite output and leaves its x0z state clear; all selected x0z buffers remain zero.
+finite output and leaves its x0x state clear; all selected x0x buffers remain zero.
 Native temporary pattern/kit save-edit-restore retains the controls/model on a
 new note. This is not persistent disk or cross-boot save/load evidence.
 
@@ -315,7 +315,7 @@ actual target buffer; it does not establish that this is the final modulated
 render frame. The native smoother/Core event probe observes
 `370, 730, 1078, 1416, 1744, 2062, 2370, 2670` while the adapter reads target
 `12345` throughout. Its passing diagnostic explicitly reports
-`render_frame_delivered: false`; [#75](https://github.com/simonjohansson/x0z/issues/75)
+`render_frame_delivered: false`; [#75](https://github.com/simonjohansson/x0x/issues/75)
 tracks the missing delivered-control route. Neither bounded routine test boots
 the full OS.
 
@@ -504,8 +504,8 @@ hashes, locations and provenance; PDFs/text remain ignored.
 A fresh machine needs the pinned Digikit [shared core and source preparation](../vendor/digikit/docs/sharc/SOURCES.md)
 first. The native test checks the generated fingerprint, exact stock ready-input
 hash and daemon binary; missing prerequisites return unavailable/77. These are
-ordinary upstream tool inputs, not x0z firmware boot code. The working preparation
-commands below run from x0z root with that shared core generated:
+ordinary upstream tool inputs, not x0x firmware boot code. The working preparation
+commands below run from x0x root with that shared core generated:
 
 ```sh
 mkdir -p out/dn2/hwr-source
@@ -518,10 +518,10 @@ mise exec -- env PYTHONPATH="$PWD/vendor/digikit" SHARC_GEN_DIR="$PWD/vendor/dig
 The initial direct `ready.py` attempt rejected the modified firmware's unknown
 hash before CF execution. That stock-oriented helper is not the patched-image
 loader. The normal documented `Emu.load` API accepts the SDK output with its
-verified stock base SHA and performs the emulator reset itself. Native x0z boot
+verified stock base SHA and performs the emulator reset itself. Native x0x boot
 now passes using that API, as in the supplied example. The mod has no special
 cold-load requirement, loader implementation, boot shim or vendor alteration.
-Actual upstream boot failures will be reported rather than hidden in x0z.
+Actual upstream boot failures will be reported rather than hidden in x0x.
 
 ## Fixtures, results and measurements
 
@@ -600,8 +600,8 @@ Each build verifies the manifest image identity and matched SDK release first.
 These commands build the existing core/companion dependencies under `out/`;
 they do not package or boot an unimplemented kick machine. `mise run firmware:dt`,
 `firmware:dn` and `firmware:dn2` additionally package those dependencies into an
-SDK-verified `out/<target>/x0z-baseline.syx`, tagged `X0Z0`, for later emulator
-integration. These images contain no x0z machine, and packaging does not prove
+SDK-verified `out/<target>/x0x-baseline.syx`, tagged `X0X0`, for later emulator
+integration. These images contain no x0x machine, and packaging does not prove
 an emulator boot. The build records the output hash and refuses unexpected stale
 dependency artifacts. Older profiles inside
 Elekloader do not expand the supported OS set. New official firmware requires
@@ -619,7 +619,7 @@ LFO targets another parameter. The ready production frame reader rejects it.
 The user approved the
 [DN-only endpoint policy](dn-final-control-endpoint-proposal.md) on 26 October
 2026. The final reader now preserves observed raw/UI bounds while normalization
-clamps only the position to its UI endpoint. `x0z_dn_frame_model` retains raw
+clamps only the position to its UI endpoint. `x0x_dn_frame_model` retains raw
 MODEL and bounds only its canonical argument to the existing selector. The
 target-accessor diagnostic stays strict, and shared ASM/SHARC contracts, DT,
 DN2 and saved layouts are unchanged. Native acceptance is recorded separately

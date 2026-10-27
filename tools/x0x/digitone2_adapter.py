@@ -97,8 +97,8 @@ def rejected_c_mutations(folder: Path) -> list[dict]:
     changes = [
         ("fractional-value-truncation", "input->param[binding->parameter], 32512",
          "input->param[binding->parameter] & ~255u, 32512"),
-        ("wrong-slot", "x0z_send_control(instrument, input->slot, binding->control,",
-         "x0z_send_control(instrument, 0, binding->control,"),
+        ("wrong-slot", "x0x_send_control(instrument, input->slot, binding->control,",
+         "x0x_send_control(instrument, 0, binding->control,"),
         ("double-level-scaling", "input->param[binding->parameter], 32512",
          "input->param[binding->parameter] / 2, 32512"),
     ]
@@ -253,7 +253,7 @@ def bridge_check(code: bytes, entry: int) -> dict:
 
 
 def diagnose(host_only=False) -> dict:
-    with tempfile.TemporaryDirectory(prefix="x0z-dn2-adapter-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="x0x-dn2-adapter-") as tmp:
         folder = Path(tmp)
         report, trace = host_check(folder)
         report["rejected_c_mutations"] = rejected_c_mutations(folder)

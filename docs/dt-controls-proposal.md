@@ -1,6 +1,6 @@
-# Digitakt combined x0z controls: approved saved layout
+# Digitakt combined x0x controls: approved saved layout
 
-The product direction is **one x0z mod containing both 808 and 909**, with a
+The product direction is **one x0x mod containing both 808 and 909**, with a
 saved MODEL selector per sound/track. Different tracks can play both models
 concurrently. This supersedes the earlier two-machine proposal and its approval;
 IDs 80/90 must not become separate engine registrations. See the
@@ -10,13 +10,13 @@ IDs 80/90 must not become separate engine registrations. See the
 then revised it to remove LEVEL, move the sound controls to A/B/C and keep
 MODEL in F. The table below is the current approved layout.**
 Implementation and emulator acceptance belong to
-[#39](https://github.com/simonjohansson/x0z/issues/39). Approval does not establish
+[#39](https://github.com/simonjohansson/x0x/issues/39). Approval does not establish
 working native defaults or persistence. Scope: DT OS 1.54, Elekloader PR #200 pin
 `2ab5f424c4721e4277d2112a5ae755d9938f50d6`.
 
 ## One native registration and page
 
-Use the approved shared ID **80**, name `X0Z KICKS`, short name `KICKS`.
+Use the approved shared ID **80**, name `X0X KICKS`, short name `KICKS`.
 Both models use that identity; ID 90 is unassigned. Check conflicts with every
 selected mod before adoption. Device-specific builds still contain both engines.
 
@@ -36,7 +36,7 @@ ModelDigi. No `cm_ui32` extras or new saved storage are proposed.
 
 Declared words use `CM_RANGE | CM_DEFAULT`, raw 0..32512, with defaults
 `display << 8`: Tone/Tune/Decay/Attack 16384 and MODEL 0.
-Native track level owns volume; x0z has no saved LEVEL parameter.
+Native track level owns volume; x0x has no saved LEVEL parameter.
 Use the generic knob look `0x86`. Hidden D retains `CM_NOT_SAMPLE` to keep SRC
 cycling out of the waveform view. D/E/G/H use `CM_HIDDEN` with no semantic
 binding or range/default override; their stored words need not be zero.

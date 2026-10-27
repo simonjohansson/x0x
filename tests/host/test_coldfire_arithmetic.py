@@ -5,8 +5,8 @@ import json
 import unittest
 from unittest.mock import patch
 
-from x0z import coldfire_arithmetic as arithmetic
-from x0z.cpu import Unavailable
+from x0x import coldfire_arithmetic as arithmetic
+from x0x.cpu import Unavailable
 
 
 class FixedPointReferenceTests(unittest.TestCase):

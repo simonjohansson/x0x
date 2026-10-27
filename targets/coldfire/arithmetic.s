@@ -3,9 +3,9 @@
  * The wrapper seeds and snapshots EMAC because Unicorn exposes no EMAC API.
  */
     .text
-    .globl x0z_diagnostic
-    .type x0z_diagnostic, @function
-x0z_diagnostic:
+    .globl x0x_diagnostic
+    .type x0x_diagnostic, @function
+x0x_diagnostic:
     moveq #0, %d0
     move.l %d0, %macsr
     move.l #0x12345678, %d0
@@ -39,7 +39,7 @@ x0z_diagnostic:
     move.l %d0, 20(%sp)
     move.l 56(%sp), %d0
     move.l %d0, 24(%sp)
-    bsr x0z_arithmetic
+    bsr x0x_arithmetic
     lea 28(%sp), %sp
     movea.l 32(%sp), %a0
     move.l %macsr, %d0
@@ -63,14 +63,14 @@ x0z_diagnostic:
     move.l 28(%a0), %d0
     move.l %d0, %macsr
     rts
-    .size x0z_diagnostic, .-x0z_diagnostic
+    .size x0x_diagnostic, .-x0x_diagnostic
 
 /* void probe(state*, out*, input*, coefficient, level, frames, macsr).
  * Save with rounding disabled, as MCF54418RM section 5.3.1.2 requires.
  */
-    .globl x0z_arithmetic
-    .type x0z_arithmetic, @function
-x0z_arithmetic:
+    .globl x0x_arithmetic
+    .type x0x_arithmetic, @function
+x0x_arithmetic:
     lea -76(%sp), %sp
     movem.l %d2-%d7/%a2-%a6, (%sp)
     move.l %macsr, %d0
@@ -137,4 +137,4 @@ x0z_arithmetic:
     movem.l (%sp), %d2-%d7/%a2-%a6
     lea 76(%sp), %sp
     rts
-    .size x0z_arithmetic, .-x0z_arithmetic
+    .size x0x_arithmetic, .-x0x_arithmetic

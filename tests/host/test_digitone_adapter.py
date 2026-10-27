@@ -4,8 +4,8 @@ import json
 import unittest
 from unittest.mock import patch
 
-from x0z import digitone_adapter as adapter
-from x0z.cpu import Unavailable
+from x0x import digitone_adapter as adapter
+from x0x.cpu import Unavailable
 
 
 class DigitoneAdapterCommandTests(unittest.TestCase):

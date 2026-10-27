@@ -10,7 +10,7 @@ import struct
 import sys
 import tempfile
 
-from x0z import cpu
+from x0x import cpu
 
 ROOT = cpu.ROOT
 SOURCE = ROOT / "targets/sharc/callback.s"
@@ -298,7 +298,7 @@ def mutation_checks(folder: Path) -> list[dict]:
 
 
 def verify() -> dict:
-    with tempfile.TemporaryDirectory(prefix="x0z-sharc-callback-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="x0x-sharc-callback-") as tmp:
         folder = Path(tmp)
         code, entry, selache = build(folder)
         sdk = cpu.require_module("elekloader.sdk.sharc", "elekloader")

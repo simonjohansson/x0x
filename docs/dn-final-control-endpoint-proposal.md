@@ -7,7 +7,7 @@ Digitone OS 1.44 final-frame adapter at Elekloader PR 200 commit
 
 ## Measured gap
 
-An isolated digiemu fixture based on x0z `3cd387a` settles voice 0's LEVEL target
+An isolated digiemu fixture based on x0x `3cd387a` settles voice 0's LEVEL target
 and Q16 smoother at raw 32512, disables that voice's separate per-voice controller
 contribution, and moves the LFO destination from slot 27 to slot 28. Actual
 CC1=127, its producer, controller stage and final stage then give:
@@ -17,7 +17,7 @@ CC1=127, its producer, controller stage and final stage then give:
 | 0 | 32512 | 32512 | 0 | 32512 | 32512 |
 | 1 | 32512 | 32512 | 983 | 32634 | 32634 |
 
-Before the approved change, `x0z_dn_frame_read(frame, 0, 119, ...)` returned **0** with a valid
+Before the approved change, `x0x_dn_frame_read(frame, 0, 119, ...)` returned **0** with a valid
 current-bank pointer and ready phase 3; it returns normally to `0xdeadbee0`.
 The stock parameter record has UI minimum 0 and maximum 32512. The final word
 is positive and representable; the old reader rejected it as above UI maximum.
@@ -39,7 +39,7 @@ For verified full-range SYN2 records 119..126 with stock bounds 0..32512:
 
 - Accept final scalar words 0..32767. Keep negative words, invalid records/slots,
   unavailable/expired frames and malformed ranges rejected without state updates.
-- Preserve the actual observed `x0z_dn_value.raw`, even when it exceeds 32512.
+- Preserve the actual observed `x0x_dn_value.raw`, even when it exceeds 32512.
   `minimum` and `maximum` remain **stock UI bounds**, not delivered-word bounds.
 - Clamp only the normalized model position to those UI bounds. For example,
   raw 32634 retains raw 32634 and UI bounds 0..32512, with position

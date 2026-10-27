@@ -3,7 +3,7 @@ import math
 import random
 import unittest
 
-from x0z.analysis import analyze
+from x0x.analysis import analyze
 
 
 RATE = 48000

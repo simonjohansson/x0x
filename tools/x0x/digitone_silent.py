@@ -38,11 +38,11 @@ def build():
                                  "--stock", stock["image"], "--out", FOLDER / "deps"], cwd=ROOT))
         suffix = "-os" + stock["version"] if meta["os"] != stock["version"] else ""
         artifacts.append(FOLDER / "deps" / f'{meta["id"]}-{meta["version"]}{suffix}.elemod')
-    image = FOLDER / "x0z.syx"
+    image = FOLDER / "x0x.syx"
     command = [sys.executable, "-m", "elekloader.patch", "--stock", stock["image"]]
     for artifact in artifacts:
         command += ["--mod", artifact]
-    logs.append(cpu.command([*command, "--out", image, "--version", "X0Z0"], cwd=ROOT))
+    logs.append(cpu.command([*command, "--out", image, "--version", "X0X0"], cwd=ROOT))
     (FOLDER / "build.log").write_text("\n".join(logs))
     return image, stock
 
@@ -87,8 +87,8 @@ def full_os():
             if active is None or at != active["return"]: return
             after = bytes(uc.mem_read(names["fw_voices"], 1024))
             lo, hi = active["slot"] * 128, (active["slot"] + 1) * 128
-            assert after[lo:hi] == bytes(128), "x0z did not silence its voice"
-            assert after[:lo] == active["before"][:lo] and after[hi:] == active["before"][hi:], "x0z wrote another voice"
+            assert after[lo:hi] == bytes(128), "x0x did not silence its voice"
+            assert after[:lo] == active["before"][:lo] and after[hi:] == active["before"][hi:], "x0x wrote another voice"
             selection = list(struct.unpack(">3I", uc.mem_read(names["selection"] + active["slot"] * 12, 12)))
             assert selection[0] == 1, "real callback did not consume a settled frame/START"
             event = dict(slot=active["slot"], track=active["track"], fresh=active["fresh"], model=selection[1])
@@ -97,7 +97,7 @@ def full_os():
             if active["fresh"]: state["starts"].append(event)
             state["active"] = None
         def entered(_uc, _at, _size, _data):
-            assert state["active"] is None, "nested x0z callback"
+            assert state["active"] is None, "nested x0x callback"
             sp = uc.reg_read(UC_M68K_REG_A7)
             ret, slot, output, voice = struct.unpack(">4I", uc.mem_read(sp, 16))
             assert output == names["fw_voices"] + slot * 128, "companion output pointer differs"
@@ -107,7 +107,7 @@ def full_os():
             state["active"] = dict(before=bytes(uc.mem_read(names["fw_voices"], 1024)), slot=slot,
                                    fresh=info[2], track=info[3])
             state["active"]["return"] = ret
-        session.at(names["x0z_dn_machine_render"], checked(entered))
+        session.at(names["x0x_dn_machine_render"], checked(entered))
         def receive(_uc, _at, _size, _data):
             source = word(uc.reg_read(UC_M68K_REG_A7) + 8)
             if word(source + 8) == 0 and state["phase"]:
@@ -140,7 +140,7 @@ def full_os():
         def controls():
             # Re-select from another page: a second SYN2 press toggles to its blank second page.
             tap("SYN1"); tap("SYN2")
-            brain = word(names["x0z_dn_brain"])
+            brain = word(names["x0x_dn_brain"])
             bottom, top = word(brain + 0x54), word(brain + 0x5c)
             view = word(word(bottom + 8) + 0xc0)
             assert word(0x41368ce4) == 2 and bottom == top and word(view + 144) == 0, "not on SYN2 first page"
@@ -154,7 +154,7 @@ def full_os():
         report["edited"] = stored()
         assert all(value > 16384 for value in report["edited"][1:4]), report["edited"]
         tap("9")
-        assert state["starts"], "native key produced no x0z START"
+        assert state["starts"], "native key produced no x0x START"
         report["808"] = state["starts"][-1]
         controls()
         for _ in range(16):

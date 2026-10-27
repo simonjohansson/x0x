@@ -1,5 +1,5 @@
 /* Private selector test ABI, no firmware IDs or saved positions.
- * int x0z_selector(bank*, notice*, input*), normal m68k C stack arguments.
+ * int x0x_selector(bank*, notice*, input*), normal m68k C stack arguments.
  * bank: 8 x {uint32 initialized, model, diagnostic_tail}; caller zeroes ownership.
  * input: {lane, delivered_raw_MODEL, delivered_trigger, delivery_status}.
  * delivery_status: 0 missing, 1 fresh, 2 stale, classified by the caller.
@@ -10,9 +10,9 @@
  * do not classify native ownership or implement analog retrigger behavior.
  */
     .text
-    .globl x0z_diagnostic
-    .type x0z_diagnostic, @function
-x0z_diagnostic:
+    .globl x0x_diagnostic
+    .type x0x_diagnostic, @function
+x0x_diagnostic:
     moveq #0, %d0
     move.l %d0, %macsr
     move.l #0x12345678, %d0
@@ -38,7 +38,7 @@ x0z_diagnostic:
     move.l %d0, 4(%sp)
     move.l 24(%sp), %d0
     move.l %d0, 8(%sp)
-    bsr x0z_selector
+    bsr x0x_selector
     lea 12(%sp), %sp
     movea.l 16(%sp), %a0
     move.l %d0, 32(%a0)
@@ -63,11 +63,11 @@ x0z_diagnostic:
     move.l 28(%a0), %d0
     move.l %d0, %macsr
     rts
-    .size x0z_diagnostic, .-x0z_diagnostic
+    .size x0x_diagnostic, .-x0x_diagnostic
 
-    .globl x0z_selector
-    .type x0z_selector, @function
-x0z_selector:
+    .globl x0x_selector
+    .type x0x_selector, @function
+x0x_selector:
     lea -16(%sp), %sp
     movem.l %d2-%d4/%a2, (%sp)
     movea.l 20(%sp), %a0
@@ -163,4 +163,4 @@ x0z_selector:
     movem.l (%sp), %d2-%d4/%a2
     lea 16(%sp), %sp
     rts
-    .size x0z_selector, .-x0z_selector
+    .size x0x_selector, .-x0x_selector

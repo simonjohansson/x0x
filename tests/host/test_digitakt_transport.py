@@ -1,7 +1,7 @@
 import struct
 import unittest
 
-from x0z.digitakt_transport import GUARDS, decode_record
+from x0x.digitakt_transport import GUARDS, decode_record
 
 
 class DigitaktTransportRecordTests(unittest.TestCase):

@@ -7,10 +7,10 @@ import tempfile
 import unittest
 import wave
 
-from x0z.audio import read_wav, write_wav
-from x0z.cli import main
-from x0z.fixtures import fixture_hash, load_json, validate_fixture, validate_result, write_json
-from x0z.oracle import render_diagnostic
+from x0x.audio import read_wav, write_wav
+from x0x.cli import main
+from x0x.fixtures import fixture_hash, load_json, validate_fixture, validate_result, write_json
+from x0x.oracle import render_diagnostic
 
 ROOT = Path(__file__).resolve().parents[2]
 

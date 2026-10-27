@@ -17,13 +17,13 @@ int32_t probe_raw[8][32], probe_min[32], probe_max[32];
 int32_t probe_slot, probe_output[32], probe_status;
 uint32_t probe_seen[24], probe_calls;
 struct dnm_voice probe_voice;
-struct x0z_dn_adapter probe_adapter;
+struct x0x_dn_adapter probe_adapter;
 const uint8_t fw_params[134 * 60] = {0};
-extern void x0z_diagnostic(int32_t *, int32_t);
+extern void x0x_diagnostic(int32_t *, int32_t);
 int32_t dnm_knob(int32_t voice, int32_t knob) { return probe_raw[voice][knob]; }
 void dnm_knob_range(int32_t knob, int32_t *minimum, int32_t *maximum)
 { *minimum = probe_min[knob]; *maximum = probe_max[knob]; }
-static void receive(void *context, const struct x0z_dn_input *in)
+static void receive(void *context, const struct x0x_dn_input *in)
 {
     uint32_t i;
     (void)context;
@@ -39,15 +39,15 @@ static void receive(void *context, const struct x0z_dn_input *in)
         probe_seen[11 + i * 5] = in->value[i].position.numerator;
         probe_seen[12 + i * 5] = in->value[i].position.denominator;
     }
-    x0z_diagnostic(in->output, in->value[0].raw);
+    x0x_diagnostic(in->output, in->value[0].raw);
 }
 void probe_run(void)
 {
-    static const struct x0z_dn_mapping map[] = {{X0Z_LEVEL,8},{X0Z_TONE,4},{X0Z_DECAY,9}};
-    probe_status = x0z_dn_render(&probe_adapter, probe_slot, probe_output,
-                                &probe_voice, X0Z_808, map, 3, receive, 0);
+    static const struct x0x_dn_mapping map[] = {{X0X_LEVEL,8},{X0X_TONE,4},{X0X_DECAY,9}};
+    probe_status = x0x_dn_render(&probe_adapter, probe_slot, probe_output,
+                                &probe_voice, X0X_808, map, 3, receive, 0);
 }
-void probe_forget(void) { probe_status = x0z_dn_forget(&probe_adapter, probe_slot); }
+void probe_forget(void) { probe_status = x0x_dn_forget(&probe_adapter, probe_slot); }
 '''
 
 
@@ -74,15 +74,15 @@ void probe_render_params(const int16_t *words)
         text=text.replace("const uint8_t fw_params[134 * 60] = {0};", "")
         text=text.replace('int32_t dnm_knob(int32_t voice, int32_t knob) { return probe_raw[voice][knob]; }\nvoid dnm_knob_range(int32_t knob, int32_t *minimum, int32_t *maximum)\n{ *minimum = probe_min[knob]; *maximum = probe_max[knob]; }',
             'volatile int16_t fw_voice_params[641];\nvolatile uint32_t fw_voice_pitch[8], fw_gate_off;\nint32_t probe_track, probe_event[18], probe_action;\nint32_t probe_buffers[8 * 32];\nuint32_t probe_sample_word = 0x20000000;\nvoid dnm_voice_on(int32_t, int32_t, void *);\nvoid dnm_render(int32_t *);')
-        text=text.replace('x0z_diagnostic(in->output, in->value[0].raw);','x0z_diagnostic(in->output, (int32_t)probe_sample_word);')
+        text=text.replace('x0x_diagnostic(in->output, in->value[0].raw);','x0x_diagnostic(in->output, (int32_t)probe_sample_word);')
         start=text.index('void probe_run(void)')
         end=text.index('void probe_forget(void)')
         text=text[:start]+'''static void native_render(int32_t slot, int32_t *block, const struct dnm_voice *voice)
 {
-    static const struct x0z_dn_mapping map[] = {{X0Z_LEVEL,8},{X0Z_TONE,4},{X0Z_DECAY,9}};
-    probe_status = x0z_dn_render(&probe_adapter, slot, block, voice, X0Z_808, map, 3, receive, 0);
+    static const struct x0x_dn_mapping map[] = {{X0X_LEVEL,8},{X0X_TONE,4},{X0X_DECAY,9}};
+    probe_status = x0x_dn_render(&probe_adapter, slot, block, voice, X0X_808, map, 3, receive, 0);
 }
-struct dnm_machine probe_machine = {127, "X0Z TEST", 0, 0, native_render, 0, 0};
+struct dnm_machine probe_machine = {127, "X0X TEST", 0, 0, native_render, 0, 0};
 const struct dnm_machine *const dn_machines[] = {&probe_machine, 0};
 void probe_run(void)
 {
@@ -330,7 +330,7 @@ def verify_native():
     entries,revision=baseline()
     stock_report=verify_entry(entries["digitone-mk1"],ROOT/"firmware",revision)
     if stock_report["version"]!="1.44": raise ValueError("native DN probe needs the latest 1.44 profile")
-    image_path=ROOT/"out/dn/x0z-baseline.syx"
+    image_path=ROOT/"out/dn/x0x-baseline.syx"
     if not image_path.is_file(): raise cpu.Unavailable("build latest baseline with mise run firmware:dn")
     report=json.loads((ROOT/"out/dn/baseline-build.json").read_text())
     if hashlib.sha256(image_path.read_bytes()).hexdigest()!=report["baseline_sha256"]:

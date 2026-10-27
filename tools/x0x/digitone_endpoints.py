@@ -20,21 +20,21 @@ FOLDER = ROOT / "out/dn/endpoints"
 DRIVER = r'''
 #include <stdint.h>
 #include "adapter.h"
-struct x0z_dn_frame probe_frame;
-struct x0z_dn_adapter probe_adapter;
+struct x0x_dn_frame probe_frame;
+struct x0x_dn_adapter probe_adapter;
 uint32_t probe_bank[8][3], probe_seen[8][12], probe_calls[8], probe_received[8];
 uint32_t probe_ready;
 int32_t probe_status[8];
-const struct x0z_dn_frame_mapping probe_mapping[] = {{X0Z_LEVEL, 119}};
-extern int x0z_selector(uint32_t *, uint32_t *, const uint32_t *);
+const struct x0x_dn_frame_mapping probe_mapping[] = {{X0X_LEVEL, 119}};
+extern int x0x_selector(uint32_t *, uint32_t *, const uint32_t *);
 struct model { int32_t raw; uint32_t canonical; };
-static void receive(void *context, const struct x0z_dn_input *in)
+static void receive(void *context, const struct x0x_dn_input *in)
 {
     const struct model *model = context;
-    uint32_t input[4] = {in->slot, model->canonical, !!(in->flags & X0Z_DN_NATIVE_START), 1};
+    uint32_t input[4] = {in->slot, model->canonical, !!(in->flags & X0X_DN_NATIVE_START), 1};
     uint32_t notice[4] = {0xa5a5a5a5, 0xa5a5a5a5, 0xa5a5a5a5, 0xa5a5a5a5};
     uint32_t *seen = probe_seen[in->slot];
-    uint32_t status = x0z_selector(probe_bank[0], notice, input), i;
+    uint32_t status = x0x_selector(probe_bank[0], notice, input), i;
     seen[0] = in->value[0].raw; seen[1] = in->value[0].minimum; seen[2] = in->value[0].maximum;
     seen[3] = in->value[0].position.numerator; seen[4] = in->value[0].position.denominator;
     seen[5] = model->raw; seen[6] = model->canonical; seen[7] = status;
@@ -50,19 +50,19 @@ void probe_machine_render(int32_t slot, int32_t *block, const struct dnm_voice *
     struct model model;
     ++probe_calls[slot];
     probe_status[slot] = 0;
-    if (x0z_dn_frame_model(&probe_frame, slot, 124, &model.raw, &model.canonical))
-        probe_status[slot] = x0z_dn_render_frame(&probe_adapter, slot, block, voice, X0Z_808,
+    if (x0x_dn_frame_model(&probe_frame, slot, 124, &model.raw, &model.canonical))
+        probe_status[slot] = x0x_dn_render_frame(&probe_adapter, slot, block, voice, X0X_808,
                                                &probe_frame, probe_mapping, 1, receive, &model);
 }
 static const struct dnm_knob knobs[DNM_KNOBS] = {{0}};
 const struct dnm_machine probe_machine = {
     127, "ENDPOINT TEST", 0, knobs, probe_machine_render, DNM_OWN_ENV, 0
 };
-void probe_in(void) { x0z_dn_frame_begin(&probe_frame); }
-void probe_pre(int16_t *words) { x0z_dn_frame_capture(&probe_frame, words); }
-void probe_late(int32_t *voices) { (void)voices; x0z_dn_frame_ready(&probe_frame); ++probe_ready; }
-void probe_end(void) { x0z_dn_frame_end(&probe_frame); }
-void probe_out(void) { x0z_dn_frame_end(&probe_frame); }
+void probe_in(void) { x0x_dn_frame_begin(&probe_frame); }
+void probe_pre(int16_t *words) { x0x_dn_frame_capture(&probe_frame, words); }
+void probe_late(int32_t *voices) { (void)voices; x0x_dn_frame_ready(&probe_frame); ++probe_ready; }
+void probe_end(void) { x0x_dn_frame_end(&probe_frame); }
+void probe_out(void) { x0x_dn_frame_end(&probe_frame); }
 '''
 
 

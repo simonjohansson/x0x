@@ -335,7 +335,7 @@ def reject_mutations(folder):
 def diagnose(fixture_path=None):
     fixture_path = fixture_path or cpu.ROOT / "tests/fixtures/diagnostic.json"
     fixture = validate_fixture(load_json(fixture_path))
-    with tempfile.TemporaryDirectory(prefix="x0z-coldfire-arithmetic-") as temp:
+    with tempfile.TemporaryDirectory(prefix="x0x-coldfire-arithmetic-") as temp:
         folder = Path(temp)
         image, _ = cpu.build_coldfire(folder, SOURCE)
         cases = check_cases(image)

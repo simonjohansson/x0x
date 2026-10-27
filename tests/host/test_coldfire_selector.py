@@ -5,8 +5,8 @@ import json
 import unittest
 from unittest.mock import patch
 
-from x0z import coldfire_selector as selector
-from x0z.cpu import Unavailable
+from x0x import coldfire_selector as selector
+from x0x.cpu import Unavailable
 
 
 def bank():

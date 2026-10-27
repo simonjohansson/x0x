@@ -3,7 +3,7 @@ import math
 import random
 import unittest
 
-from x0z.comparison import compare_backends, compare_samples
+from x0x.comparison import compare_backends, compare_samples
 
 
 RATE = 48000
