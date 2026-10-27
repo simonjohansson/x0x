@@ -3,13 +3,37 @@
  * decay_raw is caller-bounded to 0..32512; default 16384 gives tau = 143 ms.
  * State is {Q31 x,y,initial_samples_remaining,Q31 C39 node,Q31 C40 node}; 15 V encodes as .25 FS.
  * shortcut: source-separated inputs and fixed 14 V trigger;
- * full feedback/loading and residual-state retrigger follow in #9/#79.
+ * ideal hard-knee Q43 leakage; full feedback/loading and residual-state retrigger follow in #9/#79.
  */
+    /* Exact held-source Q43 flow: capacitor q1 stays fixed during this kick. */
+    .macro leakage_half
+    cmpa.l #0, %a4
+    bne.s 9f
+    move.l %a6, %d0
+    addi.l #19900015, %d0 /* -.556 V knee in the fixed 1/60 encoding */
+    move.l %d0, %acc2
+    move.l 84(%sp), %d1
+    mac.l %d4, %d1, %acc2
+    move.l 88(%sp), %d1
+    mac.l %d5, %d1, %acc2
+    movclr.l %acc2, %d0
+    tst.l %d0
+    bpl.s 9f
+    move.l #19236073, %d1 /* R165/(R165+R166)*m/(2*C42*fs) */
+    mac.l %d0, %d1, %acc2
+    movclr.l %acc2, %d0
+    add.l %d0, %d4
+    move.l 92(%sp), %d1
+    mac.l %d0, %d1, %acc2
+    movclr.l %acc2, %d0
+    sub.l %d0, %d5
+9:
+    .endm
     .text
     .globl x0x_808_body
     .type x0x_808_body, @function
 x0x_808_body:
-    lea -92(%sp), %sp
+    lea -96(%sp), %sp
     movem.l %d2-%d7/%a2-%a6, (%sp)
     move.l %macsr, %d0
     move.l %d0, 72(%sp)
@@ -29,12 +53,12 @@ x0x_808_body:
     move.l %d0, 64(%sp)
     move.l %mask, %d0
     move.l %d0, 68(%sp)
-    movea.l 96(%sp), %a0
-    movea.l 100(%sp), %a1
+    movea.l 100(%sp), %a0
+    movea.l 104(%sp), %a1
     move.l (%a0), %d4
     move.l 4(%a0), %d5
     move.l 8(%a0), %d7
-    tst.l 104(%sp)
+    tst.l 108(%sp)
     beq.s .Lcontinue
     moveq #0, %d4
     moveq #0, %d5
@@ -47,7 +71,7 @@ x0x_808_body:
     move.l #0xb0, %d0 /* fractional, saturated, nearest-even */
     move.l %d0, %macsr
     /* Three reference-training anchors; stock feedback/pot modeling remains open. */
-    move.l 108(%sp), %d6
+    move.l 112(%sp), %d6
     cmpi.l #16384, %d6
     bge .Ldecay_high
     move.l #131072, %d0 /* low branch excludes 16384, keeping the product signed-positive */
@@ -119,7 +143,7 @@ x0x_808_body:
     movclr.l %acc0, %d0
     movea.l %d0, %a2 /* companion Gy */
     /* Main exponential-input and ON-bias gains, quadratic over each Decay segment. */
-    move.l 108(%sp), %d0
+    move.l 112(%sp), %d0
     cmpi.l #16384, %d0
     bge .Lmain_high
     tst.l %d7
@@ -173,11 +197,48 @@ x0x_808_body:
     mac.l %d1, %d0, %acc0
     movclr.l %acc0, %d0
     move.l %d0, 88(%sp)
+    tst.l %d7
+    bne .Lleakage_ready
+    move.l 112(%sp), %d0
+    cmpi.l #16384, %d0
+    bge.s .Lleakage_high
+    lea .Lleakage_low_data(%pc), %a6
+    bra.s .Lleakage_coefficients
+.Lleakage_high:
+    lea .Lleakage_high_data(%pc), %a6
+.Lleakage_coefficients:
+    /* ON biases are unused in the steady stage; reuse their stack words. */
+    move.l (%a6)+, %d0
+    move.l %d0, %acc0
+    move.l (%a6)+, %d0
+    mac.l %d6, %d0, %acc0
+    move.l (%a6)+, %d0
+    mac.l %d1, %d0, %acc0
+    movclr.l %acc0, %d0
+    move.l %d0, 84(%sp)
+    move.l (%a6)+, %d0
+    move.l %d0, %acc0
+    move.l (%a6)+, %d0
+    mac.l %d6, %d0, %acc0
+    move.l (%a6)+, %d0
+    mac.l %d1, %d0, %acc0
+    movclr.l %acc0, %d0
+    move.l %d0, 88(%sp)
+    move.l (%a6)+, %d0
+    move.l %d0, %acc0
+    move.l (%a6)+, %d0
+    mac.l %d6, %d0, %acc0
+    move.l (%a6)+, %d0
+    mac.l %d1, %d0, %acc0
+    movclr.l %acc0, %d0
+    move.l %d0, 92(%sp)
+.Lleakage_ready:
     movea.l 12(%a0), %a5
     movea.l 16(%a0), %a6
     movea.l %d7, %a4
     moveq #32, %d6
 .Lsample:
+    leakage_half
     tst.l %d7
     beq.s .Lmain_off
     cmpi.l #240, %d7
@@ -236,8 +297,9 @@ x0x_808_body:
     moveq #0, %d1 /* Only clear an OFF rounding fixed point. */
 .Lmain_node_store:
     movea.l %d1, %a6
-    move.l %d4, %d0
-    add.l %d1, %d0 /* Main source direct feedthrough, not part of modal state. */
+    leakage_half
+    move.l %a6, %d0
+    add.l %d4, %d0 /* Main source direct feedthrough, not part of modal state. */
     move.l %d0, (%a1)+
     subq.l #1, %d6
     bne .Lsample
@@ -310,7 +372,7 @@ x0x_808_body:
     move.l 72(%sp), %d0
     move.l %d0, %macsr
     movem.l (%sp), %d2-%d7/%a2-%a6
-    lea 92(%sp), %sp
+    lea 96(%sp), %sp
     rts
     .balign 4
 .Lmain_attack_low:
@@ -333,4 +395,12 @@ x0x_808_body:
     .long -1501074,798188,-4123
     .long 96014,524,-18
     .long -2447,1361,-7
+.Lleakage_low_data:
+    .long 47485539,-36322559,508524
+    .long 473421941,4502196,2763962
+    .long 215398591,-165239339,-39652
+.Lleakage_high_data:
+    .long 11162980,-6799472,4412
+    .long 477924137,220915,96699
+    .long 50159252,-30561512,-1356
     .size x0x_808_body, .-x0x_808_body

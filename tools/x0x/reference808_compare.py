@@ -33,7 +33,7 @@ def raw_position(displayed):
 def source_hashes():
     paths = ["targets/coldfire/body808.s", "targets/coldfire/tone808.s",
              "targets/coldfire/coupling808.s", "targets/sharc/body808.s",
-             "tools/x0x/body808.py", "tools/x0x/retrigger808.py", "tools/x0x/pulse808.py",
+             "tools/x0x/body808.py", "tools/x0x/retrigger808.py", "tools/x0x/pulse808.py", "tools/x0x/leakage808.py",
              "tools/x0x/tone808.py", "tools/x0x/coupling808.py"]
     return {name:digest(ROOT/name) for name in paths}
 

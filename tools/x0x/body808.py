@@ -1,7 +1,7 @@
 """Independent 808 body oracle with provisional Decay feedback control.
 
-Shaped main and companion inputs use calibrated pole frequencies/losses. Full
-feedback, pitch sigh, loaded output and residual-state retrigger remain open.
+Shaped main and companion inputs use calibrated pole frequencies/losses. The Q43 hard-knee leakage adds amplitude-dependent pitch sigh; full
+feedback, soft-knee transistor behavior, loaded output and residual retrigger remain open.
 """
 import math
 
@@ -50,11 +50,8 @@ def switch_coordinates(decay_raw):
 
 
 def reference(frames, decay_raw=DEFAULT_DECAY, changes=None):
-    from .retrigger808 import companion_body_reference
-    from .pulse808 import main_reference
-    return [main+companion for main,companion in zip(
-        main_reference(frames, decay_raw, changes),
-        companion_body_reference(frames, decay_raw, changes))]
+    from .leakage808 import reference as leakage_reference
+    return leakage_reference(frames, decay_raw, changes)
 
 
 def compare():

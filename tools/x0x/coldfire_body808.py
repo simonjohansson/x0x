@@ -19,7 +19,7 @@ class Runner:
         self.state_words = state_words
         self.stride = max(16,4*state_words)
         self.extent = 8*self.stride+8
-        self.stack_bytes = 112 if state_words == 5 else 96
+        self.stack_bytes = 128 if state_words == 5 else 96
         harness = cpu.require_module("emu.harness", "digiemu")
         from unicorn import UC_HOOK_CODE, UC_HOOK_MEM_WRITE
         from unicorn import m68k_const

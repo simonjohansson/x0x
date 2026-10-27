@@ -364,3 +364,30 @@ short Decay, but regresses 7–8% at long Decay; first 6/25/150 ms improve at
 every setting. Preserve those regressions. Next continue the existing feedback/
 pitch-sigh alignment, using the default and long-tail errors to prioritize it. Do not close full fidelity or combined acceptance on these
 bounded checks. The HTML report and held-out recordings remain untouched.
+
+## 808 leakage and pitch sigh — 27 October 2026
+
+The existing #9/#79 [Q43 leakage step](808-leakage.md) runs on both CPUs.
+It adds a source-derived hard-knee collector current through nonsingular
+capacitor KCL, retaining the settled 47.65 Hz calibration and saved contract.
+142 host tests and independent C/UI suites, both actual CPU suites and the five-setting training
+comparison pass their existing numeric bounds. Whole raw errors improve at all
+five settings (default ~50%, short 23–28%, long ~39%). The first 6 ms is unchanged;
+25/150-ms waveform errors improve. The long 150–300-ms frequency estimate worsens
+from 47.648 to 49.722 Hz against 47.778 Hz reference: retain that regression, the
+remaining amplitude/phase errors and the hard-knee/full-feedback approximations.
+
+All three installed emulators ran. DT retains only #78 resets. DN reproduces
+#20's one-count bright-Tone baseline with other tested paths passing. DN2's
+nonlinear dark-Tone check passes, then note75 has no active bright-Tone lane;
+its later checks are unexecuted. That missing-note failure is not yet proved
+to share #80's late CC loss. The independent [upstream trace](dn2-late-model.md)
+now identifies receive-callback reentry and reordered CC bytes due to missing
+Digikit interrupt-mask semantics. An upstream fix/requalification remains; no
+mod workaround was adopted.
+
+Next continue the existing feedback/input/transistor alignment and native MIDI
+investigation; do not repeat this completed leakage port, widen tolerances or
+claim full fidelity/combined acceptance. Independent workers delivered the
+SHARC port, model/tests and MIDI trace while the coordinator implemented
+ColdFire and integrated the results. HTML and held-out recordings are untouched.

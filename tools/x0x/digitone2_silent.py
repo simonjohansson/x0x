@@ -9,7 +9,7 @@ from pathlib import Path
 import struct
 import sys
 
-from . import cpu, firmware, sharc_body808 as body, body808, body909, tone808, retrigger808
+from . import cpu, firmware, sharc_body808 as body, body808, body909, tone808, leakage808
 
 ROOT = cpu.ROOT
 FOLDER = ROOT / "out/dn2/silent"
@@ -558,28 +558,47 @@ def full_os() -> dict:
                 lanes=[i for i in range(16) if ids[i]==20 and pitches[i]==note<<8]
                 assert len(lanes)==1, (label,lanes)
                 lane=lanes[0]
-                native=struct.unpack("<40H",bytes.fromhex(
-                    emu.dsp_peek(0x25C48C+2*(0x6D+0x49*lane),80)["hex"]))
+                def tone_snapshot():
+                    metadata=struct.unpack("<2I",bytes.fromhex(
+                        emu.dsp_peek(0x20092000+8*lane,8)["hex"]))
+                    native=struct.unpack("<40H",bytes.fromhex(
+                        emu.dsp_peek(0x25C48C+2*(0x6D+0x49*lane),80)["hex"]))
+                    x,y=struct.unpack("<2f",bytes.fromhex(
+                        emu.dsp_peek(0x20092080+8*lane,8)["hex"]))
+                    def node(base):
+                        return struct.unpack("<f",bytes.fromhex(
+                            emu.dsp_peek(base+4*lane,4)["hex"]))[0]
+                    remaining=struct.unpack("<I",bytes.fromhex(
+                        emu.dsp_peek(0x200921C0+4*lane,4)["hex"]))[0]
+                    assert metadata[1]==1 and remaining==0, (metadata,remaining)
+                    return dict(callbacks=metadata[0],native=native,x=x,y=y,
+                                companion=node(0x20092200),main=node(0x20092240),
+                                capacitor=node(0x20092100))
+                before=tone_snapshot()
+                native=before["native"]
                 assert abs(native[0]-(position<<8))<=1 and native[1]==16384 and native[5]==0, native
-                x,y=struct.unpack("<2f",bytes.fromhex(emu.dsp_peek(0x20092080+8*lane,8)["hex"]))
-                capacitor=struct.unpack("<f",bytes.fromhex(emu.dsp_peek(0x20092100+4*lane,4)["hex"]))[0]
                 g=tone808.coefficient(native[0])
-                pole=body808.retention(native[1])*complex(
-                    math.cos(2*math.pi*body808.FREQUENCY/body808.SAMPLE_RATE),
-                    math.sin(2*math.pi*body808.FREQUENCY/body808.SAMPLE_RATE))
-                node=struct.unpack("<f",bytes.fromhex(emu.dsp_peek(0x20092200+4*lane,4)["hex"]))[0]
-                sigma=-body808.SAMPLE_RATE*math.log(body808.retention(native[1]))
-                omega=2*math.pi*body808.FREQUENCY
-                forcing=complex(-1/(retrigger808.R161*retrigger808.C42),
-                                sigma/(omega*retrigger808.R161*retrigger808.C42))
-                particular=-forcing*node/(complex(-sigma,-omega)+1/retrigger808.TAU)
-                rc_pole=math.exp(-1/(body808.SAMPLE_RATE*retrigger808.TAU))
-                homogeneous=complex(x,y)-particular
-                expected=(2*g/(1-(1-2*g)/pole.conjugate())*homogeneous).real
-                expected+=2*g/(1-(1-2*g)/rc_pole)*particular.real
+                emu.run_until(frames=emu.status()["dsp_frames"]+16,timeout_wall_s=120)
+                after=tone_snapshot()
+                assert after["native"]==native, (label,before,after)
+                callbacks=after["callbacks"]-before["callbacks"]
+                assert 0<callbacks<=64, (label,before,after)
+                samples,_=leakage808.continue_reference(complex(before["x"],before["y"]),
+                    before["main"],before["companion"],native[1],32*callbacks)
+                # Continue capacitor voltage/current, independently of the ASM's TPT state.
+                r=tone808.resistance(native[0])
+                history=1/(2*tone808.SAMPLE_RATE*tone808.C45)
+                last_input=before["x"]+before["main"]
+                voltage=((1-g)*before["capacitor"]-g*last_input)/(1-2*g)
+                current=(last_input-voltage)/r
+                for sample in samples:
+                    voltage=(voltage+history*current+history*sample/r)/(1+history/r)
+                    current=(sample-voltage)/r
+                expected=voltage+history*current
+                capacitor=after["capacitor"]
                 previous_input, previous_output = struct.unpack("<2f",bytes.fromhex(
                     emu.dsp_peek(0x20092140+8*lane,8)["hex"]))
-                tone_last = ((1-g)*capacitor-g*x)/(1-2*g)
+                tone_last = ((1-g)*capacitor-g*(after["x"]+after["main"]))/(1-2*g)
                 coupling_input_error = abs(previous_input-tone_last)
                 assert coupling_input_error <= 1e-5, (label,previous_input,tone_last)
                 assert math.isfinite(previous_output) and abs(previous_output) < .5
@@ -592,7 +611,9 @@ def full_os() -> dict:
                 assert all(math.isfinite(v) for v in pcm) and 0<peak<1, label
                 report["tone_audio"][label]=dict(target=position,slot=lane,tone_raw=native[0],
                     decay_raw=native[1],coefficient=g,capacitor=capacitor,
-                    predicted_settled_capacitor=expected,state_error_fs=error,
+                    prediction_scope="independent nonlinear continuation from native state; no START",
+                    before=before,after=after,prediction_samples=32*callbacks,
+                    predicted_capacitor=expected,state_error_fs=error,
                     native_peak_fs=peak,native_wav=str(path),
                     coupling_previous_input=previous_input,coupling_previous_output=previous_output,
                     coupling_input_error_fs=coupling_input_error)

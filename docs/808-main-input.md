@@ -1,5 +1,9 @@
 # 808 shaped main input and bridge forcing
 
+The measurements below describe the main-input checkpoint. The subsequent
+[Q43 leakage increment](808-leakage.md) adds amplitude-dependent pitch sigh;
+keep these earlier results distinct from the current comparison.
+
 This #9/#79 increment replaces the provisional y-drive with the C40/D53 pulse
 shaper and the main bridged-T input on both CPUs. It keeps the calibrated
 47.65 Hz settled pole, 6 ms high-frequency window, existing Decay curve,

@@ -25,7 +25,7 @@ def companion_body_reference(frames, decay_raw=body808.DEFAULT_DECAY, changes=No
     """Continuous RC forcing integrated analytically over constant-pole segments.
 
     shortcut: source-separated C39 and calibrated constant damping; loaded
-    feedback, main pulse shaping and intrinsic accent remain unmodeled.
+    feedback, mutual source loading and intrinsic accent remain unmodeled here.
     """
     changes = changes or {}
     state = 0j

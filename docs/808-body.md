@@ -1,8 +1,9 @@
 # 808 body, finite excitation and Decay control
 
 The #9 prototype now drives a damped mode with a
-[1 ms trigger and shaped main input](808-main-input.md). Full nonlinear diode/transistor behavior,
-pitch sigh, stock feedback/Decay mapping and the complete loaded output network
+[1 ms trigger and shaped main input](808-main-input.md), followed by
+[Q43 leakage and pitch sigh](808-leakage.md). Full nonlinear diode/transistor behavior,
+stock feedback/Decay mapping and the complete loaded output network
 remain missing. The settled body pitch is now 47.65 Hz, rounded from the
 initial five-setting software-reference measurements; see [pitch calibration](808-pitch.md).
 This is a provisional calibration, not complete circuit alignment. The saved layout
@@ -28,15 +29,19 @@ feedthrough; the rendered body adds that source after each interval. The
 approximations. At 6 ms, both CPUs and the oracle convert the modal state to
 retain C41/C42 voltage. No per-hit normalization or alignment is introduced.
 
-The independent oracle solves the shaped inputs analytically on each constant
-pole/control segment. It does not copy the ASM recurrence. The old fixed sum
+The independent oracle solves the pre-switch shaped inputs analytically and
+integrates the post-switch nonlinear ODE with four RK4 substeps per sample.
+The CPU ports instead use symmetric leakage/linear splitting; the oracle does
+not copy that recurrence. The old fixed sum
 of 48 y kicks is historical; it is no longer the current main-input model.
 
 The earlier formula `0.25*exp(-(n+1)/12000)*sin(2*pi*55*(n+1)/48000)` describes
 the historical instantaneous-state prototype, before finite excitation.
 
 The [initial frequency-switch stage](808-initial-pitch.md) uses about 131.006 Hz
-for the first 6 ms; the body then stays at 47.65 Hz. Tested fixed-control body peaks remain below 0.25 digital full scale.
+for the first 6 ms; the underlying settled pole then stays at 47.65 Hz.
+Amplitude-dependent Q43 leakage temporarily raises the measured pitch after
+that switch, without an imposed pitch envelope. Tested fixed-control body peaks remain below 0.25 digital full scale.
 The subsequent coupling stage has a separately derived half-scale transient bound.
 Ordinary note pitch is not used. Native AMP/velocity, filters and track level
 remain downstream.

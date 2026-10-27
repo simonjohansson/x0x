@@ -178,7 +178,7 @@ selected:
     I0=R4;
     R7=PASS R7;
     IF EQ JUMP continue_body;
-    // shortcut: 1 ms rectangular drive; edge shaping, physical forcing/gain and residual retrigger follow.
+    // Shaped 1 ms C40/D53 source; residual-state retrigger remains provisional.
     R0=0;
     R1=0;
     R4=288;
@@ -526,6 +526,87 @@ main_cache_off:
     I4=R4;
     R4=0;
     DM(I4,M5)=R4;
+    R4=DM(I0,M5);
+    R4=PASS R4;
+    IF NE JUMP main_setup_done;
+    // Once OFF, reuse the three zero source-bias words for Q43 coefficients.
+    R4=0x3f010204;
+    COMP(F11,F4);
+    IF GE JUMP leakage_cache_high;
+    R4=0xbc8a8f40;
+    F4=F4*F7;
+    R5=0x3cb52499;
+    F4=F4+F5;
+    R5=0x39784d7c;
+    F5=F5*F9;
+    F4=F4+F5;
+    R5=I1;
+    R10=8;
+    R5=R5+R10;
+    I4=R5;
+    DM(I4,M5)=R4;
+    R4=0x3b096567;
+    F4=F4*F7;
+    R5=0x3e61bec4;
+    F4=F4+F5;
+    R5=0x3aa8b2e6;
+    F5=F5*F9;
+    F4=F4+F5;
+    R5=I1;
+    R10=12;
+    R5=R5+R10;
+    I4=R5;
+    DM(I4,M5)=R4;
+    R4=0xbd9d95a3;
+    F4=F4*F7;
+    R5=0x3dcd6b8c;
+    F4=F4+F5;
+    R5=0xb79ae451;
+    F5=F5*F9;
+    F4=F4+F5;
+    R5=I1;
+    R10=20;
+    R5=R5+R10;
+    I4=R5;
+    DM(I4,M5)=R4;
+    JUMP main_setup_done;
+leakage_cache_high:
+    R4=0xbb4f80e0;
+    F4=F4*F7;
+    R5=0x3baa5564;
+    F4=F4+F5;
+    R5=0x3609e3f7;
+    F5=F5*F9;
+    F4=F4+F5;
+    R5=I1;
+    R10=8;
+    R5=R5+R10;
+    I4=R5;
+    DM(I4,M5)=R4;
+    R4=0x38d7bcce;
+    F4=F4*F7;
+    R5=0x3e63e459;
+    F4=F4+F5;
+    R5=0x383cdd53;
+    F5=F5*F9;
+    F4=F4+F5;
+    R5=I1;
+    R10=12;
+    R5=R5+R10;
+    I4=R5;
+    DM(I4,M5)=R4;
+    R4=0xbc692a74;
+    F4=F4*F7;
+    R5=0x3cbf57a5;
+    F4=F4+F5;
+    R5=0xb5298d27;
+    F5=F5*F9;
+    F4=F4+F5;
+    R5=I1;
+    R10=20;
+    R5=R5+R10;
+    I4=R5;
+    DM(I4,M5)=R4;
 main_setup_done:
     // shortcut: resistance-linear bright-up Tone mapping until the C-taper is calibrated.
     // Physical RC TPT coefficient: (2-t)/(102.224-99.112*t), t=raw/32512.
@@ -603,6 +684,45 @@ continue_main_clock:
     R4=R4-1;
     DM(I0,M5)=R4;
 no_main_edge:
+    R4=I1;
+    R5=16;
+    R4=R4+R5;
+    I4=R4;
+    R4=DM(I4,M5);
+    R4=PASS R4;
+    IF NE JUMP leakage_before_done;
+    // S03 Eq8 hard knee; the leakage half-flow keeps C41 charge fixed.
+    R4=I1;
+    R5=8;
+    R4=R4+R5;
+    I4=R4;
+    R4=DM(I4,M5);
+    F4=F4*F0;
+    R5=I1;
+    R6=12;
+    R5=R5+R6;
+    I4=R5;
+    R5=DM(I4,M5);
+    F5=F5*F1;
+    F4=F4+F5;
+    R5=I5;
+    F4=F4+F5;
+    R5=0x3c17d338; // .556 V in the existing 1/60 voltage encoding.
+    F4=F4+F5;
+    R5=0;
+    COMP(F4,F5);
+    IF GE JUMP leakage_before_done;
+    R5=0x3c12c274;
+    F4=F4*F5;
+    F0=F0+F4;
+    R5=I1;
+    R6=20;
+    R5=R5+R6;
+    I4=R5;
+    R5=DM(I4,M5);
+    F4=F4*F5;
+    F1=F1-F4;
+leakage_before_done:
     F4=F2*F0;
     F5=F3*F1;
     F4=F4+F5;
@@ -616,11 +736,19 @@ no_main_edge:
     F5=F14*F6;
     F4=F4+F5;
     R5=I1;
+    R6=16;
+    R5=R5+R6;
+    I4=R5;
+    R5=DM(I4,M5);
+    R5=PASS R5;
+    IF EQ JUMP main_bias_x_done;
+    R5=I1;
     R6=8;
     R5=R5+R6;
     I4=R5;
     R5=DM(I4,M5);
     F4=F4+F5;
+main_bias_x_done:
     I12=R4;
     F4=F2*F1;
     F5=F3*F0;
@@ -638,11 +766,19 @@ no_main_edge:
     F5=F15*F6;
     F4=F4+F5;
     R5=I1;
+    R6=16;
+    R5=R5+R6;
+    I4=R5;
+    R5=DM(I4,M5);
+    R5=PASS R5;
+    IF EQ JUMP main_bias_y_done;
+    R5=I1;
     R6=12;
     R5=R5+R6;
     I4=R5;
     R5=DM(I4,M5);
     F4=F4+F5;
+main_bias_y_done:
     R1=R4;
     R0=I12;
     R5=I13;
@@ -653,12 +789,60 @@ no_main_edge:
     R6=0x3f3be02a;
     F5=F5*F6;
     R4=I1;
+    R6=16;
+    R4=R4+R6;
+    I4=R4;
+    R4=DM(I4,M5);
+    R4=PASS R4;
+    IF EQ JUMP main_node_bias_done;
+    R4=I1;
     R6=20;
     R4=R4+R6;
     I4=R4;
     R6=DM(I4,M5);
     F5=F5+F6;
+main_node_bias_done:
     I5=R5;
+    R4=I1;
+    R5=16;
+    R4=R4+R5;
+    I4=R4;
+    R4=DM(I4,M5);
+    R4=PASS R4;
+    IF NE JUMP leakage_after_done;
+    // S03 Eq8 hard knee; the leakage half-flow keeps C41 charge fixed.
+    R4=I1;
+    R5=8;
+    R4=R4+R5;
+    I4=R4;
+    R4=DM(I4,M5);
+    F4=F4*F0;
+    R5=I1;
+    R6=12;
+    R5=R5+R6;
+    I4=R5;
+    R5=DM(I4,M5);
+    F5=F5*F1;
+    F4=F4+F5;
+    R5=I5;
+    F4=F4+F5;
+    R5=0x3c17d338; // .556 V in the existing 1/60 voltage encoding.
+    F4=F4+F5;
+    R5=0;
+    COMP(F4,F5);
+    IF GE JUMP leakage_after_done;
+    R5=0x3c12c274;
+    F4=F4*F5;
+    F0=F0+F4;
+    R5=I1;
+    R6=20;
+    R5=R5+R6;
+    I4=R5;
+    R5=DM(I4,M5);
+    F4=F4*F5;
+    F1=F1-F4;
+leakage_after_done:
+    R5=I5;
     F6=F0+F5; // Direct main-source feedthrough, outside modal state.
     F4=F6-F12;
     F4=F11*F4;
