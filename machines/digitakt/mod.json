@@ -6,7 +6,7 @@
   "license": "GPL-2.0-or-later",
   "device": "digitakt-mk1",
   "os": "1.54",
-  "sources": ["machine.c", "../../targets/coldfire/selector.s", "../../targets/coldfire/silence.s", "../../targets/coldfire/body808.s"],
+  "sources": ["machine.c", "../../targets/coldfire/selector.s", "../../targets/coldfire/silence.s", "../../targets/coldfire/body808.s", "../../targets/coldfire/tone808.s"],
   "machines": [{"id": 80, "descriptor": "x0x_dt_machine"}],
   "subscribe": [{"event": "ev_render_voices", "fn": "x0x_dt_render", "order": 20}],
   "requires": ["core", "machine-pages"],

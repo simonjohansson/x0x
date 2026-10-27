@@ -13,6 +13,7 @@
     "../../src/controls.c",
     "../../targets/coldfire/selector.s",
     "../../targets/coldfire/body808.s",
+    "../../targets/coldfire/tone808.s",
     "../../targets/coldfire/silence.s"
   ],
   "cflags": [

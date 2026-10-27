@@ -5,9 +5,11 @@
 /* Existing private selector ABI: eight {initialized, model, tail} lanes. */
 static uint32_t selection[8][3];
 static int32_t body_state[8][2];
+static int32_t tone_state[8];
 extern int x0x_selector(uint32_t bank[8][3], uint32_t notice[4],
                         const uint32_t input[4]);
 extern void x0x_silence(int32_t output[32]);
+extern void x0x_808_tone(int32_t *state, int32_t output[32], uint32_t tone_raw);
 extern void x0x_808_body(int32_t state[2], int32_t output[32], uint32_t start, uint32_t decay_raw);
 
 void x0x_dt_render(int32_t *blocks)
@@ -17,6 +19,7 @@ void x0x_dt_render(int32_t *blocks)
         if (fw_render_machine[track] != X0X_ID) {
             selection[track][0] = selection[track][1] = selection[track][2] = 0;
             body_state[track][0] = body_state[track][1] = 0;
+            tone_state[track] = 0;
             continue;
         }
         int32_t values[4];
@@ -29,9 +32,15 @@ void x0x_dt_render(int32_t *blocks)
         const uint32_t input[] = {track, (uint32_t)values[3],
                                  (fw_voice_start >> track) & 1u, valid};
         if (x0x_selector(selection, notice, input) == 1) {
-            if (notice[3]) body_state[track][0] = body_state[track][1] = 0;
+            if (notice[3]) {
+                body_state[track][0] = body_state[track][1] = 0;
+                tone_state[track] = 0;
+            }
             if (notice[0] == 0) {
+                /* shortcut: the provisional body restarts all audio state on START. */
+                if (input[2]) tone_state[track] = 0;
                 x0x_808_body(body_state[track], blocks + 32 * track, input[2], (uint32_t)values[1]);
+                x0x_808_tone(&tone_state[track], blocks + 32 * track, (uint32_t)values[0]);
                 continue;
             }
         }

@@ -18,6 +18,8 @@ const uint8_t fw_params[134 * 60] __attribute__((aligned(4))) = {
 static uint32_t calls, input_seen[4], zeroes;
 static uint32_t body_calls, body_start, body_decay;
 static int32_t *body_state, body_before[2];
+static uint32_t tone_calls, tone_raw;
+static int32_t *tone_state, tone_before;
 int32_t dnm_knob(int32_t slot, int32_t knob) { (void)slot; (void)knob; assert(0); return 0; }
 void dnm_knob_range(int32_t knob, int32_t *lo, int32_t *hi) { (void)knob; (void)lo; (void)hi; assert(0); }
 int x0x_selector(uint32_t bank[8][3], uint32_t notice[4], const uint32_t input[4])
@@ -39,6 +41,12 @@ void x0x_808_body(int32_t state[2], int32_t output[32], uint32_t start, uint32_t
     memcpy(body_before, state, sizeof body_before);
     if (start) { state[0] = 100; state[1] = 200; }
     for (unsigned k = 0; k < 32; ++k) output[k] = ++state[0];
+}
+void x0x_808_tone(int32_t *state, int32_t output[32], uint32_t raw)
+{
+    assert(output);
+    ++tone_calls; tone_raw = raw; tone_state = state; tone_before = *state;
+    ++*state;
 }
 
 int main(void)
@@ -74,13 +82,17 @@ int main(void)
     m->render(3, guarded + 1, &voice);
     assert(body_calls == 1 && body_start == 1 && body_before[0] == 0 && body_before[1] == 0);
     assert(body_decay == 6789); /* Preserve the delivered fractional position. */
+    assert(tone_calls == 1 && tone_raw == 12345 && tone_before == 0);
     assert(guarded[1] == 101 && guarded[32] == 132);
     int32_t *slot3 = body_state;
+    int32_t *tone3 = tone_state;
     voice.fresh = 0;
+    words[3 * 79 + 27] = 32767;
     words[3 * 79 + 28] = 32767;
     m->render(3, guarded + 1, &voice);
     assert(body_calls == 2 && body_start == 0 && body_before[0] == 132);
     assert(body_decay == 32512); /* Bound native modulation above the UI maximum. */
+    assert(tone_calls == 2 && tone_raw == 32512 && tone_before == 1);
     assert(guarded[1] == 133 && guarded[32] == 164);
     /* A pending 909 edit keeps the 808 until START, then clears that voice. */
     words[3 * 79 + 32] = 32512;
@@ -89,19 +101,25 @@ int main(void)
     voice.fresh = 1;
     m->render(3, guarded + 1, &voice);
     assert(body_calls == 3 && zeroes == 3 && slot3[0] == 0 && slot3[1] == 0);
+    assert(tone_calls == 3 && *tone3 == 0);
     words[3 * 79 + 32] = 0;
     m->render(3, guarded + 1, &voice);
     assert(body_calls == 4 && body_before[0] == 0 && body_before[1] == 0);
+    assert(tone_calls == 4 && tone_before == 0);
     /* A second voice gets separate state without changing the first voice. */
     FW_VOICE_PARAM(4, 0) = 80 << 8;
     m->render(4, guarded + 1, &voice);
     assert(body_calls == 5 && body_state != slot3 && slot3[0] == 132);
+    assert(tone_state != tone3 && *tone3 == 1);
+    m->render(3, guarded + 1, &voice);
+    assert(body_calls == 6 && body_start == 1 && tone_before == 0);
     voice.track = 1;
     m->render(3, guarded + 1, &voice);
-    assert(body_calls == 6 && body_before[0] == 0 && body_before[1] == 0);
+    assert(body_calls == 7 && body_before[0] == 0 && body_before[1] == 0 && tone_before == 0);
     FW_VOICE_PARAM(3, 0) = 0;
     x0x_dn_begin();
     assert(slot3[0] == 0 && slot3[1] == 0);
+    assert(*tone3 == 0);
     assert(guarded[0] == 12345 && guarded[33] == 12345);
     return 0;
 }

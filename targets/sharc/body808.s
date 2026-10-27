@@ -1,6 +1,6 @@
 // First 808 resonator body; 909 remains silent.
 // Per slot: {callback count since model change, selected code}; 0=inactive, 1=808, 2=909.
-// SDK input is in R4. Metadata is 16 pairs at L2 base; x/y pairs follow at +128.
+// SDK input is in R4. Metadata is at L2 base, x/y pairs at +128, Tone states at +256.
 .SECTION/SW callback_code;
 .GLOBAL sharc_voice_render.;
 sharc_voice_render.:
@@ -65,6 +65,9 @@ next_word:
     COMP(R10,R13);
     IF LT JUMP validate_word;
     R14=R0;                 // Last validated word was MODEL, parameter 5.
+    R13=LSHIFT R2 BY 2;
+    R0=0x20092100;
+    R13=R13+R0;
 
     R3=LSHIFT R2 BY 3;
     R6=0x20092000;
@@ -89,6 +92,10 @@ next_word:
     IF EQ JUMP silent;      // No initialized behavior before the first START.
     JUMP selected;
 starting:
+    // shortcut: reset Tone on START until residual-state retrigger and logical ownership are qualified.
+    I4=R13;
+    R0=0;
+    DM(I4,M5)=R0;
     R0=16384;
     COMP(R14,R0);
     IF LT JUMP select_808;
@@ -122,6 +129,8 @@ selected:
     R0=1;
     COMP(R6,R0);
     IF NE JUMP silent;
+    I4=R15;
+    R6=DM(I4,M5);
     R0=4;
     R0=R15+R0;
     I4=R0;
@@ -155,6 +164,36 @@ render_body:
     F3=F3*F11;
     R4=0x3bebe041;
     F3=F3+F4;
+    // shortcut: resistance-linear bright-up Tone mapping until the C-taper is calibrated.
+    // Physical RC TPT coefficient: (2-t)/(102.224-99.112*t), t=raw/32512.
+    F6=FLOAT R6;
+    R11=0x38010204;
+    F6=F6*F11;
+    R11=0x40000000;
+    F4=F11-F6;
+    R11=0x42c63958;
+    F5=F11*F6;
+    R11=0x42cc72b0;
+    F5=F11-F5;
+    // Positive normal-float reciprocal seed, refined without an undocumented ROM lookup.
+    R6=0x7f000000;
+    R6=R6-R5;
+    R11=0x40000000;
+    F12=F5*F6;
+    F12=F11-F12;
+    F6=F6*F12;
+    F12=F5*F6;
+    F12=F11-F12;
+    F6=F6*F12;
+    F12=F5*F6;
+    F12=F11-F12;
+    F6=F6*F12;
+    F12=F5*F6;
+    F12=F11-F12;
+    F6=F6*F12;
+    F11=F4*F6;
+    I4=R13;
+    R12=DM(I4,M5);
     R9=32;
     R10=4;
 body_sample:
@@ -167,8 +206,12 @@ body_sample:
     F5=F5-F6;
     F1=F1+F5;
     R0=R4;
+    F4=F0-F12;
+    F4=F11*F4;
+    F5=F12+F4;
+    F12=F5+F4;
     I4=R8;
-    DM(I4,M5)=R0;
+    DM(I4,M5)=R5;
     R8=R8+R10;
     R9=R9-1;
     IF NE JUMP body_sample;
@@ -176,6 +219,8 @@ body_sample:
     DM(I4,M5)=R0;
     I4=R15;
     DM(I4,M5)=R1;
+    I4=R13;
+    DM(I4,M5)=R12;
     JUMP finish;
 silent:
     R0=0;

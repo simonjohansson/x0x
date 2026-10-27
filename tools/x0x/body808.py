@@ -46,35 +46,9 @@ def reference(frames, decay_raw=DEFAULT_DECAY, changes=None):
 
 
 def compare():
-    """Compare matching actual CPU samples; each runner writes its own evidence."""
-    import json
-    from pathlib import Path
-    import struct
-
-    root = Path(__file__).resolve().parents[2]
-    cases = {}
-    for decay_raw in (0, DEFAULT_DECAY, RAW_MAX):
-        cf_path = root / f"out/coldfire/body808/samples_{decay_raw}.json"
-        sharc_path = root / f"out/sharc/body808/samples_{decay_raw}.f32"
-        coldfire = json.loads(cf_path.read_text())
-        raw = sharc_path.read_bytes()
-        sharc = struct.unpack(f"<{len(raw) // 4}f", raw)
-        frames = min(len(coldfire), len(sharc))
-        assert frames >= SAMPLE_RATE // 2, "matching half-second CPU renders are required"
-        expected = reference(frames, decay_raw)
-        errors = {
-            "coldfire_oracle": max(abs(a - b) for a, b in zip(coldfire[:frames], expected)),
-            "sharc_oracle": max(abs(a - b) for a, b in zip(sharc[:frames], expected)),
-            "cross_cpu": max(abs(a - b) for a, b in zip(coldfire[:frames], sharc[:frames])),
-        }
-        assert all(math.isfinite(e) and e <= 1e-5 for e in errors.values()), (decay_raw, errors)
-        cases[str(decay_raw)] = dict(frames=frames, maximum_errors_fs=errors,
-                                    expected_tau_s=decay_tau(decay_raw))
-    report = dict(status="passed", scope="matching unshifted Decay-controlled body samples",
-                  cases=cases, sample_rate=SAMPLE_RATE, limit_fs=1e-5,
-                  alignment_samples=0, normalization=False)
-    (root / "out/808-body-comparison.json").write_text(json.dumps(report, indent=2) + "\n")
-    return report
+    """Compare the current production body plus Tone stage on both CPUs."""
+    from .tone808 import compare as compare_tone
+    return compare_tone()
 
 
 if __name__ == "__main__":
