@@ -42,7 +42,7 @@ The dependency revisions are Git submodule pins, not floating branches:
 | --- | --- | --- |
 | Elekloader | `b893c9317936633d7a32829b618c2867ee99277c` (upstream main, 27 October 2026) | Firmware profiles, build/patch tools and matching DN2 voice interface |
 | digiemu | `f57c2f237e84b8ff91bc3adb2a2931bccf9928e9` | Digitakt/Digitone ColdFire instruction and later firmware tests |
-| Digikit | `d0a4d76d533d7181ea5eee548ca68edaa8d49c35` | Digitone II SHARC instruction and later firmware tests |
+| Digikit | `a28817d61c06cdea4fb0dbc1625a238fce0b39b9` | Digitone II SHARC instruction and later firmware tests |
 
 The 27 October upstream refresh replaces the PR200-only baseline. DN2's
 `mk2_synth` no longer has a clone field and requires Core 0.2; its fixed FM TONE
@@ -705,3 +705,21 @@ classes using manually downloaded, hash-verified archives. It uses no firmware,
 emulator or VST and changes no production dependency. [Source setup, exact
 settings, results and limits](reference-renders.md) are separate from the
 actual-ASM/native evidence above. Missing archives are unavailable, not passing.
+
+## Digikit native interrupt-mask update — 27 October 2026
+
+The submodule now pins public revision `a28817d61c06cdea4fb0dbc1625a238fce0b39b9`
+from [upstream draft PR200](https://github.com/ElekLabs/digikit/pull/200).
+This is Digikit, not the superseded Elekloader PR200 pin. Its base includes
+merged Digikit PR198/199; the aggregate update changes 44 files. The INTC fix
+adds native SIMR/CIMR mask effects rather than an x0x MIDI-delay workaround.
+14 peripheral, two native-MMIO and 18 neighboring SSI/timer tests pass.
+The upstream routed gate is incomplete due to generated-core/frontend/workspace
+prerequisites; do not describe the whole upstream suite as green or PR as merged.
+
+The unchanged 808-leakage firmware passes both its complete DN2 scenario and
+original-order late MODEL probe on the candidate runtime. The adopted pin's
+normal daemon also builds without binary/fingerprint overrides and passes the
+current full Tune scenario. Separate original-order late-MODEL qualification
+on that normal daemon remains #80's final adoption check; see
+[diagnosis and current evidence](dn2-late-model.md).

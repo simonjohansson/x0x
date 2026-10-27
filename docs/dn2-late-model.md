@@ -1,6 +1,34 @@
 # DN2 late MODEL delivery: upstream trace
 
-Issue #80 remains open. A focused diagnostic using upstream Elekloader
+## Fix published and pin adopted
+
+Digikit revision `a28817d61c06cdea4fb0dbc1625a238fce0b39b9` fixes native
+SIMR/CIMR mask effects and is now the submodule pin. The approved public patch is
+[draft upstream PR200](https://github.com/ElekLabs/digikit/pull/200), not merged.
+Fourteen synthetic peripheral tests, two actual native-MMIO tests and eighteen
+neighboring SSI/timer checks pass. Its broader routed gate is incomplete due
+to generated-core/frontend/workspace prerequisites, as recorded in that PR.
+No mod delay, retry, selector or control-map workaround was introduced.
+
+Unchanged production 808-leakage firmware SHA256
+`42558bbf749b98635ceec1bcf8a388607978b0269d03c5dfa08e6409e5821092`
+passes both its full scenario (including previously missing bright note75) and
+the original late T2 probe on the fixed candidate runtime. After the original
+3,000-frame post-CC settle, the fresh note selects 909 in six frames, within
+the unchanged 32-frame acknowledgement bound. Stored MODEL changes 0→32512;
+old voices retain their latches. There is no additional pre-CC idle pause.
+Evidence: `out/dn2/intc-requalification/qualification.json` and frozen reports.
+
+The adopted pin's normal daemon builds without generated-core regeneration or
+binary/fingerprint overrides. The standard current Tune/full-OS run passes
+37,821 audio / 37,822 DSP frames, including both 808 Tone checks and native
+controls/mixed models. Original-order late qualification on that normal daemon
+remains the final adoption gate in #80; the candidate result is kept distinct.
+Native build/pin receipts are in `out/909-tune/digikit-adoption.json`.
+
+## Historical reproduction before the fix
+
+A focused diagnostic using upstream Elekloader
 `b893c9317936633d7a32829b618c2867ee99277c`, DN2 OS 1.12 and the pinned Digikit
 reproduces the late post-double-STOP T2 CC45 failure. It distinguishes a dropped
 edit from a later overwrite; it does not establish which upstream layer is
