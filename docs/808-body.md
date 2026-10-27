@@ -1,11 +1,11 @@
 # 808 body and Decay control
 
 This #9 increment is an uncalibrated damped sine, before the 808 excitation,
-pitch sigh, stock feedback/Decay mapping and output coupling. The saved layout
+pitch sigh, stock feedback/Decay mapping and the complete loaded output network. The saved layout
 stays unchanged. DECAY changes feedback retention on every block, and TNTUN now
 drives the [passive Tone RC stage](808-tone.md). ATTK is ignored in 808 mode.
 The [first 909 body](909-body.md) follows separately. The raw-body equations below
-describe the 808 oscillator before the output filter.
+describe the 808 oscillator before Tone and the [C47 coupling filter](808-coupling.md).
 
 ## Model and units
 
@@ -27,6 +27,7 @@ one damped rotation per output sample, using the old x and y on both right sides
 - `s = exp(-1/12000)*sin(2*pi*55/48000)`.
 
 The body stays at 55 Hz with a fixed internal peak below 0.25 digital full scale.
+The subsequent coupling stage has a separately derived half-scale transient bound.
 Ordinary note pitch is not used. Native AMP/velocity, filters and track level
 remain downstream.
 

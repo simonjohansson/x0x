@@ -11,7 +11,7 @@ import sys
 import time
 import wave
 
-from . import audio, cpu, firmware
+from . import audio, coupling808, cpu, firmware
 from .digitakt_adapter import BASE, STACK, STOP
 
 ROOT = cpu.ROOT
@@ -51,7 +51,7 @@ def component():
     linker.write_text("SECTIONS { . = 0x47000000; .text : { *(.text*) } .rodata : { *(.rodata*) } .data : { *(.data*) } .bss : { *(.bss*) *(COMMON) } }")
     prefix = os.environ.get("ELEKLOADER_CROSS", "m68k-elf-")
     objects = []
-    for source in (SOURCE, fakes, ROOT / "targets/coldfire/selector.s", ROOT / "targets/coldfire/silence.s", ROOT / "targets/coldfire/body808.s", ROOT / "targets/coldfire/tone808.s", ROOT / "targets/coldfire/body909.s"):
+    for source in (SOURCE, fakes, ROOT / "targets/coldfire/selector.s", ROOT / "targets/coldfire/silence.s", ROOT / "targets/coldfire/body808.s", ROOT / "targets/coldfire/tone808.s", ROOT / "targets/coldfire/body909.s", ROOT / "targets/coldfire/coupling808.s"):
         obj = FOLDER / (source.stem + ".o")
         cpu.command([prefix + "gcc", "-mcpu=54455", "-O2", "-ffreestanding", "-fno-builtin",
                      "-Wall", "-Wextra", "-Werror", "-I", ROOT / "vendor/elekloader/elekloader/sdk/include",
@@ -92,7 +92,8 @@ def component():
         allowed = [(address("selection"), address("selection") + 96),
                    (address("reads"), address("reads") + 32),
                    (address("body_state"), address("body_state") + 64),
-                   (address("tone_state"), address("tone_state") + 32), (STACK - 2048, STACK)]
+                   (address("tone_state"), address("tone_state") + 32),
+                   (address("coupling_state"), address("coupling_state") + 64), (STACK - 2048, STACK)]
         allowed += [(address("blocks") + 128 * t, address("blocks") + 128 * (t + 1))
                     for t in range(8) if active[t] == 80]
         illegal = []
@@ -190,10 +191,12 @@ def full_os():
             session = Session(snap, paths.syx, hle=False)
             never_fake_set_posts(session.m, session.ev, session.profile.set_post)
         uc, midi = session.m.uc, MidiIn()
+        word = lambda at: int.from_bytes(uc.mem_read(at,4),"big")
         state = dict(active=None, callbacks=0, selected_callbacks=0, violations=[], controls=[],
                      body_peak=0, body909_peak=0, body909_callbacks=0, mixed_audible_blocks=0,
                      capture909=False, started909=False, samples909=[], lock_edit=False, lock_display=[],
                      decay_phase=None, decay_started=False, decay_samples=[], decay_words=[], tone_words=[])
+        state.update(coupling_blocks=0, coupling_error=0.0, coupling_difference=0)
         returns = set()
         def checked(fn):
             def run(*args):
@@ -201,6 +204,7 @@ def full_os():
                     fn(*args)
                 except Exception as error:
                     state["violations"].append(str(error))
+                    session.halted = True
                     uc.emu_stop()
             return run
         def returned(_uc, at, _size, _data):
@@ -216,6 +220,15 @@ def full_os():
                 initialized, model, _ = struct.unpack(">3I", uc.mem_read(names["selection"] + 12 * track, 12))
                 if initialized and model == 0:
                     peak = max(abs(x) for x in struct.unpack(">32i", after[lo:hi]))
+                    coupling = active["coupling"].get(track)
+                    assert coupling is not None, "808 omitted its coupling stage"
+                    words = struct.unpack(">32i", after[lo:hi])
+                    error = max(abs(a/2**31-b) for a,b in zip(words,coupling["expected"]))
+                    assert error <= 1e-5, ("native coupling recurrence",error)
+                    assert struct.unpack(">2i",uc.mem_read(coupling["state"],8)) == (coupling["input"][-1],words[-1])
+                    state["coupling_blocks"] += 1
+                    state["coupling_error"] = max(state["coupling_error"],error)
+                    state["coupling_difference"] = max(state["coupling_difference"],max(abs(a-b) for a,b in zip(words,coupling["input"])))
                     state["body_peak"] = max(state["body_peak"], peak)
                     assert peak < 0x40000000, "808 body exceeded fixed internal headroom"
                     if track == 0 and state["decay_phase"] and state["decay_started"]:
@@ -223,7 +236,7 @@ def full_os():
                 elif initialized and model == 1:
                     words = struct.unpack(">32i",after[lo:hi])
                     peak = max(abs(x) for x in words)
-                    assert peak < 0x40000000, "909 body exceeded fixed internal headroom"
+                    assert peak <= 1 << 29, "909 body exceeded its quarter-scale bound"
                     state["body909_peak"] = max(state["body909_peak"],peak)
                     state["body909_callbacks"] += 1
                     if track == 0 and state["capture909"] and state["started909"]:
@@ -250,6 +263,7 @@ def full_os():
             state["active"] = dict(before=bytes(uc.mem_read(names["fw_track_blocks"], 1024)),
                                    machines=bytes(uc.mem_read(names["fw_render_machine"], 8)),
                                    controls=list(struct.unpack(">8h", uc.mem_read(names["fw_voice_params"], 16))))
+            state["active"].update(tones=set(),coupling={})
             state["active"]["return"] = ret
         session.at(names["x0x_dt_render"], checked(entered))
         def body_entered(_uc, _at, _size, _data):
@@ -275,7 +289,34 @@ def full_os():
                 state["started909"] = True
                 state["samples909"] = []
         session.at(names["x0x_909_body"],checked(body909_entered))
+        def coupling_entered(_uc, _at, _size, _data):
+            active = state["active"]
+            assert active is not None
+            sp = uc.reg_read(UC_M68K_REG_A7)
+            owner, output = struct.unpack(">2I",uc.mem_read(sp+4,8))
+            track, remainder = divmod(owner-names["coupling_state"],8)
+            assert not remainder and 0 <= track < 8 and track in active["tones"] and track not in active["coupling"]
+            assert output == names["fw_track_blocks"] + 128*track
+            previous = struct.unpack(">2i",uc.mem_read(owner,8))
+            if word(names["fw_voice_start"]) & (1 << track):
+                assert previous == (0,0), "START did not reset coupling"
+            inputs = struct.unpack(">32i",uc.mem_read(output,128))
+            assert max(map(abs,inputs)) <= 1 << 29
+            x,y = (value/2**31 for value in previous)
+            expected=[]
+            for value in inputs:
+                current=value/2**31
+                y=coupling808.A*y+coupling808.B*(current-x)
+                x=current
+                expected.append(y)
+            active["coupling"][track]=dict(state=owner,input=inputs,expected=expected)
+        session.at(names["x0x_808_coupling"],checked(coupling_entered))
         def tone_entered(_uc, _at, _size, _data):
+            sp = uc.reg_read(UC_M68K_REG_A7)
+            owner = word(sp+4)
+            track,remainder = divmod(owner-names["tone_state"],4)
+            assert state["active"] is not None and not remainder and 0 <= track < 8
+            state["active"]["tones"].add(track)
             if not state["decay_phase"] or not state["decay_started"]:
                 return
             sp = uc.reg_read(UC_M68K_REG_A7)
@@ -562,6 +603,11 @@ def full_os():
         if restored:
             report["checked"].append("native project save and pattern reload")
         report["checked"].append("native mixed 808/909 tracks")
+        assert state["coupling_blocks"] > 0 and state["coupling_difference"] > 0
+        report["coupling_808"] = dict(blocks=state["coupling_blocks"],
+            maximum_entry_recurrence_error_fs=state["coupling_error"],
+            maximum_input_output_difference_q31=state["coupling_difference"],
+            scope="actual coupling after Tone, owned state and START reset")
         report["unqualified"] = ["strict-model qualification", "808 circuit fidelity/pot calibration", "909 diode shaping/envelopes and control response"] + ([] if restored else ["save/reload"])
         report["failed_checks"] = [name for name in ("defaults", "parameter_reset", "page_reset")
                                    if report[name]["status"] == "failed"]

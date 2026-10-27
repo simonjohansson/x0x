@@ -19,7 +19,7 @@ Start with the [architecture](docs/architecture.md),
 [implementation plan](docs/implementation-plan.md). All three silent milestones
 are accepted. The [first 808 body](docs/808-body.md) now makes sound in every
 emulator: an uncalibrated 55 Hz decaying sine with live DECAY feedback control
-and a [source-derived Tone RC filter](docs/808-tone.md). The first
+and [Tone](docs/808-tone.md) and [C47 coupling](docs/808-coupling.md) RC stages. The first
 [909 triangle body](docs/909-body.md) also makes sound in all three emulators. Both engines
 remain provisional; remaining circuit stages follow in #9/#25/#79.
 The Digitakt reset bug is deferred to #78. Digitakt II is outside the active scope.

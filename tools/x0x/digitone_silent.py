@@ -11,7 +11,7 @@ import sys
 import time
 import wave
 
-from . import body909, cpu, firmware
+from . import body909, coupling808, cpu, firmware
 
 ROOT = cpu.ROOT
 SOURCE = ROOT / "machines/digitone/machine.c"
@@ -64,10 +64,12 @@ def full_os():
                   stock=stock, firmware_sha256=hashlib.sha256(image.read_bytes()).hexdigest(),
                   digiemu_revision=cpu.revision(ROOT / "vendor/digiemu"),
                   unqualified=["strict-model qualification", "faithful 808 timbre, retrigger and pot tapers",
+                               "complete loaded 808 output network including C49/buffer and C50",
                                "909 shaping, pitch envelope and Tune/Decay/Attack response"])
     state = dict(active=None, callbacks=0, starts=[], violations=[], observations=[], phase="", samples=[], decay_text=[],
                  body_nonzero=0, body_peak=0, triangle_nonzero=0, triangle_peak=0,
-                 triangle_error=0.0, triangle_samples=[None] * 8, audio_capture=None)
+                 triangle_error=0.0, triangle_samples=[None] * 8, audio_capture=None,
+                 coupling_blocks=0, coupling_error=0.0, coupling_difference=0)
     session = None
     try:
         with (FOLDER / "native-boot.log").open("w") as log, contextlib.redirect_stdout(log):
@@ -99,13 +101,24 @@ def full_os():
             assert selection[0] == 1, "real callback did not consume a settled frame/START"
             words = struct.unpack(">32i", after[lo:hi])
             peak = max(abs(v) for v in words)
-            assert peak <= 1 << 29, "body exceeded its fixed quarter-scale bound"
             if selection[1] == 0:
+                # The coupling HP has L1 gain below two for quarter-scale input.
+                assert peak <= 1 << 30, "808 coupling output exceeded its half-scale bound"
                 assert not active.get("triangle"), "808 selected the 909 renderer"
+                coupling = active.get("coupling")
+                assert coupling is not None, "808 did not enter its actual coupling ASM"
+                error = max(abs(actual / 2**31 - wanted) for actual, wanted in zip(words, coupling["expected"]))
+                assert error <= 1e-5, ("808 native coupling differs from its entry-state recurrence", error)
+                assert struct.unpack(">2i", uc.mem_read(coupling["state"], 8)) == (coupling["input"][-1], words[-1]), "808 coupling did not retain its last input/output"
+                state["coupling_blocks"] += 1
+                state["coupling_error"] = max(state["coupling_error"], error)
+                state["coupling_difference"] = max(state["coupling_difference"], max(abs(a-b) for a,b in zip(words,coupling["input"])))
                 state["triangle_samples"][active["slot"]] = None
                 state["body_peak"] = max(state["body_peak"], peak)
                 state["body_nonzero"] += peak != 0
             else:
+                assert peak <= 1 << 29, "909 body exceeded its quarter-scale bound"
+                assert not active.get("coupling"), "909 entered the 808 coupling stage"
                 assert active.get("triangle"), "909 did not enter its actual ASM renderer"
                 offset = 0 if active["fresh"] else state["triangle_samples"][active["slot"]]
                 assert offset is not None, "909 continuation has no observed START"
@@ -155,6 +168,27 @@ def full_os():
             assert start == active["fresh"], "909 lost the native START flag"
             active["triangle"] = True
         session.at(names["x0x_909_body"], checked(triangle_entered))
+        def coupling_entered(_uc, _at, _size, _data):
+            active = state["active"]
+            assert active is not None and active.get("tone") and not active.get("coupling"), "coupling must follow Tone once per 808 block"
+            sp = uc.reg_read(UC_M68K_REG_A7)
+            saved, output = struct.unpack(">2I", uc.mem_read(sp + 4, 8))
+            assert saved == names["coupling_state"] + active["slot"] * 8, "wrong voice's coupling state"
+            assert output == names["fw_voices"] + active["slot"] * 128, "wrong coupling output buffer"
+            previous = struct.unpack(">2i", uc.mem_read(saved, 8))
+            if active["fresh"]:
+                assert previous == (0,0), "808 START did not clear coupling state"
+            inputs = struct.unpack(">32i", uc.mem_read(output, 128))
+            assert max(abs(v) for v in inputs) <= 1 << 29, "coupling input exceeded quarter scale"
+            x, y = (v / 2**31 for v in previous)
+            expected = []
+            for value in inputs:
+                current = value / 2**31
+                y = coupling808.B * (current-x) + coupling808.A * y
+                x = current
+                expected.append(y)
+            active["coupling"] = dict(state=saved, input=inputs, expected=expected)
+        session.at(names["x0x_808_coupling"], checked(coupling_entered))
         def receive(_uc, _at, _size, _data):
             source = word(uc.reg_read(UC_M68K_REG_A7) + 8)
             if word(source + 8) == 0 and state["phase"]:
@@ -163,6 +197,9 @@ def full_os():
         session.at(names["render_body"],checked(receive))
         def tone_entered(_uc, at, _size, _data):
             capture, active = state["audio_capture"], state["active"]
+            if at == names["x0x_808_tone"]:
+                assert active is not None, "Tone ASM ran outside the machine callback"
+                active["tone"] = True
             if capture is None or "tone_words" not in capture or active["track"] != capture["track"]:
                 return
             if active["slot"] != capture["slot"] and not (capture["slot"] is None and active["fresh"]):
@@ -376,9 +413,12 @@ def full_os():
             turn("A", detents)
             assert stored(2)[1] == target, (name, stored(2))
             wait(500)
-            quiet_begin = len(session.pcm); wait(100)
-            quiet = bytes(session.pcm[quiet_begin:])
+            for quiet_wait in range(20):
+                quiet_begin = len(session.pcm); wait(100)
+                quiet = bytes(session.pcm[quiet_begin:])
+                if not any(quiet): break
             report["tone_pre_capture_pcm16_peak"] = max(abs(v[0]) for v in struct.iter_unpack("<h", quiet))
+            report["tone_pre_capture_wait_ms"] = (quiet_wait+1)*100
             assert not any(quiet), "Tone capture must start with silent native output"
             capture = dict(track=2, slot=None, words=[], tone_words=[], decay_words=[], dry=[])
             state["audio_capture"] = capture
@@ -443,10 +483,14 @@ def full_os():
         report["render_audio"] = dict(nonzero_808_blocks=state["body_nonzero"], peak_q31=state["body_peak"],
                                       nonzero_909_blocks=state["triangle_nonzero"], peak_909_q31=state["triangle_peak"],
                                       maximum_909_reference_error_fs=state["triangle_error"])
+        assert state["coupling_blocks"] > 0 and state["coupling_difference"] > 0
+        report["coupling_808"] = dict(blocks=state["coupling_blocks"], maximum_entry_recurrence_error_fs=state["coupling_error"],
+                                       maximum_input_output_difference_q31=state["coupling_difference"],
+                                       output_bound_fs=0.5, scope="actual native call, per-voice state, START reset and entry-state recurrence")
         report.update(status="passed", callbacks=state["callbacks"], starts=state["starts"],
                       checked=["native menu/defaults", "native first-page controls", "native encoder MODEL delivery",
                                "next-START MODEL latch", "real companion fresh/settled frame",
-                               "bounded nonzero 808 voice output", "native Decay changes raw and downstream decay time", "native Tone endpoints reach actual ASM and change filtered output", "909 ASM routing and analytic triangle output", "isolated downstream stereo PCM for both models", "other voices preserved", "native p-lock and held-lock display", "native LFO delivery", "native save/reload", "mixed 808/909 tracks"])
+                               "bounded nonzero 808 voice output", "native Decay changes raw and downstream decay time", "native Tone endpoints reach actual ASM and change filtered output", "808 coupling ASM after Tone with per-voice state and START reset", "909 ASM routing and analytic triangle output", "isolated downstream stereo PCM for both models", "other voices preserved", "native p-lock and held-lock display", "native LFO delivery", "native save/reload", "mixed 808/909 tracks"])
     except (AssertionError, ValueError) as error:
         report["reason"] = str(error)
     finally:

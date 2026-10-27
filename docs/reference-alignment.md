@@ -2,7 +2,8 @@
 
 Source/code audit for [#79](https://github.com/simonjohansson/x0x/issues/79),
 27 October 2026. The initial audit inspected runtime `a05912e`; the inventory
-below includes the subsequent [Tone RC implementation](808-tone.md) and
+below includes the subsequent [Tone RC implementation](808-tone.md),
+[isolated C47 coupling](808-coupling.md) and
 [first 909 triangle body](909-body.md).
 Saved controls remain unchanged. This is an alignment inventory, not evidence
 that either engine reproduces original hardware or a reference VST.
@@ -76,7 +77,7 @@ its SHARC payload directly through the SDK bridge.
 | Initial pitch shift | S01 p.5 and S03 §8.1: Q41–Q43 switched resistance during attack | Rotation frequency stays fixed | Missing; retain the service-note/paper timing difference instead of silently choosing one |
 | Internal retrigger/pitch sigh | S03 §§8.1–8.2: C39/R161/D52 event and Q43 leakage behavior | No transient or nonlinear feedback state | Missing |
 | Tone | S01 p.9; S03 §9 Table1 and Eq.11 passive low-pass | TPT RC filter on both CPUs, checked against independent capacitor voltage/current integration; TNTUN changes it live | Nominal RC response implemented; bright-up resistance-linear knob mapping is provisional, C taper/direction calibration remains |
-| Coupling/output | S03 §9 Table1, level and high-pass stages; S01 p.9 output network | Fixed internal gain and native downstream processing | Analog filters absent; native track volume is not a replacement for the original coupling network |
+| Coupling/output | S03 §9 Table1 (VR4 correction); S01 p.9; S04 §1.7 | Isolated C47=.47µF / VR4=100k HP at fixed full level, after isolated Tone | C47 RC implemented; full loading, C49/R176/R177, transistor buffer and C50 remain missing. Native level remains downstream |
 | Accent | S01 trigger logic and S03 §3 | Fixed body excitation; device AMP/velocity remains downstream | Intrinsic accent/excitation absent; do not add the native gain twice |
 | Same-voice retrigger | S03 §11/Fig.12: new excitation interacts with residual circuit state | START replaces the oscillator state | Provisional restart, not circuit-state retrigger behavior |
 
@@ -123,6 +124,13 @@ until excitation supplies richer content.
 Other boundaries remain visible: nominal values are not unit calibration;
 stock versus modified 909 controls must stay separate; and the 909 R495
 annotation must accompany the selected nominal population.
+
+The C47/VR4 stage uses the published unloaded decomposition with VR4 fixed
+wide open. S04 §1.7 warns that cascaded isolated stages omit loading and can
+introduce significant differences; this is an incremental approximation, not
+the complete output model. C49/R176/R177 and the buffer must be derived with
+their connections intact rather than silently assuming the 2014 table's
+numerator/resistor naming describes the unloaded node exactly.
 
 ## Next increments and remaining gates
 

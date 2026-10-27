@@ -6,8 +6,10 @@ mod milestones are accepted, with the DT reset bug deferred to #78. In #9, the
 uncalibrated damped sine. Live Decay changes its feedback retention and is
 verified through native controls/audio on all three machines. The subsequent
 [source-derived Tone RC filter](808-tone.md) also passes both CPU and all three
-native integration checks, with provisional knob mapping. Further 808 circuit
-detail follows within these integrations.
+native integration checks, with provisional knob mapping. The
+[C47/VR4 coupling RC](808-coupling.md) is also integrated and tested on all three
+devices, fixed internally at full level; native track level still controls
+volume. Further circuit detail follows.
 
 #25 now adds the first unshaped [909 triangle body](909-body.md) to those same
 mods. Its fixed pitch, envelope and START phase are provisional audition values;
@@ -109,8 +111,9 @@ standard non-strict configuration, labelled accurately.
 
 The first #9 increment supplies an analytically checked fixed 808 body on both
 CPUs and native audio captures from every device. Live Decay and the passive
-Tone RC stage are implemented. Next add source-derived excitation, pitch/feedback,
-stock Decay mapping and output coupling as small commits.
+Tone and C47 coupling RC stages are implemented. Next add source-derived
+excitation, pitch/feedback, stock Decay mapping and the complete loaded output
+network as small commits.
 Each ready increment runs through the already-installed mod. #25 is underway
 with the unshaped triangle; diode shaping, body/tune, envelope and pulse/noise
 attack follow. Keep the same registration and

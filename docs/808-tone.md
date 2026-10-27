@@ -49,9 +49,10 @@ voice; the direct test counts at most 712 instructions including its wrapper.
 The isolated rich-input maximum error is 1.118e-8 FS and coefficient error is
 below two Q31 LSBs.
 
-The [SHARC callback](../targets/sharc/body808.s) keeps its first 128 metadata
+At the Tone increment, the [SHARC callback](../targets/sharc/body808.s) kept its first 128 metadata
 bytes and next 128 body bytes, then adds sixteen float Tone states at offset
-256: 320 total private state bytes. A positive-float reciprocal estimate with
+256: 320 total private state bytes. The later [coupling stage](808-coupling.md)
+extends this to 448 bytes without moving those banks. A positive-float reciprocal estimate with
 four Newton refinements computes G without relying on an unmodeled RECIPS seed.
 At the Tone increment `58d0d55`, the combined callback was 764 code bytes and at
 most 827 observed instructions. Its 3934
@@ -70,8 +71,8 @@ qualification remain in #9/#20/#79; no SDK transport or saved format was added.
 ## Verification
 
 The numerical/native results below are from the completed Tone increment,
-before 909 sound was added. [909-body.md](909-body.md) records the current
-combined-mod regression while retaining these 808 checks.
+before 909 sound and coupling were added. [808-coupling.md](808-coupling.md)
+records the current chain while retaining these 808 checks.
 
 Run `mise run test` for host/C checks and `mise run test:808:body` for actual
 ColdFire body, ColdFire Tone, combined SHARC body/Tone and cross-CPU comparison.

@@ -562,6 +562,12 @@ def full_os() -> dict:
                 pole=body808.retention(native[1])*complex(
                     math.cos(2*math.pi*55/48000),math.sin(2*math.pi*55/48000))
                 expected=(2*g/(1-(1-2*g)/pole)*complex(y,x)).imag
+                previous_input, previous_output = struct.unpack("<2f",bytes.fromhex(
+                    emu.dsp_peek(0x20092140+8*lane,8)["hex"]))
+                tone_last = ((1-g)*capacitor-g*x)/(1-2*g)
+                coupling_input_error = abs(previous_input-tone_last)
+                assert coupling_input_error <= 1e-5, (label,previous_input,tone_last)
+                assert math.isfinite(previous_output) and abs(previous_output) < .5
                 error=abs(capacitor-expected)
                 assert math.isfinite(capacitor) and error<=1e-5, (label,capacitor,expected,error)
                 emu.run_until(frames=emu.status()["dsp_frames"]+150,timeout_wall_s=120)
@@ -572,9 +578,14 @@ def full_os() -> dict:
                 report["tone_audio"][label]=dict(target=position,slot=lane,tone_raw=native[0],
                     decay_raw=native[1],coefficient=g,capacitor=capacitor,
                     predicted_settled_capacitor=expected,state_error_fs=error,
-                    native_peak_fs=peak,native_wav=str(path))
+                    native_peak_fs=peak,native_wav=str(path),
+                    coupling_previous_input=previous_input,coupling_previous_output=previous_output,
+                    coupling_input_error_fs=coupling_input_error)
+
                 emu.midi_in(bytes([0x81,note,0]))
             assert report["tone_audio"]["bright"]["coefficient"] > 10*report["tone_audio"]["dark"]["coefficient"]
+            assert any(abs(v["coupling_previous_input"]-v["coupling_previous_output"]) > 1e-5
+                       for v in report["tone_audio"].values()), "native coupling did not filter the Tone output"
             emu.midi_in(bytes([0xB1,cc["0"],64]))
             tap("STOP"); tap("STOP")
             emu.run_until(frames=emu.status()["dsp_frames"] + 3000, timeout_wall_s=120)

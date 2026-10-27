@@ -159,8 +159,9 @@ Digikit's instruction interpreter and the host/C tests ran inside the sandbox.
 ## Current first-body checks
 
 ```sh
-mise run test:808:body  # actual body + Tone on both CPUs, oracle and cross-CPU comparison
+mise run test:808:body  # actual body + Tone + coupling on both CPUs and cross-CPU comparison
 mise run test:808:coldfire:tone  # filter alone; composed checks also need the body output
+mise run test:808:coldfire:coupling  # coupling alone; composed checks need the Tone files
 mise run test:909:body  # first unshaped triangle on both CPUs and matching comparison
 mise run test:dt        # actual DT audio; retains the known #78 reset failures
 mise run test:dn        # actual DN audio and native controls/locks/LFO/persistence
@@ -175,7 +176,8 @@ a provisional stock-pot mapping; ATTK remains ignored in 808 mode. Existing
 `:silent` task/module names are retained as compatibility aliases. Direct
 reports/samples live in `out/coldfire/{body808,tone808}` and `out/sharc/body808`;
 native captures remain under `out/{dt,dn,dn2}/silent`. See [808-body.md](808-body.md)
-and [808-tone.md](808-tone.md) for 808 evidence; [909-body.md](909-body.md) records
+and [808-tone.md](808-tone.md) for historical 808 evidence; [808-coupling.md](808-coupling.md)
+records the current chain. [909-body.md](909-body.md) records
 the triangle increment and its remaining circuit gaps.
 DN2's passing scenario uses its verified saved-909 T1 for the isolated capture;
 the separate late T2 MODEL transition is unqualified and tracked in #80.

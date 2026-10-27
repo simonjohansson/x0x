@@ -69,10 +69,12 @@ approximately 142 ms to 1 second, with 250 ms at the approved default. TNTUN
 now controls the [808 passive Tone RC stage](808-tone.md); its resistance mapping
 is provisional pending stock-pot calibration. Live Tone/Decay edits keep the
 ringing state; START currently restarts the body and clears the Tone history.
-ATTK is ignored for 808. The [first 909 body](909-body.md) adds an unshaped
+The [C47 coupling stage](808-coupling.md) follows Tone with fixed internal level;
+native track level still controls volume. ATTK is ignored for 808.
+The [first 909 body](909-body.md) adds an unshaped
 triangle oscillator with provisional fixed pitch and amplitude decay. Its stock
 Tune/Decay/Attack behavior and diode shaping follow incrementally. Circuit
-excitation, stock 808 feedback/Decay mapping, output coupling and faithful
+excitation, stock 808 feedback/Decay mapping, the loaded output network and faithful
 retrigger behavior remain engine work.
 
 The shared model defines the intended musical behavior. It does not translate

@@ -65,6 +65,10 @@ renders give:
 | Fitted amplitude time constant | 0.249998572 s | 0.249999278 s |
 | Maximum instructions per 909 block | 711 including test wrapper | 734 |
 
+These are historical results from the first triangle increment; the subsequent
+[808 coupling stage](808-coupling.md) updates the shared callback while keeping
+the 909 algorithm and comparison unchanged.
+
 The two CPU outputs differ by at most 2.129e-7 FS. Both retain state/output,
 callee/context and retrigger/interleaving guards. The combined SHARC callback
 passes 4686 component calls with 914 code bytes, unchanged 320 state bytes and
@@ -125,7 +129,8 @@ note76 still selects 808. Follow-up probes locate the loss above the selector:
 | Original ordering plus PCM tap, unchanged production | 0 | Fresh native parameter5 remains0 | 808; bounded acknowledgement fails |
 
 The diagnostic copy only logs into its explicitly allocated temporary 768-byte
-private state area; production remains at 320 bytes. It is separate evidence,
+private state area; production at that revision used 320 bytes (448 after the
+later coupling increment). It is separate evidence,
 not production audio qualification. Its source/firmware hashes are recorded in
 `out/dn2/late-model-probe{,-immediate}/provenance.json`.
 
