@@ -91,7 +91,7 @@ def component():
         uc.mem_write(address("blocks"), original)
         allowed = [(address("selection"), address("selection") + 96),
                    (address("reads"), address("reads") + 32),
-                   (address("body_state"), address("body_state") + 128),
+                   (address("body_state"), address("body_state") + 160),
                    (address("tone_state"), address("tone_state") + 32),
                    (address("coupling_state"), address("coupling_state") + 64), (STACK - 2048, STACK)]
         allowed += [(address("blocks") + 128 * t, address("blocks") + 128 * (t + 1))
@@ -274,7 +274,7 @@ def full_os():
         def body_entered(_uc, _at, _size, _data):
             sp = uc.reg_read(UC_M68K_REG_A7)
             owner, _output, start, decay = struct.unpack(">4I", uc.mem_read(sp + 4, 16))
-            track, offset = divmod(owner-names["body_state"],16)
+            track, offset = divmod(owner-names["body_state"],20)
             assert offset == 0 and 0 <= track < 8
             state["active"]["pulses"][track] = (owner,body808.ATTACK_SAMPLES-32 if start else max(word(owner+8)-32,0))
             if owner != names["body_state"] or not state["decay_phase"]:

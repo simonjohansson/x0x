@@ -1,22 +1,8 @@
 import unittest
 
 from x0x.analysis import analyze
-from x0x.body808 import FREQUENCY, ATTACK_FREQUENCY, ATTACK_SAMPLES, GAIN, SAMPLE_RATE, TAU, _main_reference as reference
-
-
-def impulse_shape(n, k, raw):
-    import math
-    from x0x.body808 import retention
-    high, low = 2*math.pi*ATTACK_FREQUENCY, 2*math.pi*FREQUENCY
-    if n < ATTACK_SAMPLES:
-        return math.sin(high*(n+1-k)/SAMPLE_RATE)
-    sigma = -SAMPLE_RATE*math.log(retention(raw))
-    ratio = (sigma*sigma+low*low)/(sigma*sigma+high*high)
-    angle = high*(ATTACK_SAMPLES-k)/SAMPLE_RATE
-    x = math.sin(angle)
-    y = ratio*high/low*math.cos(angle)+(ratio-1)*sigma/low*x
-    dt = (n+1-ATTACK_SAMPLES)/SAMPLE_RATE
-    return x*math.cos(low*dt)+y*math.sin(low*dt)
+from x0x.pulse808 import main_reference as reference
+from x0x.body808 import FREQUENCY, ATTACK_FREQUENCY, ATTACK_SAMPLES, GAIN, SAMPLE_RATE, TAU
 
 
 class Body808Tests(unittest.TestCase):
@@ -57,8 +43,7 @@ class Decay808Tests(unittest.TestCase):
         self.assertEqual(actual[:switch], baseline[:switch])
         import math
         n = switch + 200
-        expected = sum(GAIN/48 * retention(0)**(switch-k) * retention(32512)**(n+1-switch)
-                       * impulse_shape(n,k,0) for k in range(48))
+        expected = baseline[n]*(retention(32512)/retention(0))**(n+1-switch)
         self.assertAlmostEqual(actual[n], expected, places=11)
         self.assertGreater(abs(actual[n]), abs(baseline[n]))
 
@@ -73,21 +58,6 @@ class Decay808Tests(unittest.TestCase):
 
 
 class Excitation808Tests(unittest.TestCase):
-    def test_finite_pulse_matches_direct_convolution_at_callback_boundaries(self):
-        import math
-        from x0x.body808 import PULSE_SAMPLES, PULSE_GAIN, retention
-        self.assertEqual(PULSE_SAMPLES,48)
-        self.assertEqual(PULSE_SAMPLES/SAMPLE_RATE,.001)
-        self.assertEqual(ATTACK_SAMPLES/SAMPLE_RATE,.006)
-        for raw in (0,16384,32512):
-            samples=reference(2001,raw)
-            for n in (0,31,32,47,48,63,64,255,256,287,288,289,319,320,2000):
-                expected=sum(PULSE_GAIN*retention(raw)**(n+1-k)
-                    * impulse_shape(n,k,raw)
-                    for k in range(min(n+1,PULSE_SAMPLES)))
-                self.assertAlmostEqual(samples[n],expected,places=12)
-            self.assertAlmostEqual(samples[0],PULSE_GAIN*retention(raw)*math.sin(2*math.pi*ATTACK_FREQUENCY/SAMPLE_RATE),places=14)
-
     def test_switch_conserves_both_capacitor_voltages_without_an_output_jump(self):
         import math
         from x0x.body808 import retention, switch_coordinates

@@ -11,7 +11,7 @@ from . import analysis, body808, body909, coupling808, cpu, tone808, sharc_callb
 
 SOURCE = cpu.ROOT / "targets/sharc/body808.s"
 FOLDER = cpu.ROOT / "out/sharc/body808"
-STATE_BYTES = 576
+STATE_BYTES = 1024
 FRAMES = 24000
 
 
@@ -27,7 +27,7 @@ def component() -> tuple[dict, bytes]:
     def runner():
         return selector.SelectorRunner(code, entry, state_bytes=STATE_BYTES,
                                        extra_slot_state_offset=128, tone_state_offset=256,
-                                       coupling_state_offset=320, pulse_state_offset=448, companion_state_offset=512)
+                                       coupling_state_offset=320, pulse_state_offset=448, companion_state_offset=512, main_state_offset=576, coefficient_state_offset=640)
 
     policy = runner()
     inputs = selector.cases()

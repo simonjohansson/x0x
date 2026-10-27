@@ -1,7 +1,7 @@
 """Independent 808 body oracle with provisional Decay feedback control.
 
-This is an uncalibrated 808 starting point, with finite rectangular excitation, before pulse-edge shaping, pitch sigh,
-stock Decay/Tone networks and residual-state retrigger behavior are modeled.
+Shaped main and companion inputs use calibrated pole frequencies/losses. Full
+feedback, pitch sigh, loaded output and residual-state retrigger remain open.
 """
 import math
 
@@ -11,7 +11,6 @@ FREQUENCY = 47.65
 TAU = 0.143
 GAIN = 0.25
 PULSE_SAMPLES = 48  # Nominal 1 ms trigger in S01/S03, at 48 kHz.
-PULSE_GAIN = GAIN / PULSE_SAMPLES
 ATTACK_SAMPLES = 288  # S03 section8.1: 6 ms, distinct from the 1 ms drive.
 # S03 equation7: R161 || (R165+R166) switches to R161 || R166.
 ATTACK_FREQUENCY = FREQUENCY * math.sqrt(
@@ -38,11 +37,6 @@ def decay_tau(decay_raw):
     return -1 / (SAMPLE_RATE * math.log(retention(decay_raw)))
 
 
-def _phase(sample):
-    return 2*math.pi/SAMPLE_RATE * (ATTACK_FREQUENCY*min(sample, ATTACK_SAMPLES)
-                                   + FREQUENCY*max(0, sample-ATTACK_SAMPLES))
-
-
 def switch_coordinates(decay_raw):
     """Keep output and C41/C42 voltage when the calibrated pole pair changes.
 
@@ -55,41 +49,11 @@ def switch_coordinates(decay_raw):
     return ratio*high/low, (ratio-1)*sigma/low
 
 
-def _main_reference(frames, decay_raw=DEFAULT_DECAY, changes=None):
-    """Finite-drive convolution, then free decay from conserved capacitor state."""
-    changes = changes or {}
-    loss = math.log(retention(decay_raw))
-    attenuation = 0.0
-    samples = []
-    cosine_sum = sine_sum = 0.0
-    for n in range(frames):
-        if n in changes:
-            decay_raw = changes[n]
-            loss = math.log(retention(decay_raw))
-        if n < PULSE_SAMPLES:
-            weight = PULSE_GAIN * math.exp(-attenuation)
-            cosine_sum += weight * math.cos(_phase(n))
-            sine_sum += weight * math.sin(_phase(n))
-        attenuation += loss
-        if n < ATTACK_SAMPLES:
-            angle = _phase(n+1)
-            sample = math.exp(attenuation) * (cosine_sum*math.sin(angle)-sine_sum*math.cos(angle))
-            if n+1 == ATTACK_SAMPLES:
-                quadrature = math.exp(attenuation) * (cosine_sum*math.cos(angle)+sine_sum*math.sin(angle))
-                alpha, beta = switch_coordinates(decay_raw)
-                switch_x, switch_y = sample, alpha*quadrature+beta*sample
-                switch_attenuation = attenuation
-        else:
-            angle = 2*math.pi*FREQUENCY*(n+1-ATTACK_SAMPLES)/SAMPLE_RATE
-            sample = math.exp(attenuation-switch_attenuation) * (switch_x*math.cos(angle)+switch_y*math.sin(angle))
-        samples.append(sample)
-    return samples
-
-
 def reference(frames, decay_raw=DEFAULT_DECAY, changes=None):
     from .retrigger808 import companion_body_reference
+    from .pulse808 import main_reference
     return [main+companion for main,companion in zip(
-        _main_reference(frames, decay_raw, changes),
+        main_reference(frames, decay_raw, changes),
         companion_body_reference(frames, decay_raw, changes))]
 
 

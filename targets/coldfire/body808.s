@@ -1,15 +1,15 @@
 /* Provisional 808 body: damped 47.65 Hz sine at 48 kHz with live decay.
- * void x0x_808_body(int32_t state[4], int32_t output[32], uint32_t start, uint32_t decay_raw).
+ * void x0x_808_body(int32_t state[5], int32_t output[32], uint32_t start, uint32_t decay_raw).
  * decay_raw is caller-bounded to 0..32512; default 16384 gives tau = 143 ms.
- * State is {Q31 x,y,initial_samples_remaining,Q31 C39 node}; 15 V encodes as .25 FS.
- * shortcut: source-separated C39 and fixed encoding; main pulse shaping,
+ * State is {Q31 x,y,initial_samples_remaining,Q31 C39 node,Q31 C40 node}; 15 V encodes as .25 FS.
+ * shortcut: source-separated inputs and fixed 14 V trigger;
  * full feedback/loading and residual-state retrigger follow in #9/#79.
  */
     .text
     .globl x0x_808_body
     .type x0x_808_body, @function
 x0x_808_body:
-    lea -76(%sp), %sp
+    lea -92(%sp), %sp
     movem.l %d2-%d7/%a2-%a6, (%sp)
     move.l %macsr, %d0
     move.l %d0, 72(%sp)
@@ -29,23 +29,25 @@ x0x_808_body:
     move.l %d0, 64(%sp)
     move.l %mask, %d0
     move.l %d0, 68(%sp)
-    movea.l 80(%sp), %a0
-    movea.l 84(%sp), %a1
+    movea.l 96(%sp), %a0
+    movea.l 100(%sp), %a1
     move.l (%a0), %d4
     move.l 4(%a0), %d5
     move.l 8(%a0), %d7
-    tst.l 88(%sp)
+    tst.l 104(%sp)
     beq.s .Lcontinue
     moveq #0, %d4
     moveq #0, %d5
     move.l #288, %d7
     move.l #25411890, %d0 /* .71 V / 60; positive D52 clamp at START */
     move.l %d0, 12(%a0)
+    move.l #501079518, %d0 /* 14 V / 60, fresh C40 rising edge */
+    move.l %d0, 16(%a0)
 .Lcontinue:
     move.l #0xb0, %d0 /* fractional, saturated, nearest-even */
     move.l %d0, %macsr
     /* Three reference-training anchors; stock feedback/pot modeling remains open. */
-    move.l 92(%sp), %d6
+    move.l 108(%sp), %d6
     cmpi.l #16384, %d6
     bge .Ldecay_high
     move.l #131072, %d0 /* low branch excludes 16384, keeping the product signed-positive */
@@ -116,20 +118,85 @@ x0x_808_body:
     mac.l %d6, %d0, %acc0
     movclr.l %acc0, %d0
     movea.l %d0, %a2 /* companion Gy */
+    /* Main exponential-input and ON-bias gains, quadratic over each Decay segment. */
+    move.l 108(%sp), %d0
+    cmpi.l #16384, %d0
+    bge .Lmain_high
+    tst.l %d7
+    beq.s .Lmain_steady_low
+    lea .Lmain_attack_low(%pc), %a6
+    bra.s .Lmain_interpolate
+.Lmain_steady_low:
+    lea .Lmain_steady_low_data(%pc), %a6
+    bra.s .Lmain_interpolate
+.Lmain_high:
+    tst.l %d7
+    beq.s .Lmain_steady_high
+    lea .Lmain_attack_high(%pc), %a6
+    bra.s .Lmain_interpolate
+.Lmain_steady_high:
+    lea .Lmain_steady_high_data(%pc), %a6
+.Lmain_interpolate:
+    move.l #2147483647, %d0
+    sub.l %d6, %d0
+    mac.l %d6, %d0, %acc0
+    movclr.l %acc0, %d1 /* t*(1-t) */
+    move.l (%a6)+, %d0
+    move.l %d0, %acc0
+    move.l (%a6)+, %d0
+    mac.l %d6, %d0, %acc0
+    move.l (%a6)+, %d0
+    mac.l %d1, %d0, %acc0
+    movclr.l %acc0, %d0
+    move.l %d0, 76(%sp)
+    move.l (%a6)+, %d0
+    move.l %d0, %acc0
+    move.l (%a6)+, %d0
+    mac.l %d6, %d0, %acc0
+    move.l (%a6)+, %d0
+    mac.l %d1, %d0, %acc0
+    movclr.l %acc0, %d0
+    move.l %d0, 80(%sp)
+    move.l (%a6)+, %d0
+    move.l %d0, %acc0
+    move.l (%a6)+, %d0
+    mac.l %d6, %d0, %acc0
+    move.l (%a6)+, %d0
+    mac.l %d1, %d0, %acc0
+    movclr.l %acc0, %d0
+    move.l %d0, 84(%sp)
+    move.l (%a6)+, %d0
+    move.l %d0, %acc0
+    move.l (%a6)+, %d0
+    mac.l %d6, %d0, %acc0
+    move.l (%a6)+, %d0
+    mac.l %d1, %d0, %acc0
+    movclr.l %acc0, %d0
+    move.l %d0, 88(%sp)
     movea.l 12(%a0), %a5
+    movea.l 16(%a0), %a6
     movea.l %d7, %a4
     moveq #32, %d6
 .Lsample:
     tst.l %d7
-    beq.s .Lnopulse
+    beq.s .Lmain_off
+    cmpi.l #240, %d7
+    bne.s .Lnot_main_fall
+    movea.l #-25411890, %a6 /* Ideal D53 negative clamp updates C40 charge. */
+.Lnot_main_fall:
     subq.l #1, %d7
-    cmpi.l #240, %d7 /* Drive only for the first 48 of 288 initial samples. */
-    blt.s .Lnopulse
-    addi.l #11184811, %d5 /* round((.25/48)*2^31); provisional internal forcing scale */
-.Lnopulse:
+    cmpi.l #240, %d7
+    blt.s .Lmain_off
+    move.l 84(%sp), %d0
+    move.l %d0, %acc0
+    move.l 88(%sp), %d0
+    move.l %d0, %acc1
+    bra.s .Lrotate
+.Lmain_off:
     moveq #0, %d0
     move.l %d0, %acc0
     move.l %d0, %acc1
+.Lrotate:
     mac.l %d4, %d2, %acc0
     mac.l %d5, %d3, %acc0
     mac.l %d5, %d2, %acc1
@@ -139,17 +206,39 @@ x0x_808_body:
     mac.l %d0, %d1, %acc0
     move.l %a2, %d1
     mac.l %d0, %d1, %acc1
+    move.l %a6, %d0
+    move.l 76(%sp), %d1
+    mac.l %d0, %d1, %acc0
+    move.l 80(%sp), %d1
+    mac.l %d0, %d1, %acc1
     movclr.l %acc0, %d4
     movclr.l %acc1, %d5
-    move.l #2146128341, %d1 /* exp(-1/(48000*.033)) */
+    move.l %a5, %d0
+    move.l #2146128341, %d1
     mac.l %d0, %d1, %acc0
     movclr.l %acc0, %d1
     cmp.l %d0, %d1
     bne.s .Lnode_decay
-    moveq #0, %d1 /* Clear only a rounding fixed point, not a fitted tail threshold. */
+    moveq #0, %d1
 .Lnode_decay:
     movea.l %d1, %a5
-    move.l %d4, (%a1)+
+    move.l %a6, %d0
+    move.l #1576015139, %d1 /* C40 retention, tau=(R162||R163)*C40 */
+    mac.l %d0, %d1, %acc0
+    movclr.l %acc0, %d1
+    cmpi.l #240, %d7
+    blt.s .Lmain_decay
+    addi.l #5985773, %d1 /* ON equilibrium contribution */
+    bra.s .Lmain_node_store
+.Lmain_decay:
+    cmp.l %d0, %d1
+    bne.s .Lmain_node_store
+    moveq #0, %d1 /* Only clear an OFF rounding fixed point. */
+.Lmain_node_store:
+    movea.l %d1, %a6
+    move.l %d4, %d0
+    add.l %d1, %d0 /* Main source direct feedthrough, not part of modal state. */
+    move.l %d0, (%a1)+
     subq.l #1, %d6
     bne .Lsample
     cmpa.l #32, %a4
@@ -201,6 +290,7 @@ x0x_808_body:
     move.l %d5, 4(%a0)
     move.l %d7, 8(%a0)
     move.l %a5, 12(%a0)
+    move.l %a6, 16(%a0)
     moveq #0, %d0
     move.l %d0, %macsr
     move.l 44(%sp), %d0
@@ -220,6 +310,27 @@ x0x_808_body:
     move.l 72(%sp), %d0
     move.l %d0, %macsr
     movem.l (%sp), %d2-%d7/%a2-%a6
-    lea 76(%sp), %sp
+    lea 92(%sp), %sp
     rts
+    .balign 4
+.Lmain_attack_low:
+    .long 394143749,1479326,-306522
+    .long -17938484,11010047,-26319
+    .long 671713,2402,-522
+    .long -28448,18770,-45
+.Lmain_attack_high:
+    .long 395623075,340884,-10492
+    .long -6928437,2043976,-1422
+    .long 674115,559,-18
+    .long -9678,3485,-2
+.Lmain_steady_low_data:
+    .long 55041695,1308213,-306535
+    .long -5703189,4202115,-78631
+    .long 93802,2212,-522
+    .long -9611,7163,-134
+.Lmain_steady_high_data:
+    .long 56349908,309230,-10492
+    .long -1501074,798188,-4123
+    .long 96014,524,-18
+    .long -2447,1361,-7
     .size x0x_808_body, .-x0x_808_body

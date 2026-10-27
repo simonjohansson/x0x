@@ -1,5 +1,9 @@
 # 808 companion excitation
 
+Measurements below describe the historical companion-only build. The subsequent
+[main-input increment](808-main-input.md) replaces its provisional main y drive;
+the companion source and its qualifications remain in use.
+
 This #9/#79 increment connects the source-separated C39/R161/D52 companion
 pulse to both DSP backends. It follows the [isolated circuit reference](808-retrigger.md)
 and [capacitor-state conversion](808-switch-state.md). It retains the current
@@ -116,10 +120,9 @@ The first SHARC render inventory omitted the new oracle dependency; that
 original inventory is preserved and its samples separately revalidated against
 the fully hashed current oracle. No DSP-source mismatch is exempted.
 
-The next planned audio change is the missing **main pulse-shaper/bridge forcing**,
-not another isolated research-only checkpoint. The current main y drive still
-has the wrong source-channel numerator and lacks the diode-shaped edges/direct
-feedthrough. Continue that #9/#79 work before tuning away these residuals.
+The subsequent main-input increment supplies the pulse shaper and proper
+bridge forcing. Full feedback/loading, nonlinear pitch sigh and calibrated
+source/control behavior remain planned #9/#79 work.
 
 Native firmware SHA256: DT
 `ff4c9a49e25e5d73ab991204e192feee8f97a50f9058bab6d2e76c580a10f321`;

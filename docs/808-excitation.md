@@ -1,5 +1,9 @@
 # Finite 808 excitation: nominal 1 ms rectangle
 
+This page records the historical duration-only drive. The subsequent
+[main-input increment](808-main-input.md) replaces it with C40/D53 shaping
+and proper bridge forcing on both CPUs.
+
 The counter layout, measurements and firmware hashes below record the historical
 finite-excitation increment. The [initial frequency-switch stage](808-initial-pitch.md)
 now reuses that private counter for a 6 ms window while retaining the 1 ms drive.

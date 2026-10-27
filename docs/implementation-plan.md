@@ -346,3 +346,21 @@ separate gates. See [SDK evidence](development.md#setup). The continuation loop
 uses the manifest's validated upstream pin; it must not restore PR200. Next is
 the existing #9 main pulse-shaper/forcing step, with no DSP or HTML change in
 this dependency refresh.
+
+## Shaped 808 main input — 27 October 2026
+
+The existing #9/#79 [main pulse-shaper and bridge input](808-main-input.md) now
+run on both CPUs, replacing the provisional y injection with C40/D53 charge
+state, main-channel forcing and direct feedthrough. The calibrated poles/Decay,
+companion input, approved controls, IDs and MODEL policy remain. Full feedback,
+pitch sigh, loaded output and faithful residual-state retrigger remain open.
+
+136 host tests and C/UI suites, both actual CPU suites and supplemental midpoint
+probes pass with the existing 1e-5 FS limit. [Native evidence](808-main-input-native.md)
+records all three installed emulator scenarios: DT retains only #78 resets;
+DN and DN2 pass their tested paths without closing historical #20 or separate
+#80. Five-setting training error improves 37% at default and 74–75% at
+short Decay, but regresses 7–8% at long Decay; first 6/25/150 ms improve at
+every setting. Preserve those regressions. Next continue the existing feedback/
+pitch-sigh alignment, using the default and long-tail errors to prioritize it. Do not close full fidelity or combined acceptance on these
+bounded checks. The HTML report and held-out recordings remain untouched.

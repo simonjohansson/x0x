@@ -17,6 +17,9 @@ class Runner:
 
     def __init__(self, image, state_words=2):
         self.state_words = state_words
+        self.stride = max(16,4*state_words)
+        self.extent = 8*self.stride+8
+        self.stack_bytes = 112 if state_words == 5 else 96
         harness = cpu.require_module("emu.harness", "digiemu")
         from unicorn import UC_HOOK_CODE, UC_HOOK_MEM_WRITE
         from unicorn import m68k_const
@@ -26,9 +29,9 @@ class Runner:
         self.uc = self.machine.uc
         self.machine.ensure(0x40000000)
         self.uc.mem_write(self.BASE, image)
-        self.uc.mem_write(self.STATES - 4, b"\xa5" * 136)
+        self.uc.mem_write(self.STATES - 4, b"\xa5" * self.extent)
         for voice in range(8):
-            self.uc.mem_write(self.STATES + 16 * voice, bytes(state_words * 4))
+            self.uc.mem_write(self.STATES + self.stride * voice, bytes(state_words * 4))
         self.steps = 0
         self.invalid = []
         self.allowed = []
@@ -46,11 +49,11 @@ class Runner:
         assert 0 <= voice < 8 and start in (0, 1) and 0 <= decay_raw <= 32512
         uc = self.uc
         register = lambda name: getattr(self.regs, "UC_M68K_REG_" + name)
-        state = self.STATES + 16 * voice
-        before = bytes(uc.mem_read(self.STATES - 4, 136))
+        state = self.STATES + self.stride * voice
+        before = bytes(uc.mem_read(self.STATES - 4, self.extent))
         uc.mem_write(self.OUTPUT - 4, b"\xa5" * 136)
         uc.mem_write(self.SNAPSHOT - 4, b"\xa5" * 44)
-        uc.mem_write(self.STACK - 112, b"\xa5" * 144)
+        uc.mem_write(self.STACK-self.stack_bytes-16, b"\xa5"*(self.stack_bytes+48))
         arguments = struct.pack(">6I", self.STOP, state, self.OUTPUT, start, decay_raw, self.SNAPSHOT)
         uc.mem_write(self.STACK, arguments)
         uc.reg_write(register("SR"), 0x2700)
@@ -61,19 +64,19 @@ class Runner:
         uc.reg_write(register("A7"), self.STACK)
         self.steps, self.invalid = 0, []
         self.allowed = [(state, state + 4*self.state_words), (self.OUTPUT, self.OUTPUT + 128),
-                        (self.SNAPSHOT, self.SNAPSHOT + 36), (self.STACK - 96, self.STACK)]
+                        (self.SNAPSHOT, self.SNAPSHOT + 36), (self.STACK-self.stack_bytes, self.STACK)]
         uc.emu_start(self.BASE, self.STOP, timeout=10_000_000)
         assert not self.invalid, self.invalid
         assert uc.reg_read(register("PC")) == self.STOP, "body did not return before the test watchdog"
         assert uc.reg_read(register("A7")) == self.STACK + 4, "caller stack pointer changed"
         assert all(uc.reg_read(reg) == value for reg, value in saved.items()), "callee register changed"
         assert bytes(uc.mem_read(self.STACK, 24)) == arguments, "caller arguments changed"
-        assert bytes(uc.mem_read(self.STACK - 112, 16)) == b"\xa5" * 16, "stack underflow"
+        assert bytes(uc.mem_read(self.STACK-self.stack_bytes-16, 16)) == b"\xa5" * 16, "stack underflow"
         assert bytes(uc.mem_read(self.STACK + 24, 8)) == b"\xa5" * 8, "stack overflow"
         snapshot = bytes(uc.mem_read(self.SNAPSHOT - 4, 44))
         assert snapshot[:4] == snapshot[-4:] == b"\xa5" * 4, "EMAC snapshot guard changed"
         assert struct.unpack(">8I", snapshot[4:36]) == EMAC_SEED, "EMAC context changed"
-        after = bytes(uc.mem_read(self.STATES - 4, 136))
+        after = bytes(uc.mem_read(self.STATES - 4, self.extent))
         at = state - (self.STATES - 4)
         assert before[:at] == after[:at] and before[at + 4*self.state_words:] == after[at + 4*self.state_words:], "other voice/guard changed"
         output = bytes(uc.mem_read(self.OUTPUT - 4, 136))
@@ -108,7 +111,7 @@ def run(folder=None):
     cases, default_words, worst = [], [], 0
     frames = body808.SAMPLE_RATE // 2
     for raw in (0, 1, 16383, 16384, 16385, 32511, 32512):
-        runner = Runner(image, state_words=4)
+        runner = Runner(image, state_words=5)
         assert runner.render(decay_raw=raw) == [0] * 32, "untriggered zero state is not silent"
         words = []
         for block in range(frames // 32):
@@ -140,16 +143,16 @@ def run(folder=None):
         if raw == 16384:
             default_words, default_samples, default_measures = words, samples, measures
             default_case = cases[-1]
-    interleaved = Runner(image, state_words=4)
+    interleaved = Runner(image, state_words=5)
     for block in range(20):
         interleaved.render(7, int(block % 5 == 0), 32512)
         assert interleaved.render(0, int(block == 0)) == default_words[32 * block:32 * (block + 1)]
     for residue in (-1,1):
-        tail = Runner(image, state_words=4)
+        tail = Runner(image, state_words=5)
         tail.uc.mem_write(tail.STATES+12, struct.pack(">i",residue))
         assert tail.render() == [0]*32
         assert struct.unpack(">i",tail.uc.mem_read(tail.STATES+12,4))[0] == 0, "C39 rounding fixed point was retained"
-    runner, live, raw = Runner(image, state_words=4), [], 16384
+    runner, live, raw = Runner(image, state_words=5), [], 16384
     changes = {8000: 32512, 16000: 0}
     for sample in range(0, frames, 32):
         raw = changes.get(sample, raw)

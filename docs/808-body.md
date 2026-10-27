@@ -1,7 +1,7 @@
 # 808 body, finite excitation and Decay control
 
 The #9 prototype now drives a damped mode with a
-[nominal 1 ms rectangular excitation](808-excitation.md). Pulse-edge shaping,
+[1 ms trigger and shaped main input](808-main-input.md). Full nonlinear diode/transistor behavior,
 pitch sigh, stock feedback/Decay mapping and the complete loaded output network
 remain missing. The settled body pitch is now 47.65 Hz, rounded from the
 initial five-setting software-reference measurements; see [pitch calibration](808-pitch.md).
@@ -16,28 +16,21 @@ the negative band-pass bridge channel on both CPUs.
 
 ## Model and units
 
-At 48,000 samples/second, START clears x/y and injects `u=0.25/48` into y
-before each rotation for exactly 48 samples. Both ASM implementations compute:
+At 48,000 samples/second, START resets the oscillator and both source nodes.
+The main trigger drives the R162/R163/C40 shelf for 48 samples, then D53's ideal
+negative clamp supplies its falling edge. The C39 companion has its separate
+6 ms envelope. Each source uses the fixed encoding 15 V = .25 FS.
 
-- `x_next = c*x + s*(y+u) + Gx*r` and output `x_next`;
-- `y_next = c*(y+u) - s*x + Gy*r`.
+Both ASM implementations advance the same calibrated modal pole pair, with
+integrated main/companion forcing. Stored x/y exclude the main source's direct
+feedthrough; the rendered body adds that source after each interval. The
+[main-input derivation](808-main-input.md) gives the transfer, gains and current
+approximations. At 6 ms, both CPUs and the oracle convert the modal state to
+retain C41/C42 voltage. No per-hit normalization or alignment is introduced.
 
-r is the source-separated C39 node; Gx/Gy integrate its continuous 33 ms RC
-decay over one sample. At START r=.71/60; at 6 ms the encoded envelope falls
-by .25. The companion derivation documents that fixed private encoding and
-its independently integrated analytical response.
-
-The main drive sum is 0.25; there is no per-hit normalization. At the
-default DECAY=64, `c=exp(-1/(48000*.143))*cos(2*pi*47.65/48000)` and
-`s=exp(-1/(48000*.143))*sin(2*pi*47.65/48000)`. Other Decay values use the existing live
-feedback retention. For the first 6 ms, c/s use the source-derived initial frequency instead.
-The independent oracle convolves analytical impulse responses with the finite
-drive and accumulated log retention. At 6 ms, both CPUs and the oracle
-[convert the modal state](808-switch-state.md) to retain C41/C42 voltage rather
-than retaining y unchanged across the frequency switch.
-It does not copy the ASM recurrence. [Source boundary, equations and current
-checks](808-excitation.md) distinguish the duration-only trigger approximation
-from the still-missing pulse shaper and full bridged-T forcing.
+The independent oracle solves the shaped inputs analytically on each constant
+pole/control segment. It does not copy the ASM recurrence. The old fixed sum
+of 48 y kicks is historical; it is no longer the current main-input model.
 
 The earlier formula `0.25*exp(-(n+1)/12000)*sin(2*pi*55*(n+1)/48000)` describes
 the historical instantaneous-state prototype, before finite excitation.
