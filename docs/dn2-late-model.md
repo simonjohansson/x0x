@@ -38,3 +38,29 @@ Local evidence is under `out/dn2/late-model-upstream/`: `diagnosis.json`,
 `native-write-watch-2.summary.json` and `provenance.json`. The focused setup
 checks pass; its late-transition verdict fails. No real device, reference audio
 or HTML report was used.
+
+## Stage trace: receive callbacks reorder the bytes
+
+A subsequent isolated diagnostic keeps the same frozen production artifacts,
+logging the native receive callback and complete CC-message handler before and
+after their original functions. The wire/DMA ring contains the requested bytes
+`B1 2D 7F`, but the native parser buffer contains `B1 7F 2D`; the queued control
+event therefore requests controller127/value45 rather than MODEL45/value127.
+The SDK correctly reports controller127 as unmapped. This is neither a CC gate
+nor a later stored-MODEL overwrite.
+
+Receipt counters go15→16→15→16 as nested native receive callbacks overwrite
+each other's parser state. Native ISR400021a0 writes source28 to SIMR at
+fc04c01c before lowering IPL to3, then writes CIMR atfc04c01d on return.
+The configured source is level4. The pinned Digikit INTC's SIMR/CIMR writes
+are plain register storage and do not update IMR; MIDI servicing continues to
+see an unmasked source and permits reentry. The missing interrupt-mask side
+effects are an emulator fault; patching x0x selection/CC mapping or adding idle
+time would conceal it.
+
+Stage evidence, frozen snapshot/address receipts and diagnostic source are in
+`out/dn2/late-model-stages/`, including the exact requested wire bytes and the
+reordered parser/control event. Instrumentation affects timing, so retain the
+original production failure separately. Fix and qualify Digikit's hardware mask
+semantics upstream, then rerun production #80 and the missing bright-Tone note.
+A common cause for that separate missing-note observation remains unproved.
