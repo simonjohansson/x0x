@@ -70,5 +70,44 @@ The installed DT build's functional checks pass across 39,446 callbacks;
 only known #78 parameter/page resets fail. Its unnormalized native PCM measures
 47.652534 Hz. Firmware SHA256:
 `85336d6d305e9495c437a821a61dff60dc96f241ae2fa0160b35dfad0c9c221b`.
-DN/DN2 native runs and the fresh two-second five-setting comparison are pending
-at this code increment; component passes do not claim those results.
+The DN native functional checks also pass across 100,792 callbacks and its
+unnormalized downstream PCM measures 47.641554 Hz. Overall acceptance remains
+failed on the historical #20 `tone_bright_exact_zero_baseline`: one PCM16 count
+persists for six seconds. The waveform change did not fix that gate. Firmware
+SHA256: `9fbe12bc4da0cab7b3b33a8dd222ec755fb055fe8a7a2a722d38e9897bc6b8a5`.
+
+DN2's installed coupled-emulator scenario passes across 31,879 DSP frames,
+with no halt or missing blocks. Native float PCM measures 47.650329 Hz. Native
+controls, locks/LFO, reload, mixed models, Tone/coupling and 909 checks remain
+passing in this scenario; the separate #80 late MODEL path is not qualified.
+Firmware SHA256:
+`892551cd08a12d89c2dc8508bc9b03e65608febf01820184a2efc010ee853823`.
+
+## Fresh five-setting comparison
+
+Both actual ASM backends were freshly rendered for two seconds per setting,
+using the same fifteen hash-verified fresh reference takes and fixed host-gain
+correction as the initial diagnostic. Full measurements, source/executable
+hashes and float renders are in `out/reference/808-pitch/measurements.json`
+and neighboring files. No alignment, normalization or per-hit gain fit is used.
+
+| Setting | Reference median Hz | ColdFire Hz | SHARC Hz | Unaligned residual RMS FS, before / after pitch correction |
+| --- | --- | --- | --- | --- |
+| Default | 47.64380 | 47.65001 | 47.65000 | 0.06474 / 0.03154 |
+| Dark, short | 46.66961 | 47.65009 | 47.65001 | 0.03820 / 0.03422 |
+| Bright, short | 46.67983 | 47.65008 | 47.65001 | 0.03916 / 0.03503 |
+| Dark, long | 47.65359 | 47.65000 | 47.65000 | 0.10987 / 0.11633 |
+| Bright, long | 47.65360 | 47.65000 | 47.65001 | 0.11168 / 0.11790 |
+
+The default waveform residual roughly halves, and both short corners improve
+slightly. **Both long-corner raw residuals worsen**, despite the much closer
+settled pitch. This is retained as a mismatch, not normalized or phase-fitted
+away. Pitch agreement alone cannot establish waveform fidelity; the initial
+pitch/forcing, phase evolution and overly long tails still differ. Short hits
+retain about a 0.98 Hz median discrepancy, so this does not close the full
+pitch-path work. Decay remains the next independent calibration/model issue.
+
+Across these full two-second renders, maximum analytical errors are
+2.142e-6 FS (ColdFire) and 2.021e-6 FS (SHARC); cross-CPU difference is
+2.511e-6 FS. These still pass the unchanged 1e-5 FS numeric limit. They are
+not VST-fidelity tolerances, and the long-corner regression is not a pass.

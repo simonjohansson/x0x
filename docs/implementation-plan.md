@@ -2,8 +2,9 @@
 
 The silent-first priority set on 26 October 2026 is complete: all three native
 mod milestones are accepted, with the DT reset bug deferred to #78. In #9, the
-[first audible 808 body](808-body.md) now runs in all three emulators. It is an
-uncalibrated damped sine. Live Decay changes its feedback retention and is
+[first audible 808 body](808-body.md) now runs in all three emulators. It is a
+provisional damped sine, now with [settled pitch calibrated to 47.65 Hz](808-pitch.md).
+Live Decay changes its feedback retention and is
 verified through native controls/audio on all three machines. The subsequent
 [source-derived Tone RC filter](808-tone.md) also passes both CPU and all three
 native integration checks, with provisional knob mapping. The
@@ -204,8 +205,25 @@ software reference. This is raw component output, not a fresh native-OS test.
 
 Prioritize #9/#79's source-derived resonator/pitch path, then Decay feedback and
 knob mapping, then attack shaping/loaded Tone-output stages and global scaling.
-The reference default is 47.64 Hz with a 143 ms descriptive decay fit; current
-x0x is 55 Hz / 250 ms. No production DSP was changed or fitted. The full grid,
+The reference default is 47.64 Hz with a 143 ms descriptive decay fit;
+the initial x0x baseline was 55 Hz / 250 ms. That diagnostic did not change DSP;
+the subsequent settled-pitch correction is recorded below. The full grid,
 held-out validation, strength/history/live-control comparisons, aliasing and
 blind listening remain open in #2. Keep held-out recordings unused while making
 model decisions; these five settings do not freeze a fidelity tolerance.
+
+## Settled 808 pitch — 27 October 2026
+
+The [47.65 Hz body calibration](808-pitch.md) in #9/#2 replaces the provisional
+55 Hz rotation on both CPUs. This is one settled-body target from the five
+training settings, not the complete initial pitch path or circuit alignment.
+The default raw waveform residual roughly halves; both long-corner residuals
+get slightly worse and remain recorded mismatches. Native DT/DN/DN2 audio has the
+new pitch; DT still fails known #78 resets and DN reproduces the historical
+one-count silence gate in #20. DN2 passes its tested native scenario with no
+halt/missing blocks. The original HTML report remains unchanged.
+
+Keep #9/#79 open for initial pitch/forcing, stock Decay feedback/control curves,
+loaded Tone/output stages and faithful retrigger. Decay is the next independent
+model correction; full-grid/held-out fidelity and #80 remain open. Component
+precision does not qualify reference or native acceptance gates.
