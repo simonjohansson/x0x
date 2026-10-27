@@ -565,7 +565,8 @@ def full_os() -> dict:
                 capacitor=struct.unpack("<f",bytes.fromhex(emu.dsp_peek(0x20092100+4*lane,4)["hex"]))[0]
                 g=tone808.coefficient(native[0])
                 pole=body808.retention(native[1])*complex(
-                    math.cos(2*math.pi*55/48000),math.sin(2*math.pi*55/48000))
+                    math.cos(2*math.pi*body808.FREQUENCY/body808.SAMPLE_RATE),
+                    math.sin(2*math.pi*body808.FREQUENCY/body808.SAMPLE_RATE))
                 expected=(2*g/(1-(1-2*g)/pole)*complex(y,x)).imag
                 previous_input, previous_output = struct.unpack("<2f",bytes.fromhex(
                     emu.dsp_peek(0x20092140+8*lane,8)["hex"]))

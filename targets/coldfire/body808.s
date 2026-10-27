@@ -1,4 +1,4 @@
-/* Provisional 808 body: damped 55 Hz sine at 48 kHz with live decay.
+/* Provisional 808 body: damped 47.65 Hz sine at 48 kHz with live decay.
  * void x0x_808_body(int32_t state[3], int32_t output[32], uint32_t start, uint32_t decay_raw).
  * decay_raw is caller-bounded to 0..32512; default 16384 gives tau = 250 ms.
  * State is {x,y,pulse_remaining} in Q1.31; caller owns disjoint aligned state/output extents.
@@ -46,14 +46,14 @@ x0x_808_body:
     move.l 92(%sp), %d6
     move.l #66052, %d0 /* floor(2^31 / 32512); product stays signed-positive */
     mulu.l %d0, %d6
-    move.l #2147112711, %d2
+    move.l #2147126590, %d2
     move.l %d2, %acc0
-    move.l #270545, %d2
+    move.l #270547, %d2
     mac.l %d6, %d2, %acc0
     movclr.l %acc0, %d2
-    move.l #15458369, %d3
+    move.l #13392598, %d3
     move.l %d3, %acc0
-    move.l #1948, %d3
+    move.l #1688, %d3
     mac.l %d6, %d3, %acc0
     movclr.l %acc0, %d3
     moveq #32, %d6

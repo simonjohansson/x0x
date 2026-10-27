@@ -1,9 +1,11 @@
 # 808 body, finite excitation and Decay control
 
-The #9 prototype now drives an uncalibrated damped mode with a
+The #9 prototype now drives a damped mode with a
 [nominal 1 ms rectangular excitation](808-excitation.md). Pulse-edge shaping,
 pitch sigh, stock feedback/Decay mapping and the complete loaded output network
-remain missing. The saved layout
+remain missing. The settled body pitch is now 47.65 Hz, rounded from the
+initial five-setting software-reference measurements; see [pitch calibration](808-pitch.md).
+This is a provisional calibration, not complete circuit alignment. The saved layout
 stays unchanged. DECAY changes feedback retention on every block, and TNTUN now
 drives the [passive Tone RC stage](808-tone.md). ATTK is ignored in 808 mode.
 The [first 909 body](909-body.md) follows separately. The raw-body equations below
@@ -18,8 +20,8 @@ before each rotation for exactly 48 samples. Both ASM implementations compute:
 - `y_next = c*(y+u) - s*x`.
 
 The fixed internal drive sum is 0.25; there is no per-hit normalization. At the
-default DECAY=64, `c=exp(-1/12000)*cos(2*pi*55/48000)` and
-`s=exp(-1/12000)*sin(2*pi*55/48000)`. Other Decay values use the existing live
+default DECAY=64, `c=exp(-1/12000)*cos(2*pi*47.65/48000)` and
+`s=exp(-1/12000)*sin(2*pi*47.65/48000)`. Other Decay values use the existing live
 feedback retention. The independent oracle convolves analytical impulse
 responses with the finite drive, integrating log retention over timed changes.
 It does not copy the ASM recurrence. [Source boundary, equations and current
@@ -29,7 +31,7 @@ from the still-missing pulse shaper and full bridged-T forcing.
 The earlier formula `0.25*exp(-(n+1)/12000)*sin(2*pi*55*(n+1)/48000)` describes
 the historical instantaneous-state prototype, before finite excitation.
 
-The body stays at 55 Hz with a fixed internal peak below 0.25 digital full scale.
+The body stays at 47.65 Hz with a fixed internal peak below 0.25 digital full scale.
 The subsequent coupling stage has a separately derived half-scale transient bound.
 Ordinary note pitch is not used. Native AMP/velocity, filters and track level
 remain downstream.
@@ -144,6 +146,7 @@ is now implemented with a provisional resistance-linear control mapping; see
 [the current Tone evidence](808-tone.md).
 [#79](https://github.com/simonjohansson/x0x/issues/79) owns reference-implementation
 and schematic alignment; its [source/code audit](reference-alignment.md) records
-the current gaps and pinned source baselines. #2 compares the aligned engines
-to a VST later. Reference captures and physical-device timing remain outside
-this increment.
+the current gaps and pinned source baselines. #2 now has an initial five-setting
+software-reference comparison; the [pitch increment](808-pitch.md) uses that
+training evidence without consuming held-out settings. Full calibrated fidelity
+and physical-device timing remain unqualified.

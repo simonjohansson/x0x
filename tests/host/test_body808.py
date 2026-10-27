@@ -8,7 +8,7 @@ class Body808Tests(unittest.TestCase):
     def test_analytic_body_has_the_declared_pitch_decay_and_scale(self):
         samples = reference(SAMPLE_RATE)
         report = analyze(samples, SAMPLE_RATE)
-        self.assertAlmostEqual(report['frequency']['median_hz'], FREQUENCY, delta=.001)
+        self.assertAlmostEqual(report['frequency']['median_hz'], 47.65, delta=.001)
         for side in ('positive', 'negative'):
             fit = report['decay_' + side]
             self.assertTrue(fit['applicable'])

@@ -1,4 +1,4 @@
-"""Independent 55 Hz body oracle with provisional Decay feedback control.
+"""Independent 808 body oracle with provisional Decay feedback control.
 
 This is an uncalibrated 808 starting point, with finite rectangular excitation, before pulse-edge shaping, pitch sigh,
 stock Decay/Tone networks and residual-state retrigger behavior are modeled.
@@ -6,7 +6,8 @@ stock Decay/Tone networks and residual-state retrigger behavior are modeled.
 import math
 
 SAMPLE_RATE = 48000
-FREQUENCY = 55.0
+# Rounded settled-body pitch from #2's five-setting training diagnostic, not circuit alignment.
+FREQUENCY = 47.65
 TAU = 0.25
 GAIN = 0.25
 PULSE_SAMPLES = 48  # Nominal 1 ms trigger in S01/S03, at 48 kHz.

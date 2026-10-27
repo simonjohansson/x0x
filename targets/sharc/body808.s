@@ -180,13 +180,14 @@ continue_body:
 render_body:
     // shortcut: provisional linear feedback-radius Decay curve until circuit modeling.
     // Use c-1 to avoid float32 radius bias when c is close to one.
-    R2=0x39041a19;
+    // 47.65 Hz settled body; initial pitch evolution remains unmodeled.
+    R2=0x39041a51;
     F2=F2*F11;
-    R3=0xb9351f1f;
+    R3=0xb92e5840;
     F2=F2+F3;
-    R3=0x35737a1f;
+    R3=0x3552f0ab;
     F3=F3*F11;
-    R4=0x3bebe041;
+    R4=0x3bcc5ad6;
     F3=F3+F4;
     // shortcut: resistance-linear bright-up Tone mapping until the C-taper is calibrated.
     // Physical RC TPT coefficient: (2-t)/(102.224-99.112*t), t=raw/32512.

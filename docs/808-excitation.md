@@ -8,8 +8,8 @@ one full 32-sample callback and sixteen samples of the next callback.
 Only the **duration and finite rectangular shape** are taken from the trigger
 baseline. This is not the complete pulse-shaper/resonator circuit. R162/R163/C40,
 the diode edge response, source impedance, physical forcing/gain, accent and
-pitch-switch/feedback paths remain open in #9/#79. The 55 Hz rotation and Decay
-mapping remain provisional. The [executable Plaits reference](reference-renders.md)
+pitch-switch/feedback paths remain open in #9/#79. The rotation now uses the [47.65 Hz settled-body calibration](808-pitch.md);
+Decay mapping remains provisional. The [executable Plaits reference](reference-renders.md)
 provides a finite-excitation example, rather than the stock circuit authority.
 
 ## Model and fixed scale
@@ -36,7 +36,7 @@ The independent oracle sums analytical impulse responses, not the DSP rotation:
 
 `out[n] = F * sum(exp(L[n+1]-L[k]) * sin(w*(n+1-k)), k=0..min(n,47))`,
 
-where `L[j]` is accumulated log retention before sample j and `w=2*pi*55/48000`.
+where `L[j]` is accumulated log retention before sample j and `w=2*pi*47.65/48000`.
 The implementation factors this finite sum into cosine/sine sums. A direct
 convolution test checks onset and callback/pulse boundaries independently.
 The older single damped-sine formula is the historical instantaneous-drive model;
