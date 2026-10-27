@@ -9,9 +9,10 @@ IDs 80/90 must not become separate engine registrations. See the
 **The user explicitly approved this combined ID/layout on 26 October 2026,
 then revised it to remove LEVEL, move the sound controls to A/B/C and keep
 MODEL in F. The table below is the current approved layout.**
-Implementation and emulator acceptance belong to
-[#39](https://github.com/simonjohansson/x0x/issues/39). Approval does not establish
-working native defaults or persistence. Scope: DT OS 1.54, Elekloader PR #200 pin
+The silent emulator milestone is accepted in closed
+[#39](https://github.com/simonjohansson/x0x/issues/39), with native defaults and
+temporary pattern save/reload verified. Native reset shortcuts remain a known
+bug deferred to [#78](https://github.com/simonjohansson/x0x/issues/78). Scope: DT OS 1.54, Elekloader PR #200 pin
 `2ab5f424c4721e4277d2112a5ae755d9938f50d6`.
 
 ## One native registration and page

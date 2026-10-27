@@ -32,11 +32,11 @@ model stage, CPU implementation and matrix cell.
 | Deferred by user | [#2](https://github.com/simonjohansson/x0x/issues/2) | Reference VST captures and fidelity comparisons for both models |
 | After sound | [#20](https://github.com/simonjohansson/x0x/issues/20) | Combined-mod emulator regression and readiness review |
 
-The three device issues are independent. Start with DT, whose existing full-OS
-observer already reaches the render hook. Use subagents for non-overlapping
-work. A blocked device does not stop useful work on another device. Once all
-currently actionable silent bring-up work is done, sound work can proceed on
-working devices while the blocked device retains its open gate.
+The three silent device issues are closed. The next planned work is the 808
+engine in #9, integrated incrementally into the working mods. The DT reset
+correction in #78 and reference work in #2 are deferred by the user. Use
+subagents for non-overlapping work when authorized; one blocked device does
+not stop useful work on another device.
 
 ## First milestone: silent mods in all three emulators
 

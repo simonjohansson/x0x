@@ -1,9 +1,10 @@
 # Development and verification
 
-Current priority is the [silent three-device milestone](implementation-plan.md).
-The detailed checks below record evidence already collected; they are not a
-queue of prerequisites to exhaust before installing the silent mod. #39, #40
-and #7 own that work. Historical #75 and matrix links are superseded provenance.
+The [silent three-device milestone](implementation-plan.md) is accepted in
+closed issues #39, #40 and #7. Digitakt reset shortcuts remain a known bug
+deferred to #78; the next planned engine work is #9. The detailed checks below
+record evidence already collected, not a new prerequisite queue. Historical
+#75 and matrix links are superseded provenance.
 
 
 The scaffold has independent host, C adapter and assembled CPU tests.
@@ -183,7 +184,8 @@ base/patched source hashes. Separate bounded actual-helper tests verify IDs80,
 
 **The full-OS task still returns 1:** native knob+NO and SRC+PLAY reset actions
 bypass the corrected range helper and restore stock B=768/C=0. Parameter/page
-reset failures remain explicit in the report; #39 stays open. No additional SRC
+reset failures remain explicit in the report. The user accepted #39 and deferred
+this bug to [#78](https://github.com/simonjohansson/x0x/issues/78). No additional SRC
 UI routing or on-switch overwrite was introduced to conceal that SDK gap.
 
 Reports, firmware and screenshots are regenerated under `out/dt/silent/`.
@@ -300,7 +302,7 @@ different layers and do not replace the full firmware gates:
 
 | Device | Current native silent-mod evidence | Remaining scope |
 | --- | --- | --- |
-| DT, OS 1.54 | Real ID80 mod: native controls, p-lock/LFO, save/reload, mixed tracks and zero owned output | Native knob/page reset gate in #39; actual audio and broader qualification later |
+| DT, OS 1.54 | Real ID80 mod: native controls, p-lock/LFO, save/reload, mixed tracks and zero owned output | Native knob/page reset deferred to #78; actual audio and broader qualification later |
 | DN, OS 1.44 | Real ID80 mod: complete native silent milestone in standard full-OS digiemu | Actual audio and broader qualification in #9/#25/#20 |
 | DN2, OS 1.12 | Real ID20 mod: complete coupled native silent milestone, including persistent project reload and stock FM coexistence | Actual audio and broader qualification in #9/#25/#20 |
 
@@ -315,9 +317,9 @@ actual target buffer; it does not establish that this is the final modulated
 render frame. The native smoother/Core event probe observes
 `370, 730, 1078, 1416, 1744, 2062, 2370, 2670` while the adapter reads target
 `12345` throughout. Its passing diagnostic explicitly reports
-`render_frame_delivered: false`; [#75](https://github.com/simonjohansson/x0x/issues/75)
-tracks the missing delivered-control route. Neither bounded routine test boots
-the full OS.
+`render_frame_delivered: false`; this was the gap investigated in superseded
+[#75](https://github.com/simonjohansson/x0x/issues/75), subsequently resolved for
+the installed silent mod in #40. Neither bounded routine test boots the full OS.
 
 The DN final-frame harness builds its own verified Core/companion and generated
 subscriber under `out/dn/transport`; earlier prototype artifacts are not required.
@@ -351,9 +353,11 @@ the production adapter with the same diagnostic bindings and injected metadata.
 Its settings are non-strict. The earlier strict baseline and observer both flag
 a stock read at `0x4009de90` of `0x12a` with A0=0; that model/setup limitation
 remains explicitly unavailable. Reports now record
-`production_adapter_consumption: true` with this narrow scope. Native sources,
-locks, allocator/START ownership, selector integration and audio timing remain
-open in #75; neither mode qualifies kick fidelity or a complete installed mod.
+`production_adapter_consumption: true` with this narrow scope. These diagnostic
+modes do not establish native sources, locks, allocator/START ownership, selector
+integration or audio timing. The later #40 silent-mod scenario establishes the
+listed native plumbing checks; broader lifecycle, timing and kick fidelity remain
+#9/#25/#20 work.
 
 `test:dn:machine` adds a separate bounded registered-machine proof. It reuses the
 self-contained build, contributing ID 127 only to ignored diagnostic firmware

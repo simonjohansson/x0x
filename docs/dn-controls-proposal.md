@@ -8,9 +8,10 @@ separate ID-80/ID-90 engine proposal is superseded. See the
 **The user explicitly approved this combined ID/layout on 26 October 2026,
 then revised it to remove LEVEL, move the sound controls to A/B/C and keep
 MODEL in F. The table below is the current approved layout.**
-Implementation and emulator acceptance belong to
-[#40](https://github.com/simonjohansson/x0x/issues/40). Approval does not establish
-working native defaults or persistence. Scope: DN OS 1.44,
+Implementation and silent emulator acceptance are complete in
+[#40](https://github.com/simonjohansson/x0x/issues/40), including native defaults
+and temporary pattern save/reload. Approval and emulator evidence are distinct;
+restart persistence and broader qualification remain #20 work. Scope: DN OS 1.44,
 Elekloader PR #200 pin `2ab5f424c4721e4277d2112a5ae755d9938f50d6`.
 
 ## One registration and shared controls
@@ -61,19 +62,21 @@ volume, with fixed internal output calibration and no x0x LEVEL knob. Ordinary n
 `set_knobs` applies defaults when selecting a different native machine, not on
 same-machine reselection. Switching 808/909 uses MODEL inside x0x, so it must
 not invoke machine-selection defaults or overwrite saved controls. Native
-selection, reset, FM/x0x switching and save/load still need emulator coverage.
+selection/defaults, model switching and temporary pattern save/reload pass in
+#40. Reset gestures, broader FM/x0x switching and restart persistence remain
+separate qualification work in #20.
 
-The delivery work formerly tracked in [#75](https://github.com/simonjohansson/x0x/issues/75)
-now belongs to #40, including MODEL: `dnm_knob` currently supplies target words rather
-than the observed final smoothed/controller/LFO frame. C-only declaration tests
-do not resolve that transport gap. Connect the existing tested private
-final-frame reader to the installed mod as part of #40.
+The delivery gap investigated in superseded
+[#75](https://github.com/simonjohansson/x0x/issues/75) is resolved for the installed
+silent mod in #40. `dnm_knob` supplies target words, so the production callback
+uses the private final-frame reader instead. Native p-lock and LFO values reach
+the actual callback, including START-latched MODEL selection.
 
 ## Small test increments
 
 1. Test the one descriptor, both control interpretations, blanks, distinct
    fractions/endpoints and selector policy without either renderer.
-2. Resolve final-frame delivery, then test native control and MODEL ramps,
+2. Retain the completed final-frame delivery checks for native control and MODEL ramps,
    locks, threshold crossings, per-voice latching and unrelated-track isolation.
 3. Round-trip the single identity, MODEL and controls through sound/kit saves.
    Model changes must not select another native machine or reset all controls.

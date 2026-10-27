@@ -2,8 +2,12 @@
 
 Investigation for [#75](https://github.com/simonjohansson/x0x/issues/75),
 26 October 2026. **Existing-event private implementation; no new public SDK
-hook or firmware patch.** [#40](https://github.com/simonjohansson/x0x/issues/40)
-remains open. Scope is Digitone mk1 OS **1.44**, Elekloader PR 200 commit
+hook or firmware patch.** This document preserves the diagnostic investigation;
+#75 was superseded and [#40](https://github.com/simonjohansson/x0x/issues/40)
+subsequently completed installed silent-mod acceptance. References below to
+remaining gates describe those diagnostic stages, not the current work queue.
+Current evidence is in the [development guide](development.md#silent-digitone-mod).
+Scope is Digitone mk1 OS **1.44**, Elekloader PR 200 commit
 `2ab5f424c4721e4277d2112a5ae755d9938f50d6` and digiemu
 `f57c2f237e84b8ff91bc3adb2a2931bccf9928e9`.
 

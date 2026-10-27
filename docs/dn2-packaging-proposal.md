@@ -7,8 +7,10 @@ and switching at START with old-model tail clearing. The later explicit
 revision removes LEVEL, moves the sound controls to A/B/C and keeps MODEL
 in F; the table below is the current approved layout/defaults.
 Production declarations and tests are implemented separately in #6/#24; this
-decision is not native persistence, lifecycle or audio qualification.
-The [private contract](render-contract.md) still applies.
+decision is distinct from native persistence, lifecycle or audio qualification.
+The subsequent #7 silent milestone passes native coupled boot, controls, mixed
+tracks and project save/reload. Restart persistence, broader lifecycle and kick
+audio remain #9/#25/#20 work. The [private contract](render-contract.md) still applies.
 
 ## Selected packaging direction
 
@@ -74,8 +76,8 @@ while checking missing registrations.
 Approved **ID 20**, name **`X0X KICKS`**, short label **`KICKS`**,
 clone/default type **0 (FM TONE)** and one SYN page. Clone 0 selects stock
 defaults, permissions and positional MIDI mapping; it does not make the kick
-use FM DSP. Its AMP/filter defaults and track assignment behavior still need
-emulator checks.
+use FM DSP. Native assignment and stock-track coexistence pass in #7; audible
+AMP/filter behavior remains qualification work once the kick engines exist.
 
 | SYN1 knob | Sound slot / callback parameter | Static label and meaning | Integer default |
 | --- | --- | --- | --- |

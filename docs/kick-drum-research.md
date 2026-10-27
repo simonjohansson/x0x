@@ -671,11 +671,12 @@ kernel change needs regression checks in both ColdFire consumers without making
 their device-specific work a single inseparable ticket. Start with 808 feasibility;
 909 work does not require full qualification of all three 808 cells.
 
-The scaffold now includes C control boundaries, diagnostic ASM, host test tools,
-latest-only SDK dependency builds, adapter components and a native DT observer.
-DN2's approved combined controls are tested independently of its renderers.
-The DN target-versus-delivered-control gap is tracked in #75; the
-[development guide](development.md) records current evidence boundaries.
+The scaffold includes C control boundaries, diagnostic ASM, host test tools,
+latest-only SDK builds and accepted installed silent mods on all three devices.
+C controls and actual ASM remain independently testable. The DN delivered-control
+gap investigated in superseded #75 is resolved for the installed mod in #40;
+the DT reset bug is deferred to #78. The [development guide](development.md)
+records current evidence boundaries.
 The kick models remain future work. The
 issue backlog uses engine labels **808** and **909**,
 device/CPU labels and explicit blocking relationships. Shared work may carry

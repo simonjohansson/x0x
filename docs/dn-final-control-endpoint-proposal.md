@@ -70,8 +70,9 @@ alternative is part of the approved policy.
 
 The user's supplied AGENTS.md requires review before API changes. The explicit
 approval above authorizes this DN-only raw-reader/receiver rejection behavior
-and metadata meaning. Native-source, ownership, selector
-integration, full-OS timing and fidelity gates in #75/#40 remain separate.
+and metadata meaning. The diagnostic checks below are separate from #40
+installed-mod acceptance, which subsequently passed native control and selector
+delivery. Broader ownership, full-OS timing and fidelity remain #9/#25/#20 work.
 
 ## Verification
 
@@ -91,5 +92,6 @@ The output is a C diagnostic marker, not kick audio.
 
 Five recompiled adapters are rejected: removed normalized clamp, clipped raw
 observation, denominators rescaled to 32634/32767, and bypassed MODEL
-canonicalization. Native MODEL-source delivery, real START ownership and full-OS
-audio timing remain separate; this result does not qualify complete #75/#40.
+canonicalization. This isolated result does not establish native MODEL-source
+delivery, real START ownership or full-OS audio timing. Later #40 evidence covers
+the installed silent-mod scenario; broader qualification remains #9/#25/#20 work.
