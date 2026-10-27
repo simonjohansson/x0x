@@ -4,7 +4,7 @@
 
 /* Existing private selector ABI: eight {initialized, model, tail} lanes. */
 static uint32_t selection[8][3];
-static int32_t body_state[8][3];
+static int32_t body_state[8][4];
 static int32_t tone_state[8];
 static int32_t coupling_state[8][2];
 extern int x0x_selector(uint32_t bank[8][3], uint32_t notice[4],
@@ -13,7 +13,7 @@ extern void x0x_silence(int32_t output[32]);
 extern void x0x_808_tone(int32_t *state, int32_t output[32], uint32_t tone_raw);
 extern void x0x_808_coupling(int32_t state[2], int32_t output[32]);
 extern void x0x_909_body(int32_t state[2], int32_t output[32], uint32_t start, uint32_t decay_raw);
-extern void x0x_808_body(int32_t state[3], int32_t output[32], uint32_t start, uint32_t decay_raw);
+extern void x0x_808_body(int32_t state[4], int32_t output[32], uint32_t start, uint32_t decay_raw);
 
 void x0x_dt_render(int32_t *blocks)
 {
@@ -21,7 +21,7 @@ void x0x_dt_render(int32_t *blocks)
     for (uint32_t track = 0; track < 8; ++track) {
         if (fw_render_machine[track] != X0X_ID) {
             selection[track][0] = selection[track][1] = selection[track][2] = 0;
-            body_state[track][0] = body_state[track][1] = body_state[track][2] = 0;
+            body_state[track][0] = body_state[track][1] = body_state[track][2] = body_state[track][3] = 0;
             tone_state[track] = 0;
             coupling_state[track][0] = coupling_state[track][1] = 0;
             continue;
@@ -37,7 +37,7 @@ void x0x_dt_render(int32_t *blocks)
                                  (fw_voice_start >> track) & 1u, valid};
         if (x0x_selector(selection, notice, input) == 1) {
             if (notice[3]) {
-                body_state[track][0] = body_state[track][1] = body_state[track][2] = 0;
+                body_state[track][0] = body_state[track][1] = body_state[track][2] = body_state[track][3] = 0;
                 tone_state[track] = 0;
                 coupling_state[track][0] = coupling_state[track][1] = 0;
             }

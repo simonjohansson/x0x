@@ -55,7 +55,7 @@ def switch_coordinates(decay_raw):
     return ratio*high/low, (ratio-1)*sigma/low
 
 
-def reference(frames, decay_raw=DEFAULT_DECAY, changes=None):
+def _main_reference(frames, decay_raw=DEFAULT_DECAY, changes=None):
     """Finite-drive convolution, then free decay from conserved capacitor state."""
     changes = changes or {}
     loss = math.log(retention(decay_raw))
@@ -84,6 +84,13 @@ def reference(frames, decay_raw=DEFAULT_DECAY, changes=None):
             sample = math.exp(attenuation-switch_attenuation) * (switch_x*math.cos(angle)+switch_y*math.sin(angle))
         samples.append(sample)
     return samples
+
+
+def reference(frames, decay_raw=DEFAULT_DECAY, changes=None):
+    from .retrigger808 import companion_body_reference
+    return [main+companion for main,companion in zip(
+        _main_reference(frames, decay_raw, changes),
+        companion_body_reference(frames, decay_raw, changes))]
 
 
 def compare():

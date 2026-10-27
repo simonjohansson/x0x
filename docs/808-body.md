@@ -11,16 +11,23 @@ drives the [passive Tone RC stage](808-tone.md). ATTK is ignored in 808 mode.
 The [first 909 body](909-body.md) follows separately. The [reference-informed Decay increment](808-decay.md) shortens the
 previously excessive tails. The raw-body equations below
 describe the 808 oscillator before Tone and the [C47 coupling filter](808-coupling.md).
+The source-separated [C39 companion excitation](808-companion.md) now enters
+the negative band-pass bridge channel on both CPUs.
 
 ## Model and units
 
 At 48,000 samples/second, START clears x/y and injects `u=0.25/48` into y
 before each rotation for exactly 48 samples. Both ASM implementations compute:
 
-- `x_next = c*x + s*(y+u)` and output `x_next`;
-- `y_next = c*(y+u) - s*x`.
+- `x_next = c*x + s*(y+u) + Gx*r` and output `x_next`;
+- `y_next = c*(y+u) - s*x + Gy*r`.
 
-The fixed internal drive sum is 0.25; there is no per-hit normalization. At the
+r is the source-separated C39 node; Gx/Gy integrate its continuous 33 ms RC
+decay over one sample. At START r=.71/60; at 6 ms the encoded envelope falls
+by .25. The companion derivation documents that fixed private encoding and
+its independently integrated analytical response.
+
+The main drive sum is 0.25; there is no per-hit normalization. At the
 default DECAY=64, `c=exp(-1/(48000*.143))*cos(2*pi*47.65/48000)` and
 `s=exp(-1/(48000*.143))*sin(2*pi*47.65/48000)`. Other Decay values use the existing live
 feedback retention. For the first 6 ms, c/s use the source-derived initial frequency instead.
@@ -36,7 +43,7 @@ The earlier formula `0.25*exp(-(n+1)/12000)*sin(2*pi*55*(n+1)/48000)` describes
 the historical instantaneous-state prototype, before finite excitation.
 
 The [initial frequency-switch stage](808-initial-pitch.md) uses about 131.006 Hz
-for the first 6 ms; the body then stays at 47.65 Hz with a fixed internal peak below 0.25 digital full scale.
+for the first 6 ms; the body then stays at 47.65 Hz. Tested fixed-control body peaks remain below 0.25 digital full scale.
 The subsequent coupling stage has a separately derived half-scale transient bound.
 Ordinary note pitch is not used. Native AMP/velocity, filters and track level
 remain downstream.

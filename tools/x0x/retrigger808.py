@@ -1,4 +1,4 @@
-"""Host-only C39/R161/D52 reference; not connected to production DSP.
+"""Independent C39/R161/D52 and bridge-input reference models.
 
 S01 p9 / S03 section8.1 Figure8: C39 feeds the node, R161 returns to
 Vcomm approximated as ground, and D52 clamps the positive edge.
@@ -6,6 +6,7 @@ shortcut: fixed 0.71 V ideal diode; finite conduction/source impedance,
 Vcomm loading and transistor leakage require the coupled circuit model.
 """
 import math
+import cmath
 
 from . import body808
 
@@ -16,6 +17,51 @@ DIODE_DROP_V = .71
 ENVELOPE_V = 15.0
 SAMPLE_RATE = body808.SAMPLE_RATE
 R167, R170, C41, C42 = 1e6, 470e3, 15e-9, 15e-9
+# Encoding/headroom convention, not a measured hardware or VST voltage scale.
+VOLT_SCALE = body808.GAIN / ENVELOPE_V
+
+
+def companion_body_reference(frames, decay_raw=body808.DEFAULT_DECAY, changes=None):
+    """Continuous RC forcing integrated analytically over constant-pole segments.
+
+    shortcut: source-separated C39 and calibrated constant damping; loaded
+    feedback, main pulse shaping and intrinsic accent remain unmodeled.
+    """
+    changes = changes or {}
+    state = 0j
+    result = []
+    fall = (DIODE_DROP_V*math.exp(-body808.ATTACK_SAMPLES/(SAMPLE_RATE*TAU))
+            - ENVELOPE_V)*VOLT_SCALE
+    for n in range(frames):
+        if n == body808.ATTACK_SAMPLES:
+            alpha, beta = body808.switch_coordinates(decay_raw)
+            state = complex(state.real, alpha*state.imag+beta*state.real)
+        if n == 0 or n == body808.ATTACK_SAMPLES or n in changes:
+            decay_raw = changes.get(n, decay_raw)
+            sigma = -SAMPLE_RATE*math.log(body808.retention(decay_raw))
+            omega = 2*math.pi*(body808.ATTACK_FREQUENCY if n < body808.ATTACK_SAMPLES else body808.FREQUENCY)
+            pole = complex(-sigma, -omega)
+            source = (DIODE_DROP_V*VOLT_SCALE*math.exp(-n/(SAMPLE_RATE*TAU))
+                      if n < body808.ATTACK_SAMPLES else
+                      fall*math.exp(-(n-body808.ATTACK_SAMPLES)/(SAMPLE_RATE*TAU)))
+            forcing = complex(-1/(R161*C42), sigma/(omega*R161*C42))
+            driven = forcing*source/(pole+1/TAU)
+            initial, begin = state, n
+        elapsed = (n+1-begin)/SAMPLE_RATE
+        exponential = cmath.exp(pole*elapsed)
+        state = exponential*initial + driven*(exponential-math.exp(-elapsed/TAU))
+        result.append(state.real)
+    return result
+
+
+def companion_step(decay_raw, attack):
+    """Exact one-sample coefficients for a continuously decaying C39 input."""
+    sigma = -SAMPLE_RATE*math.log(body808.retention(decay_raw))
+    omega = 2*math.pi*(body808.ATTACK_FREQUENCY if attack else body808.FREQUENCY)
+    pole = complex(-sigma, -omega)
+    forcing = complex(-1/(R161*C42), sigma/(omega*R161*C42))
+    step = forcing*(cmath.exp(pole/SAMPLE_RATE)-math.exp(-1/(SAMPLE_RATE*TAU)))/(pole+1/TAU)
+    return step.real, step.imag
 
 
 def bridge_reference(main, companion, sample_rate=SAMPLE_RATE):

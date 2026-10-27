@@ -5,6 +5,58 @@ from x0x import body808, retrigger808 as retrigger
 
 
 class Retrigger808Tests(unittest.TestCase):
+    def test_companion_body_matches_the_inverse_laplace_response(self):
+        k, lam = 1/(1e6*15e-9), 1/.033
+        drive = .71*retrigger.VOLT_SCALE
+        omega = 2*math.pi*body808.ATTACK_FREQUENCY
+        for raw in (0,16384,32512):
+            sigma = -48000*math.log(body808.retention(raw))
+            a = k*drive*lam/((sigma-lam)**2+omega**2)
+            c = -k*drive-a*(sigma-lam)
+            actual = retrigger.companion_body_reference(288,raw)
+            for n,value in enumerate(actual):
+                t = (n+1)/48000
+                expected = a*math.exp(-lam*t)+math.exp(-sigma*t)*(
+                    -a*math.cos(omega*t)+c/omega*math.sin(omega*t))
+                self.assertAlmostEqual(value,expected,places=13)
+            self.assertLess(actual[0],0)  # Positive source enters the negative band-pass channel.
+
+    def test_companion_with_live_decay_matches_an_independent_ode_solver(self):
+        changes = {256:32512,288:0,320:16384,3200:32512}
+        actual = retrigger.companion_body_reference(4096,0,changes)
+        state,raw,worst = 0j,0,0.
+        lam,k = 1/.033,1/(1e6*15e-9)
+        first = .71*retrigger.VOLT_SCALE
+        fall = first*math.exp(-288/(48000*.033))-.25
+        for n in range(4096):
+            if n == 288:
+                a,b = body808.switch_coordinates(raw)
+                state = complex(state.real,a*state.imag+b*state.real)
+            raw = changes.get(n,raw)
+            sigma = -48000*math.log(body808.retention(raw))
+            omega = 2*math.pi*(body808.ATTACK_FREQUENCY if n < 288 else body808.FREQUENCY)
+            source = first if n < 288 else fall
+            origin = 0 if n < 288 else 288
+            def derivative(z,t):
+                node = source*math.exp(-lam*(t-origin/48000))
+                return complex(-sigma,-omega)*z+complex(-k,k*sigma/omega)*node
+            dt = 1/(48000*4)
+            for j in range(4):
+                t = n/48000+j*dt
+                a = derivative(state,t)
+                b = derivative(state+dt*a/2,t+dt/2)
+                c = derivative(state+dt*b/2,t+dt/2)
+                d = derivative(state+dt*c,t+dt)
+                state += dt*(a+2*b+2*c+d)/6
+            worst = max(worst,abs(state.real-actual[n]))
+        self.assertLess(worst,1e-11)
+
+    def test_composed_body_keeps_headroom_with_one_fixed_voltage_scale(self):
+        self.assertEqual(retrigger.ENVELOPE_V*retrigger.VOLT_SCALE,.25)
+        for raw in range(0,32513,2032):
+            samples = body808.reference(24000,raw)
+            self.assertLess(max(map(abs,samples)),body808.GAIN)
+
     def test_polarity_capacitor_charge_and_both_envelope_edges(self):
         self.assertAlmostEqual(retrigger.TAU, .033)
         fall = body808.ATTACK_SAMPLES

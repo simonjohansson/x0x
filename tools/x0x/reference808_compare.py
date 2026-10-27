@@ -33,7 +33,8 @@ def raw_position(displayed):
 def source_hashes():
     paths = ["targets/coldfire/body808.s", "targets/coldfire/tone808.s",
              "targets/coldfire/coupling808.s", "targets/sharc/body808.s",
-             "tools/x0x/body808.py", "tools/x0x/tone808.py", "tools/x0x/coupling808.py"]
+             "tools/x0x/body808.py", "tools/x0x/retrigger808.py",
+             "tools/x0x/tone808.py", "tools/x0x/coupling808.py"]
     return {name:digest(ROOT/name) for name in paths}
 
 
@@ -76,10 +77,10 @@ def render(backend):
         print(f"Rendering {backend} {label}: {FRAMES/RATE:g} seconds",flush=True)
         tr,dr=raw_position(tone),raw_position(decay)
         if backend=='coldfire':
-            b,t,c=Body(images[0][0],state_words=3),Tone(images[1][0]),Coupling(images[2][0])
+            b,t,c=Body(images[0][0],state_words=4),Tone(images[1][0]),Coupling(images[2][0])
         else:
             machine=sharc_selector.SelectorRunner(code,entry,state_bytes=STATE_BYTES,
-                extra_slot_state_offset=128,tone_state_offset=256,coupling_state_offset=320,pulse_state_offset=448)
+                extra_slot_state_offset=128,tone_state_offset=256,coupling_state_offset=320,pulse_state_offset=448, companion_state_offset=512)
         samples=[]
         for n in range(0,FRAMES,32):
             if backend=='coldfire':

@@ -32,11 +32,11 @@ int x0x_selector(uint32_t bank[8][3], uint32_t notice[4], const uint32_t input[4
 }
 
 static int32_t *pulse_owner;
-void x0x_808_body(int32_t state[3], int32_t output[32], uint32_t start, uint32_t decay_raw)
+void x0x_808_body(int32_t state[4], int32_t output[32], uint32_t start, uint32_t decay_raw)
 {
     assert(state && start == 1 && decay_raw == 12345);
-    assert(state[2] == 0);
-    pulse_owner = state; state[2] = 16;
+    assert(state[2] == 0 && state[3] == 0);
+    pulse_owner = state; state[2] = 16; state[3] = 300;
     ++body_calls;
     for (unsigned i = 0; i < 32; ++i) output[i] = 17;
 }
@@ -108,6 +108,6 @@ int main(void)
     for (unsigned i = 224; i < 256; ++i) assert(blocks[i] == 29);
     fw_render_machine[0] = 0;
     x0x_dt_render(blocks);
-    assert(pulse_owner[2] == 0);
+    assert(pulse_owner[2] == 0 && pulse_owner[3] == 0);
     return 0;
 }

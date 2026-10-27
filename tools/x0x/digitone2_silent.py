@@ -9,7 +9,7 @@ from pathlib import Path
 import struct
 import sys
 
-from . import cpu, firmware, sharc_body808 as body, body808, body909, tone808
+from . import cpu, firmware, sharc_body808 as body, body808, body909, tone808, retrigger808
 
 ROOT = cpu.ROOT
 FOLDER = ROOT / "out/dn2/silent"
@@ -567,7 +567,16 @@ def full_os() -> dict:
                 pole=body808.retention(native[1])*complex(
                     math.cos(2*math.pi*body808.FREQUENCY/body808.SAMPLE_RATE),
                     math.sin(2*math.pi*body808.FREQUENCY/body808.SAMPLE_RATE))
-                expected=(2*g/(1-(1-2*g)/pole)*complex(y,x)).imag
+                node=struct.unpack("<f",bytes.fromhex(emu.dsp_peek(0x20092200+4*lane,4)["hex"]))[0]
+                sigma=-body808.SAMPLE_RATE*math.log(body808.retention(native[1]))
+                omega=2*math.pi*body808.FREQUENCY
+                forcing=complex(-1/(retrigger808.R161*retrigger808.C42),
+                                sigma/(omega*retrigger808.R161*retrigger808.C42))
+                particular=-forcing*node/(complex(-sigma,-omega)+1/retrigger808.TAU)
+                rc_pole=math.exp(-1/(body808.SAMPLE_RATE*retrigger808.TAU))
+                homogeneous=complex(x,y)-particular
+                expected=(2*g/(1-(1-2*g)/pole.conjugate())*homogeneous).real
+                expected+=2*g/(1-(1-2*g)/rc_pole)*particular.real
                 previous_input, previous_output = struct.unpack("<2f",bytes.fromhex(
                     emu.dsp_peek(0x20092140+8*lane,8)["hex"]))
                 tone_last = ((1-g)*capacitor-g*x)/(1-2*g)

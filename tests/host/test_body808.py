@@ -1,7 +1,7 @@
 import unittest
 
 from x0x.analysis import analyze
-from x0x.body808 import FREQUENCY, ATTACK_FREQUENCY, ATTACK_SAMPLES, GAIN, SAMPLE_RATE, TAU, reference
+from x0x.body808 import FREQUENCY, ATTACK_FREQUENCY, ATTACK_SAMPLES, GAIN, SAMPLE_RATE, TAU, _main_reference as reference
 
 
 def impulse_shape(n, k, raw):

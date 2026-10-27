@@ -1,5 +1,10 @@
 # 808 Decay calibration from the training recordings
 
+These measurements describe the earlier calibration. The subsequent
+[companion input](808-companion.md) keeps these pole losses but adds continuing
+forcing, so finite-window decay fits can differ from the bare pole time constant.
+Current waveform checks use the driven analytical oracle.
+
 The next existing #9/#2 step shortens the 808's excessive tails on both CPUs.
 The old raw-body range was approximately 142 ms to 1 second, with a 250 ms
 default. At fixed reference Tone 128, the two-second positive-peak fits are

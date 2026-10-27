@@ -1,5 +1,9 @@
 # 808 capacitor state at the initial frequency switch
 
+The conversion remains in use. Measurements below describe the historical
+state-only build; the subsequent [companion increment](808-companion.md) adds
+the source-separated input on both CPUs.
+
 This #9/#79 increment corrects the state conversion at the end of the initial
 6 ms window on both CPUs. The preceding [bridge derivation](808-retrigger.md)
 showed that retaining modal x/y across a resistance change does not retain
@@ -121,6 +125,6 @@ Native firmware SHA256:
 
 The HTML report and held-out audio remain untouched. #78 reset behavior,
 historical #20 silence residue and #80 late MODEL delivery keep their separate
-acceptance status. Next integrate the companion input with consistent forcing
-and a documented fixed voltage-to-audio scale, retaining explicit approximations
-for the remaining circuit stages.
+acceptance status. The subsequent companion increment supplies that input;
+main pulse shaping/forcing and the remaining feedback/loading/leakage stages
+continue as planned circuit-alignment work.

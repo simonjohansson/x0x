@@ -1,9 +1,9 @@
 /* Provisional 808 body: damped 47.65 Hz sine at 48 kHz with live decay.
- * void x0x_808_body(int32_t state[3], int32_t output[32], uint32_t start, uint32_t decay_raw).
+ * void x0x_808_body(int32_t state[4], int32_t output[32], uint32_t start, uint32_t decay_raw).
  * decay_raw is caller-bounded to 0..32512; default 16384 gives tau = 143 ms.
- * State is {Q31 x,y,initial_samples_remaining}; drive=1 ms, frequency switch=6 ms.
- * shortcut: START restarts the body and 1 ms rectangle; shaped excitation,
- * physical forcing/gain and residual-state retrigger follow in #9/#79.
+ * State is {Q31 x,y,initial_samples_remaining,Q31 C39 node}; 15 V encodes as .25 FS.
+ * shortcut: source-separated C39 and fixed encoding; main pulse shaping,
+ * full feedback/loading and residual-state retrigger follow in #9/#79.
  */
     .text
     .globl x0x_808_body
@@ -39,13 +39,15 @@ x0x_808_body:
     moveq #0, %d4
     moveq #0, %d5
     move.l #288, %d7
+    move.l #25411890, %d0 /* .71 V / 60; positive D52 clamp at START */
+    move.l %d0, 12(%a0)
 .Lcontinue:
     move.l #0xb0, %d0 /* fractional, saturated, nearest-even */
     move.l %d0, %macsr
     /* Three reference-training anchors; stock feedback/pot modeling remains open. */
     move.l 92(%sp), %d6
     cmpi.l #16384, %d6
-    bge.s .Ldecay_high
+    bge .Ldecay_high
     move.l #131072, %d0 /* low branch excludes 16384, keeping the product signed-positive */
     mulu.l %d0, %d6
     tst.l %d7
@@ -54,13 +56,21 @@ x0x_808_body:
     move.l #36801676, %d3
     move.l #1030110, %d0
     movea.l #17667, %a2
-    bra.s .Ldecay_coefficients
+    movea.l #-2979664, %a3
+    movea.l #-1431, %a4
+    movea.l #134297, %a5
+    movea.l #-83403, %a6
+    bra .Ldecay_coefficients
 .Lsteady_low:
     move.l #2146098800, %d2
     move.l #13386187, %d3
     move.l #1030242, %d0
     movea.l #6426, %a2
-    bra.s .Ldecay_coefficients
+    movea.l #-2979791, %a3
+    movea.l #-1431, %a4
+    movea.l #308271, %a5
+    movea.l #-229334, %a6
+    bra .Ldecay_coefficients
 .Ldecay_high:
     subi.l #16384, %d6
     move.l #133152, %d0 /* floor(2^31 / 16128) */
@@ -71,12 +81,20 @@ x0x_808_body:
     move.l #36819343, %d3
     move.l #190576, %d0
     movea.l #3268, %a2
-    bra.s .Ldecay_coefficients
+    movea.l #-2981094, %a3
+    movea.l #-265, %a4
+    movea.l #50893, %a5
+    movea.l #-15430, %a6
+    bra .Ldecay_coefficients
 .Lsteady_high:
     move.l #2147129041, %d2
     move.l #13392613, %d3
     move.l #190600, %d0
     movea.l #1189, %a2
+    movea.l #-2981221, %a3
+    movea.l #-265, %a4
+    movea.l #78937, %a5
+    movea.l #-42428, %a6
 .Ldecay_coefficients:
     move.l %d2, %acc0
     mac.l %d6, %d0, %acc0
@@ -85,6 +103,20 @@ x0x_808_body:
     move.l %a2, %d0
     mac.l %d6, %d0, %acc0
     movclr.l %acc0, %d3
+    /* Exact decaying-input integral at the three anchors; interpolate with Decay. */
+    move.l %a3, %d0
+    move.l %d0, %acc0
+    move.l %a4, %d0
+    mac.l %d6, %d0, %acc0
+    movclr.l %acc0, %d0
+    movea.l %d0, %a3 /* companion Gx */
+    move.l %a5, %d0
+    move.l %d0, %acc0
+    move.l %a6, %d0
+    mac.l %d6, %d0, %acc0
+    movclr.l %acc0, %d0
+    movea.l %d0, %a2 /* companion Gy */
+    movea.l 12(%a0), %a5
     movea.l %d7, %a4
     moveq #32, %d6
 .Lsample:
@@ -102,11 +134,24 @@ x0x_808_body:
     mac.l %d5, %d3, %acc0
     mac.l %d5, %d2, %acc1
     msac.l %d4, %d3, %acc1
+    move.l %a5, %d0
+    move.l %a3, %d1
+    mac.l %d0, %d1, %acc0
+    move.l %a2, %d1
+    mac.l %d0, %d1, %acc1
     movclr.l %acc0, %d4
     movclr.l %acc1, %d5
+    move.l #2146128341, %d1 /* exp(-1/(48000*.033)) */
+    mac.l %d0, %d1, %acc0
+    movclr.l %acc0, %d1
+    cmp.l %d0, %d1
+    bne.s .Lnode_decay
+    moveq #0, %d1 /* Clear only a rounding fixed point, not a fitted tail threshold. */
+.Lnode_decay:
+    movea.l %d1, %a5
     move.l %d4, (%a1)+
     subq.l #1, %d6
-    bne.s .Lsample
+    bne .Lsample
     cmpa.l #32, %a4
     bne .Lstore_body
     /* Preserve physical capacitor voltage at the frequency switch.
@@ -148,10 +193,14 @@ x0x_808_body:
     mac.l %d5, %d6, %acc0
     msac.l %d4, %d3, %acc0
     movclr.l %acc0, %d5
+    move.l %a5, %d0
+    subi.l #536870912, %d0 /* 15 V envelope falls; D52 does not clamp the negative edge. */
+    movea.l %d0, %a5
 .Lstore_body:
     move.l %d4, (%a0)
     move.l %d5, 4(%a0)
     move.l %d7, 8(%a0)
+    move.l %a5, 12(%a0)
     moveq #0, %d0
     move.l %d0, %macsr
     move.l 44(%sp), %d0

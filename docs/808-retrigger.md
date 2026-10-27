@@ -3,8 +3,9 @@
 This #9/#79 checkpoint establishes an isolated **host-only** reference for
 C39/R161/D52. It does not change production DSP, resolve the current initial
 pitch regressions, or qualify a new native/reference comparison.
-The subsequent [state-conversion increment](808-switch-state.md) applies the
-charge-continuity result on both CPUs; companion forcing itself remains open.
+The subsequent [state conversion](808-switch-state.md) and
+[companion integration](808-companion.md) apply these results on both CPUs.
+Measurements and host-only scope below describe this earlier foundation.
 
 ## Circuit and explicit assumptions
 

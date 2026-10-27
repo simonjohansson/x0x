@@ -114,7 +114,7 @@ def full_os():
                 state["coupling_error"] = max(state["coupling_error"], error)
                 state["coupling_difference"] = max(state["coupling_difference"], max(abs(a-b) for a,b in zip(words,coupling["input"])))
                 state["triangle_samples"][active["slot"]] = None
-                remaining = word(names["body"] + 12*active["slot"] + 8)
+                remaining = word(names["body"] + 16*active["slot"] + 8)
                 assert remaining == active["expected_pulse"], "native 808 initial-frequency counter changed"
                 state["pulse_counts"].add(remaining)
                 state["pulse_blocks"] += 1
@@ -171,7 +171,7 @@ def full_os():
             assert active is not None, "909 ASM ran outside the machine callback"
             sp = uc.reg_read(UC_M68K_REG_A7)
             saved, output, start, decay = struct.unpack(">4I", uc.mem_read(sp + 4, 16))
-            assert saved == names["body"] + active["slot"] * 12 and output == names["fw_voices"] + active["slot"] * 128
+            assert saved == names["body"] + active["slot"] * 16 and output == names["fw_voices"] + active["slot"] * 128
             assert start == active["fresh"], "909 lost the native START flag"
             active["triangle"] = True
             active["decay909"] = decay
@@ -184,7 +184,7 @@ def full_os():
             assert active is not None
             sp = uc.reg_read(UC_M68K_REG_A7)
             owner, output, start = struct.unpack(">3I",uc.mem_read(sp+4,12))
-            assert owner == names["body"]+12*active["slot"] and start == active["fresh"]
+            assert owner == names["body"]+16*active["slot"] and start == active["fresh"]
             assert output == names["fw_voices"]+128*active["slot"]
             active["expected_pulse"] = body808.ATTACK_SAMPLES-32 if start else max(word(owner+8)-32,0)
         session.at(names["x0x_808_body"],checked(pulse_entered))
@@ -443,7 +443,7 @@ def full_os():
             report["tone_pre_capture_peak_trace"] = quiet_peaks
             report["tone_pre_capture_pcm16_peak"] = quiet_peaks[-1]
             if any(quiet):
-                report["tone_pre_capture_body_state"] = list(struct.unpack(">24i",uc.mem_read(names["body"],96)))
+                report["tone_pre_capture_body_state"] = list(struct.unpack(">32i",uc.mem_read(names["body"],128)))
                 report["tone_pre_capture_selection"] = list(struct.unpack(">24I",uc.mem_read(names["selection"],96)))
             report["tone_pre_capture_wait_ms"] = (quiet_wait+1)*100
             report["capture_baselines"]["tone_"+name] = dict(peak_pcm16=quiet_peaks[-1],

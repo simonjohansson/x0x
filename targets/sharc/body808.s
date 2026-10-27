@@ -1,6 +1,6 @@
 // First provisional 808 resonator/Tone and unshaped 909 triangle bodies.
 // Per slot: {callback count since model change, selected code}; 0=inactive, 1=808, 2=909.
-// SDK input R4. Metadata L2; body +128, Tone +256, coupling +320, pulse counters +448.
+// Metadata L2; body +128, Tone +256, coupling +320, counters +448, C39 nodes +512.
 .SECTION/SW callback_code;
 .GLOBAL sharc_voice_render.;
 sharc_voice_render.:
@@ -105,6 +105,12 @@ starting:
     I4=R0;
     R0=0;
     DM(I4,M5)=R0;
+    R0=LSHIFT R2 BY 2;
+    R1=0x20092200;
+    R0=R0+R1;
+    I4=R0;
+    R0=0;
+    DM(I4,M5)=R0;
     // shortcut: reset Tone on START until residual-state retrigger and logical ownership are qualified.
     I4=R13;
     R0=0;
@@ -171,6 +177,12 @@ selected:
     R1=0;
     R4=288;
     DM(I0,M5)=R4;
+    R4=I0;
+    R5=64;
+    R4=R4+R5;
+    I4=R4;
+    R4=0x3c41e099; // .71 V / 60; ideal positive D52 clamp
+    DM(I4,M5)=R4;
     JUMP render_body;
 continue_body:
     I4=R14;
@@ -178,6 +190,7 @@ continue_body:
     I4=R15;
     R1=DM(I4,M5);
 render_body:
+    I1=R15;
     // shortcut: three training anchors, not the stock feedback network/pot curve.
     // Use c-1 to avoid float32 radius bias when c is close to one.
     // S03 equation7/section8.1: nominal 131.006 Hz for 6 ms, then 47.65 Hz.
@@ -191,12 +204,26 @@ render_body:
     R3=0xba4a7914;
     R4=0x3788f17b;
     R5=0x3c8c6323;
+    R14=0xb5b16be3;
+    R15=0xbab5dd3f;
+    R4=0xb8a19fdd;
+    I12=R4;
+    R4=0x3883262d;
+    I13=R4;
+    R4=0x3788f17b;
     JUMP decay_coefficients;
 steady_low:
     R2=0x3a798f0c;
     R3=0xba290c80;
     R4=0x36c73f05;
     R5=0x3bcc41cb;
+    R14=0xb5b16dd2;
+    R15=0xbab5df3a;
+    R4=0xb95e3583;
+    I12=R4;
+    R4=0x391685d9;
+    I13=R4;
+    R4=0x36c73f05;
     JUMP decay_coefficients;
 decay_high:
     R4=DM(I0,M5);
@@ -206,17 +233,38 @@ decay_high:
     R3=0xb9c8b858;
     R4=0x364de63d;
     R5=0x3c8c7126;
+    R14=0xb4856141;
+    R15=0xbab5ef66;
+    R4=0xb773022b;
+    I12=R4;
+    R4=0x38020432;
+    I13=R4;
+    R4=0x364de63d;
     JUMP decay_coefficients;
 steady_high:
     R2=0x393b9c4a;
     R3=0xb985d886;
     R4=0x3595c97c;
     R5=0x3bcc562d;
+    R14=0xb48562b5;
+    R15=0xbab5f161;
+    R4=0xb8270cc1;
+    I12=R4;
+    R4=0x386e5b47;
+    I13=R4;
+    R4=0x3595c97c;
 decay_coefficients:
     F2=F2*F11;
     F2=F2+F3;
     F3=F4*F11;
     F3=F3+F5;
+    // Source-separated C39 continuous-input integral, at the same Decay anchors.
+    F14=F14*F11;
+    F14=F14+F15;
+    R15=I12;
+    R4=I13;
+    F15=F15*F11;
+    F15=F15+F4;
     // shortcut: resistance-linear bright-up Tone mapping until the C-taper is calibrated.
     // Physical RC TPT coefficient: (2-t)/(102.224-99.112*t), t=raw/32512.
     F6=FLOAT R6;
@@ -247,17 +295,20 @@ decay_coefficients:
     F11=F4*F6;
     I4=R13;
     R12=DM(I4,M5);
-    I1=R15;
     I2=R13;
     // Unloaded C47=.47uF into fixed wide-open VR4=100k; full output loading remains open.
-    R14=0x3f7fe2f5;
-    R15=0x3f7ff17a;
     R7=DM(I3,M5);
     R10=DM(I5,M5);
     R9=32;
     R13=4;
     R4=DM(I0,M5);
     I12=R4;
+    R4=I0;
+    R5=64;
+    R4=R4+R5;
+    I4=R4;
+    R4=DM(I4,M5);
+    I13=R4;
 body_sample:
     R4=DM(I0,M5);
     R4=PASS R4;
@@ -278,15 +329,25 @@ no_pulse:
     F6=F3*F0;
     F5=F5-F6;
     F1=F1+F5;
+    R5=I13;
+    F6=F14*F5;
+    F4=F4+F6;
+    F6=F15*F5;
+    F1=F1+F6;
     R0=R4;
+    R6=0x3f7fd6a4; // exp(-1/(48000*.033))
+    F5=F5*F6;
+    I13=R5;
     F4=F0-F12;
     F4=F11*F4;
     F5=F12+F4;
     F12=F5+F4;
     F4=F5-F7;
     R7=R5;
-    F4=F15*F4;
-    F10=F14*F10;
+    R6=0x3f7ff17a;
+    F4=F6*F4;
+    R6=0x3f7fe2f5;
+    F10=F6*F10;
     F10=F10+F4;
     I4=R8;
     DM(I4,M5)=R10;
@@ -321,6 +382,10 @@ no_pulse:
     F1=F1*F5;
     F4=F4*F0;
     F1=F1-F4;
+    R4=I13;
+    R5=0x3e800000;
+    F4=F4-F5;
+    I13=R4;
 store_body:
     R4=I1;
     R4=R4-R13;
@@ -330,6 +395,12 @@ store_body:
     DM(I2,M5)=R12;
     DM(I3,M5)=R7;
     DM(I5,M5)=R10;
+    R4=I0;
+    R5=64;
+    R4=R4+R5;
+    I4=R4;
+    R4=I13;
+    DM(I4,M5)=R4;
     JUMP finish;
 body909:
     R0=4;

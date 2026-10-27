@@ -318,3 +318,17 @@ resets; DN reproduces #20's one-count silence baseline; DN2's tested scenario
 passes. Default/short raw residuals improve slightly but both long settings
 worsen; retain those regressions without changing acceptance limits. The
 original HTML and held-out recordings remain untouched.
+
+## 808 companion excitation — 27 October 2026
+
+The [C39 companion input](808-companion.md) is integrated on both CPUs with one
+new volatile state word per voice, consistent negative band-pass forcing and a
+fixed private voltage encoding. 134 host/C tests, both CPU suites and all three
+installed emulator scenarios ran. DT retains only #78 resets; DN's current
+baselines pass without resolving #20; DN2 passes its tested scenario. #80 stays
+unqualified. First-25-ms errors improve about 5–6% at all five training settings;
+whole-clip short errors improve, default barely changes, and long errors worsen
+about 7%. Retain those regressions. Next implement the existing main pulse-shaper
+and proper bridge input on both CPUs, then compare again. Do not add another
+research-only checkpoint or fit away the missing input physics. HTML and
+held-out audio remain untouched; full fidelity and combined acceptance stay open.

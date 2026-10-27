@@ -108,7 +108,7 @@ def run(folder=None):
     cases, default_words, worst = [], [], 0
     frames = body808.SAMPLE_RATE // 2
     for raw in (0, 1, 16383, 16384, 16385, 32511, 32512):
-        runner = Runner(image, state_words=3)
+        runner = Runner(image, state_words=4)
         assert runner.render(decay_raw=raw) == [0] * 32, "untriggered zero state is not silent"
         words = []
         for block in range(frames // 32):
@@ -121,26 +121,35 @@ def run(folder=None):
         # Stable feedback accumulates Q31 quantization; no gain/time fitting.
         assert error <= 1e-5, f"decay {raw}: waveform error {error} exceeds 1e-5 FS"
         measures = analyze(samples, body808.SAMPLE_RATE)
+        expected_measures = analyze(expected, body808.SAMPLE_RATE)
         assert measures["onset_sample"] == 0 and measures["onset_polarity"] == 1
         assert measures["full_scale_samples"] == 0
         frequency = measures["frequency"]["median_hz"]
         tau = measures["decay_positive"]["time_constant_s"]
-        assert frequency is not None and abs(frequency - body808.FREQUENCY) <= .02, frequency
-        assert tau is not None and abs(tau - body808.decay_tau(raw)) <= .001, tau
+        # The finite-window fit includes ongoing C39 forcing, not just the bare pole.
+        assert frequency is not None and abs(frequency - expected_measures["frequency"]["median_hz"]) <= .02, frequency
+        expected_tau = expected_measures["decay_positive"]["time_constant_s"]
+        assert tau is not None and abs(tau - expected_tau) <= .001, tau
         path = folder / f"samples_{raw}.json"
         path.write_text(json.dumps(samples) + "\n")
         cases.append(dict(decay_raw=raw, waveform_peak_error_fs=error, frequency_hz=frequency,
-                          decay_tau_s=tau, expected_tau_s=body808.decay_tau(raw), samples=str(path)))
+                          decay_tau_s=tau, expected_tau_s=expected_tau,
+                          raw_body_time_constant_s=body808.decay_tau(raw), samples=str(path)))
         assert runner.render(start=1, decay_raw=raw) == words[:32], "retrigger differs"
         assert runner.render(decay_raw=raw) == words[32:64], "retrigger continuation differs"
         if raw == 16384:
             default_words, default_samples, default_measures = words, samples, measures
             default_case = cases[-1]
-    interleaved = Runner(image, state_words=3)
+    interleaved = Runner(image, state_words=4)
     for block in range(20):
         interleaved.render(7, int(block % 5 == 0), 32512)
         assert interleaved.render(0, int(block == 0)) == default_words[32 * block:32 * (block + 1)]
-    runner, live, raw = Runner(image, state_words=3), [], 16384
+    for residue in (-1,1):
+        tail = Runner(image, state_words=4)
+        tail.uc.mem_write(tail.STATES+12, struct.pack(">i",residue))
+        assert tail.render() == [0]*32
+        assert struct.unpack(">i",tail.uc.mem_read(tail.STATES+12,4))[0] == 0, "C39 rounding fixed point was retained"
+    runner, live, raw = Runner(image, state_words=4), [], 16384
     changes = {8000: 32512, 16000: 0}
     for sample in range(0, frames, 32):
         raw = changes.get(sample, raw)
