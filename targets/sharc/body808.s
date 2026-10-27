@@ -642,16 +642,18 @@ leakage_cache_high:
     I4=R5;
     DM(I4,M5)=R4;
 main_setup_done:
-    // shortcut: resistance-linear bright-up Tone mapping until the C-taper is calibrated.
-    // Physical RC TPT coefficient: (2-t)/(102.224-99.112*t), t=raw/32512.
+    // Nominal modern C15 rational taper; the exact vintage track is unmeasured.
+    // Physical RC TPT coefficient: (750+1375*t)/(38334-31721*t), t=raw/32512.
     F6=FLOAT R6;
     R11=0x38010204;
     F6=F6*F11;
-    R11=0x40000000;
-    F4=F11-F6;
-    R11=0x42c63958;
+    R11=0x44abe000;
+    F4=F11*F6;
+    R11=0x443b8000;
+    F4=F4+F11;
+    R11=0x46f7d200;
     F5=F11*F6;
-    R11=0x42cc72b0;
+    R11=0x4715be00;
     F5=F11-F5;
     // Positive normal-float reciprocal seed, refined without an undocumented ROM lookup.
     R6=0x7f000000;

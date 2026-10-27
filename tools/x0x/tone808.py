@@ -1,6 +1,6 @@
 """808 Tone RC reference from S01 p9 and S03 section9/Table1/Equation11.
 
-Native knob direction/taper is provisionally reverse-resistance-linear.
+Native knob direction follows R23; the taper uses a nominal rational C15 curve.
 The circuit's voltage/current trapezoid is independent of the ASM TPT form.
 """
 import math
@@ -16,8 +16,9 @@ R171, R172, VR5, C45 = 220.0, 10000.0, 10000.0, 1e-7
 def resistance(tone_raw):
     if type(tone_raw) is not int or not 0 <= tone_raw <= RAW_MAX:
         raise ValueError("Tone must be an exact native word in 0..32512")
-    # shortcut: physical C taper/direction calibration remains open in #79.
-    pot = VR5 * (1 - tone_raw / RAW_MAX)
+    position = tone_raw / RAW_MAX
+    # shortcut: nominal 15% midpoint; exact vintage curve remains open in #79.
+    pot = VR5 * (1 - position) / (1 + (14 / 3) * position)
     return R171 + R172 * pot / (R172 + pot)
 
 

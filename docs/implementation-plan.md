@@ -22,6 +22,11 @@ The [continuing-pitch investigation](808-pitch-sigh-investigation.md) attributes
 the remaining long-kick error to Q43. Its isolated source corrections were
 rejected before porting; the accepted audio remains `853bb77`. Continue existing
 808 Tone-taper/output-loading work while retaining the open pitch error.
+The [nominal C-taper correction](808-tone.md) now replaces the provisional
+linear Tone law on both CPUs. Its isolated reference-transfer check improves
+all interior settings; absolute raw regressions remain recorded. Host/C UI and
+ColdFire component checks pass; SHARC, full-tail and native qualification are
+the current remaining gates for this increment.
 
 The 909 [diode shaper](909-shaping.md), [C9/IC12 Tune path](909-tune.md) and
 [loaded ENV1/Q12 VCA](909-vca.md) run on both CPUs and all three emulators.

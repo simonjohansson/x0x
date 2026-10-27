@@ -1,8 +1,8 @@
 # 808 passive Tone stage
 
 The measurements below predate [finite rectangular excitation](808-excitation.md).
-The network equations are unchanged; current composed/native evidence is kept
-with that increment rather than treating older body captures as current proof.
+The RC topology is unchanged. The control taper is now corrected as described
+below; older component/native numbers remain historical evidence.
 
 TNTUN now filters the provisional 808 body on DT, DN and DN2. This is one
 source-derived circuit stage in [#9](https://github.com/simonjohansson/x0x/issues/9)
@@ -20,11 +20,18 @@ The selected network is
 
 `Req = 220 + 10000*l/(1+l)` and `H(s) = 1/(1+s*Req*1e-7)`.
 
-The current native mapping is explicitly provisional: `l=1-tone_raw/32512`.
-Higher TNTUN is brighter. Tone 0 gives 5220 Ω and 304.895 Hz; Tone 127 gives
-220 Ω and 7234.316 Hz. This resistance-linear mapping is not the schematic's
-calibrated C-taper potentiometer, nor a verified stock knob direction. Default
-64 lies around 450 Hz. Deriving the physical taper remains in #79.
+S01 p.16 identifies the original part as EVH-LWAD25C14, Roland 13219313,
+10 kΩ(C). The p.9 wiring uses R23: increasing brightness reduces resistance
+from 10 kΩ toward zero. A modern Panasonic C-taper specification places R23
+at about 15% halfway through travel; it does not establish the exact vintage
+track. Use a bounded rational approximation to that nominal midpoint:
+
+`t=tone_raw/32512`, `l=(1-t)/(1+(14/3)*t)`.
+
+Higher TNTUN is brighter. Both endpoint resistances/cutoffs remain 5220 Ω /
+304.895 Hz and 220 Ω / 7234.316 Hz. Approved default64 now gives 1509.22 Ω /
+1054.55 Hz, versus the previous linear mapping's 3535.79 Ω / 450.13 Hz.
+The precise curve remains provisional; this is not an exact vintage-pot model.
 
 Coefficients update once per delivered 32-sample block. DT forwards native raw
 Tone, DN uses the existing bounded exact-position numerator, and DN2 reads
@@ -35,7 +42,8 @@ Native smoothing, p-locks and LFO delivery use these same inputs.
 
 At 48 kHz the bilinear RC coefficient is
 
-`G = 1/(1+2*48000*Req*1e-7) = (2-t)/(102.224-99.112*t)`, `t=raw/32512`.
+`G = 1/(1+2*48000*Req*1e-7) = (750+1375*t)/(38334-31721*t)`,
+`t=raw/32512`.
 
 Both ASM implementations use the TPT recurrence `v=G*(x-s)`, `y=s+v`,
 `s=y+v`. The capacitor-history state is owned by one voice. The independent
@@ -73,6 +81,40 @@ owner's charge. Residual circuit-state retrigger behavior and logical ownership
 qualification remain in #9/#20/#79; no SDK transport or saved format was added.
 
 ## Verification
+
+The current correction is motivated independently of the body mismatch.
+Same-Decay reference Tone pairs identify a default effective resistance around
+1503 Ω, versus the old 3536 Ω; the dark endpoint remains near 5220 Ω. All nine
+Decay settings and all three repetitions support the interior brightness
+correction. Pair identification fits RC relationships with no output-gain or
+delay parameter; it does not establish absolute physical resistance inside
+the software reference. A fixed nominal 15% rational curve follows the observed
+direction without fitting nine lookup-table knots. It still misses some of
+the reference's finer control shape.
+
+On that isolated Tone-pair diagnostic, the fixed curve improves every one of
+the 189 interior takes in all four 6/25/150/500 ms windows; the endpoint laws
+are unchanged. Interior mean 500 ms pair error falls .00555992→.00052224 FS.
+This control-specific evidence is separate from absolute engine-waveform error.
+
+The model-only 81-setting / 243-take / first-500-ms screen preserves raw timing,
+output gain, repetitions and the documented reference multiplier ×4. Mean raw
+error improves .0617813→.0586830 FS at 6 ms, .0744283→.0731033 at 25 ms,
+.0656949→.0647576 at 150 ms and .0460243→.0459027 at 500 ms. **Nineteen
+interior settings regress at 500 ms**, including every Tone223 setting and
+several Tone159/191 settings. Default peak moves .232411→.240234 FS toward
+the reference's .308554 FS. Body/pitch, Decay, gain, saved controls and lifecycle
+are unchanged; this does not fix the continuing Q43 pitch error.
+
+191 tracked host tests and seven compiled C/UI checks pass. Guarded ColdFire
+Tone and composed Tone/C47 suites pass, with maximum composed error 3.6234e-6 FS
+under the unchanged 1e-5 limit; both endpoint outputs remain byte-identical.
+SHARC component, committed-source full-tail/reference and installed-emulator
+qualification are tracked separately and must finish before claiming those
+gates. The screen is not a full-tail or native-emulator result. Source images,
+RC identification and screen receipts are under `out/808-tone-taper/` and
+`out/808-tone-identification/`; new CPU results are under `out/808-tone-c15/`.
+No held-out audio, fitted gain/alignment, physical device or website is used.
 
 The numerical/native results below are from the completed Tone increment,
 before 909 sound and coupling were added. [808-coupling.md](808-coupling.md)

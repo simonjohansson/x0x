@@ -2,7 +2,7 @@
  * void x0x_808_tone(int32_t *state, int32_t output[32], uint32_t tone_raw).
  * Q1.31 in-place TPT one-pole; state and output are aligned, disjoint extents.
  * tone_raw is caller-bounded to 0..32512. The caller owns lifecycle resets.
- * shortcut: reverse resistance-linear knob mapping; measured C taper is pending.
+ * shortcut: fixed nominal rational C15 approximation; exact vintage curve is unproven.
  */
     .text
     .globl x0x_808_tone
@@ -31,14 +31,14 @@ x0x_808_tone:
     movea.l 80(%sp), %a0
     movea.l 84(%sp), %a1
     move.l 88(%sp), %d3
-    /* G = 1000*(65024-raw) / (102224*32512-99112*raw). */
-    move.l #65024, %d2
-    sub.l %d3, %d2
-    move.l #1000, %d0
+    /* Nominal rational C15 rheostat: G=(750*32512+1375*raw)/(38334*32512-31721*raw). */
+    move.l %d3, %d2
+    move.l #1375, %d0
     mulu.l %d0, %d2
-    move.l #99112, %d0
+    addi.l #24384000, %d2
+    move.l #31721, %d0
     mulu.l %d0, %d3
-    move.l #3323506688, %d5
+    move.l #1246315008, %d5
     sub.l %d3, %d5
     moveq #0, %d6
     moveq #31, %d7
