@@ -118,7 +118,14 @@ same note, velocity and downstream settings; audio is not normalized.
 | --- | --- | --- |
 | DT | Actual ASM receives exact 0/32512; raw late/early energy ratios 0.01457/0.54881; captured downstream ratios 0.14332/0.65833 | Only the deferred #78 reset checks fail |
 | DN | Native knob endpoints reach exact 0/32512; raw late/early RMS ratios 0.018249/0.563319 and downstream ratios 0.012681/0.510993 | All checks pass across 16,591 callbacks |
-| DN2 | Native Decay verification in progress | Pending |
+| DN2 | Exact 0/32512 delivery; actual DSP-state tau 0.141888/1.000006 s; downstream late/early energy ratios 0.04551/0.50802 | All checks pass across 18,032 DSP frames; no halt/missing blocks |
+
+Decay is now verified through each native control path and actual audio output.
+DT captures are `out/dt/silent/decay-{short,long}-{raw,native}.wav`; DN captures
+are `out/dn/silent/808-decay-{short,long}-{raw,native}.wav`; DN2 captures are
+`out/dn2/silent/decay-{short,long}-native.wav`. The DT/DN tests observe actual
+rendered samples; DN2 also observes the two body state variables at two callback
+counts, measuring their squared-energy loss without assuming native wall time.
 
 Raw/direct and downstream measurements have different windows and host effects;
 compare short against long within each test, not the ratios across devices.

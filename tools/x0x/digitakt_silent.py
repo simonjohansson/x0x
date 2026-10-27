@@ -11,7 +11,7 @@ import sys
 import time
 import wave
 
-from . import cpu, firmware
+from . import audio, cpu, firmware
 from .digitakt_adapter import BASE, STACK, STOP
 
 ROOT = cpu.ROOT
@@ -173,7 +173,7 @@ def full_os():
                   stock=stock, firmware_sha256=hashlib.sha256(image.read_bytes()).hexdigest(),
                   digiemu_revision=cpu.revision(ROOT / "vendor/digiemu"),
                   companion_compatibility=compatibility,
-                  unqualified=["p-lock/LFO delivery", "save/reload", "strict-model qualification", "808 circuit fidelity/Tone/Decay response", "909 audio"])
+                  unqualified=["p-lock/LFO delivery", "save/reload", "strict-model qualification", "808 circuit fidelity/Tone response", "909 audio"])
     session = None
     try:
         with (FOLDER / "native-boot.log").open("w") as log, contextlib.redirect_stdout(log):
@@ -186,7 +186,8 @@ def full_os():
             never_fake_set_posts(session.m, session.ev, session.profile.set_post)
         uc, midi = session.m.uc, MidiIn()
         state = dict(active=None, callbacks=0, selected_callbacks=0, violations=[], controls=[],
-                     body_peak=0, silent_909_callbacks=0)
+                     body_peak=0, silent_909_callbacks=0,
+                     decay_phase=None, decay_started=False, decay_samples=[], decay_words=[])
         returns = set()
         def checked(fn):
             def run(*args):
@@ -211,6 +212,8 @@ def full_os():
                     peak = max(abs(x) for x in struct.unpack(">32i", after[lo:hi]))
                     state["body_peak"] = max(state["body_peak"], peak)
                     assert peak < 0x40000000, "808 body exceeded fixed internal headroom"
+                    if track == 0 and state["decay_phase"] and state["decay_started"]:
+                        state["decay_samples"].extend(struct.unpack(">32i", after[lo:hi]))
                 else:
                     assert after[lo:hi] == bytes(128), "inactive/909 callback was not silent"
                     state["silent_909_callbacks"] += int(initialized and model == 1)
@@ -230,6 +233,20 @@ def full_os():
                                    controls=list(struct.unpack(">8h", uc.mem_read(names["fw_voice_params"], 16))))
             state["active"]["return"] = ret
         session.at(names["x0x_dt_render"], checked(entered))
+        def body_entered(_uc, _at, _size, _data):
+            if not state["decay_phase"]:
+                return
+            sp = uc.reg_read(UC_M68K_REG_A7)
+            owner, _output, start, decay = struct.unpack(">4I", uc.mem_read(sp + 4, 16))
+            if owner != names["body_state"]:
+                return
+            if start:
+                state["decay_started"] = True
+                state["decay_samples"] = []
+                state["decay_words"] = []
+            if state["decay_started"]:
+                state["decay_words"].append(decay)
+        session.at(names["x0x_808_body"], checked(body_entered))
         def wait(ms=80):
             session.run_ms(ms)
             assert not session.halted and not state["violations"], (session.halted, state["violations"])
@@ -395,17 +412,51 @@ def full_os():
         reset = [stored()[1][i] for i in (17, 18, 19, 22)]
         report["page_reset"] = dict(actual=reset, expected=[16384, 16384, 16384, 0],
                                      status="passed" if reset == [16384, 16384, 16384, 0] else "failed")
+        # Same native track/AMP/velocity, different B values; compare actual DSP tails.
+        send([0x80, 60, 0, 0x81, 60, 0])
+        report["decay_audio"] = {}
+        for label, position in (("short", 0), ("long", 127)):
+            send([0xb0, 16, 64, 0xb0, 17, position, 0xb0, 18, 64, 0xb0, 21, 0])
+            wait(600)
+            state["decay_phase"] = label
+            state["decay_started"] = False
+            state["decay_samples"] = []
+            state["decay_words"] = []
+            begin_pcm = len(session.pcm)
+            send([0x90, 60, 100]); wait(750)
+            state["decay_phase"] = None
+            samples = state["decay_samples"]
+            assert len(samples) >= 19200 and state["decay_words"], label
+            early = sum(x*x for x in samples[:4800])
+            late = sum(x*x for x in samples[14400:19200])
+            assert early > 0
+            pcm = bytes(session.pcm[begin_pcm:])
+            with wave.open(str(FOLDER / f"decay-{label}-native.wav"), "wb") as wav:
+                wav.setparams((2, 2, session.audio_cfg["rate"], 0, "NONE", "not compressed"))
+                wav.writeframes(pcm)
+            audio.write_wav(FOLDER / f"decay-{label}-raw.wav", [x/2**31 for x in samples], 48000)
+            pcm_peak = max(abs(x) for x in struct.unpack("<"+"h"*(len(pcm)//2), pcm))
+            assert 0 < pcm_peak < 32767, label
+            report["decay_audio"][label] = dict(target=position, delivered_min=min(state["decay_words"]),
+                delivered_max=max(state["decay_words"]), frames=len(samples),
+                late_early_energy_ratio=late/early, native_pcm_peak=pcm_peak,
+                native_wav=str(FOLDER / f"decay-{label}-native.wav"),
+                raw_wav=str(FOLDER / f"decay-{label}-raw.wav"))
+            send([0x80, 60, 0])
+        assert (report["decay_audio"]["long"]["late_early_energy_ratio"] >
+                4 * report["decay_audio"]["short"]["late_early_energy_ratio"]), report["decay_audio"]
+        send([0xb0, 17, 64])
         assert state["active"] is None and state["selected_callbacks"] > 0 and not state["violations"], state
         report.update(callbacks=state["callbacks"], selected_callbacks=state["selected_callbacks"],
                       checked=["native machine selection", "native UART control delivery", "next-START MODEL latch",
-                               "808 body reaches native PCM", "909 blocks zero", "other track blocks preserved",
+                               "808 body reaches native PCM", "native Decay changes the actual ASM tail", "909 blocks zero", "other track blocks preserved",
                                "native LFO destination and modulation", "native sequencer parameter lock",
                                "x0x-only defaults helper scope"])
         restored = report["save_reload"]["restored"]
         if restored:
             report["checked"].append("native project save and pattern reload")
         report["checked"].append("native mixed 808/909 tracks")
-        report["unqualified"] = ["strict-model qualification", "808 circuit fidelity/Tone/Decay response", "909 audio"] + ([] if restored else ["save/reload"])
+        report["unqualified"] = ["strict-model qualification", "808 circuit fidelity/Tone response", "909 audio"] + ([] if restored else ["save/reload"])
         report["failed_checks"] = [name for name in ("defaults", "parameter_reset", "page_reset")
                                    if report[name]["status"] == "failed"]
         report["status"] = "passed" if not report["failed_checks"] and restored else "failed"

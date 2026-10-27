@@ -476,6 +476,52 @@ def full_os() -> dict:
             report["unlocked_base_after_plock"] = base
             assert base and all([p[k] for k in (0, 1, 2, 5)] == [16384, 16384, 16384, 0]
                                 for p in base.values()), base
+            # Read actual per-voice quadrature energy across a held native note.
+            report["decay_audio"] = {}
+            for label, position, note in (("short", 0, 72), ("long", 127, 73)):
+                emu.midi_in(bytes([0x81, 70, 0, 0xB1, cc["1"], position]))
+                emu.run_until(frames=emu.status()["dsp_frames"] + 600, timeout_wall_s=120)
+                path = out / f"decay-{label}-native.wav"
+                emu.call("pcm.tap", action="capture", path=str(path))
+                emu.midi_in(bytes([0x91, note, 100]))
+                emu.run_until(frames=emu.status()["dsp_frames"] + 100, timeout_wall_s=120)
+                ids = struct.unpack("<16H", bytes.fromhex(emu.dsp_peek(0x25C48C + 2*74, 32)["hex"]))
+                pitches = struct.unpack("<16H", bytes.fromhex(emu.dsp_peek(0x25C48C + 2, 32)["hex"]))
+                lanes = [i for i in range(16) if ids[i] == 20 and pitches[i] == note << 8]
+                assert len(lanes) == 1, (label, lanes)
+                lane = lanes[0]
+                def body_snapshot():
+                    metadata = struct.unpack("<2I", bytes.fromhex(emu.dsp_peek(0x20092000 + 8*lane, 8)["hex"]))
+                    xy = struct.unpack("<2f", bytes.fromhex(emu.dsp_peek(0x20092080 + 8*lane, 8)["hex"]))
+                    native = struct.unpack("<40H", bytes.fromhex(
+                        emu.dsp_peek(0x25C48C + 2*(0x6D + 0x49*lane), 80)["hex"]))
+                    assert metadata[1] == 1 and all(math.isfinite(x) for x in xy), (metadata, xy)
+                    energy = sum(x*x for x in xy)
+                    assert energy > 0
+                    return dict(callbacks=metadata[0], energy=energy, decay_raw=native[1])
+                early = body_snapshot()
+                emu.run_until(frames=emu.status()["dsp_frames"] + 500, timeout_wall_s=120)
+                late = body_snapshot()
+                emu.call("pcm.tap", action="capture_stop")
+                pcm = hook_ab.read_wav(path)
+                assert len(pcm) >= 28800 and all(math.isfinite(x) for x in pcm), label
+                peak = float(max(abs(pcm)))
+                assert 0 < peak < 1, (label, peak)
+                dt = (late["callbacks"] - early["callbacks"]) * 32 / 48000
+                ratio = late["energy"] / early["energy"]
+                assert dt > 0 and 0 < ratio < 1, (label, early, late)
+                first = sum(float(x)*float(x) for x in pcm[:9600])
+                tail = sum(float(x)*float(x) for x in pcm[19200:28800])
+                report["decay_audio"][label] = dict(target=position, slot=lane, early=early, late=late,
+                    raw_state_energy_ratio=ratio, measured_tau_s=-2*dt/math.log(ratio),
+                    pcm_peak_fs=peak, native_late_early_energy_ratio=tail/first,
+                    native_wav=str(path))
+                emu.midi_in(bytes([0x81, note, 0]))
+            assert (report["decay_audio"]["long"]["measured_tau_s"] >
+                    4 * report["decay_audio"]["short"]["measured_tau_s"]), report["decay_audio"]
+            assert (report["decay_audio"]["long"]["native_late_early_energy_ratio"] >
+                    4 * report["decay_audio"]["short"]["native_late_early_energy_ratio"]), report["decay_audio"]
+            emu.midi_in(bytes([0xB1, cc["1"], 64]))
             report["final_status"] = emu.status()
             final = report["final_status"]
             assert final["cf"]["ready"] and final["cf"]["error"] is None, final
@@ -487,7 +533,7 @@ def full_os() -> dict:
         report["traceback"] = traceback.format_exc()
     report["unqualified"] = [
         "persistence across emulator/device restart",
-        "808 circuit fidelity and Tone/Decay response",
+        "808 circuit fidelity and Tone response",
         "909 audio and real-device timing",
     ]
     (out / "native-boot-report.json").write_text(json.dumps(report, indent=2) + "\n")

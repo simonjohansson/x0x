@@ -3,6 +3,7 @@ import argparse
 import contextlib
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import struct
@@ -62,9 +63,9 @@ def full_os():
     report = dict(status="failed", scope="standard full-OS digiemu Session; native panel/encoder",
                   stock=stock, firmware_sha256=hashlib.sha256(image.read_bytes()).hexdigest(),
                   digiemu_revision=cpu.revision(ROOT / "vendor/digiemu"),
-                  unqualified=["strict-model qualification", "faithful 808 timbre and retrigger", "sound-control response", "909 audio"])
+                  unqualified=["strict-model qualification", "faithful 808 timbre and retrigger", "Tone response", "909 audio"])
     state = dict(active=None, callbacks=0, starts=[], violations=[], observations=[], phase="", samples=[], decay_text=[],
-                 body_nonzero=0, body_peak=0, silent_909=0)
+                 body_nonzero=0, body_peak=0, silent_909=0, audio_capture=None)
     session = None
     try:
         with (FOLDER / "native-boot.log").open("w") as log, contextlib.redirect_stdout(log):
@@ -97,6 +98,13 @@ def full_os():
                 assert peak <= 1 << 29, "808 body exceeded its fixed quarter-scale bound"
                 state["body_peak"] = max(state["body_peak"], peak)
                 state["body_nonzero"] += peak != 0
+                capture = state["audio_capture"]
+                if capture is not None and active["track"] == 0:
+                    if active["fresh"]:
+                        assert capture["slot"] is None, "decay capture unexpectedly retriggered"
+                        capture["slot"] = active["slot"]
+                    if active["slot"] == capture["slot"]:
+                        capture["words"].extend(struct.unpack(">32i", after[lo:hi]))
             else:
                 assert after[lo:hi] == bytes(128), "unimplemented 909 did not stay silent"
                 state["silent_909"] += 1
@@ -182,6 +190,46 @@ def full_os():
                                peak_pcm16=pcm_peak, normalization="none", source="isolated native note on the 808 track")
         assert state["starts"], "native key produced no x0x START"
         report["808"] = state["starts"][-1]
+        # The same isolated note at both native Decay endpoints, before adding locks or LFOs.
+        response = {}
+        for name, target, detents in (("short", 0, -320), ("long", 32512, 320)):
+            turn("B", detents)
+            assert stored()[2] == target, (name, stored())
+            wait(500)
+            state["phase"] = "decay-" + name
+            state["audio_capture"] = dict(slot=None, words=[])
+            begin = len(session.pcm)
+            session.press(session.code("9")); wait(800)
+            raw = state["audio_capture"]["words"]
+            state["audio_capture"] = None
+            native = bytes(session.pcm[begin:])
+            session.release(session.code("9")); wait(300)
+            values = [v[1] for phase, controls in state["samples"] if phase == "decay-" + name
+                      for v in controls if v[0] == 1]
+            assert values and set(values) == {target}, (name, sorted(set(values)))
+            pcm_words = [v[0] for v in struct.iter_unpack("<h", native)]
+            def ratio(samples, channels):
+                assert len(samples) >= 36000 * channels, "decay capture is too short"
+                early, late = samples[2400 * channels:7200 * channels], samples[28800 * channels:36000 * channels]
+                early_power = sum(v * v for v in early) / len(early)
+                assert early_power > 0, "decay capture has no attack"
+                return math.sqrt(sum(v * v for v in late) / len(late) / early_power)
+            response[name] = dict(raw=target, raw_late_early_rms=ratio(raw, 1),
+                                  native_late_early_rms=ratio(pcm_words, 2), raw_frames=len(raw),
+                                  native_frames=len(native)//4)
+            for kind, data, channels, width in (("raw", struct.pack("<" + "i" * len(raw), *raw), 1, 4),
+                                                ("native", native, 2, 2)):
+                path = FOLDER / f"808-decay-{name}-{kind}.wav"
+                with wave.open(str(path), "wb") as wav:
+                    wav.setparams((channels, width, 48000, 0, "NONE", "not compressed"))
+                    wav.writeframes(data)
+                response[name][kind + "_path"] = str(path)
+        state["phase"] = ""
+        assert response["long"]["raw_late_early_rms"] > 4 * response["short"]["raw_late_early_rms"], response
+        assert response["long"]["native_late_early_rms"] > 4 * response["short"]["native_late_early_rms"], response
+        report["decay_response"] = response
+        turn("B", -80)
+        assert 0 < stored()[2] < 32512, "restore an editable Decay base for the lock scenario"
         controls()
         for _ in range(16):
             if stored()[4] >= 16384: break
@@ -278,7 +326,7 @@ def full_os():
         report.update(status="passed", callbacks=state["callbacks"], starts=state["starts"],
                       checked=["native menu/defaults", "native first-page controls", "native encoder MODEL delivery",
                                "next-START MODEL latch", "real companion fresh/settled frame",
-                               "bounded nonzero 808 voice output", "silent 909 voice output", "isolated downstream stereo PCM", "other voices preserved", "native p-lock and held-lock display", "native LFO delivery", "native save/reload", "mixed 808/909 tracks"])
+                               "bounded nonzero 808 voice output", "native Decay changes raw and downstream decay time", "silent 909 voice output", "isolated downstream stereo PCM", "other voices preserved", "native p-lock and held-lock display", "native LFO delivery", "native save/reload", "mixed 808/909 tracks"])
     except (AssertionError, ValueError) as error:
         report["reason"] = str(error)
     finally:

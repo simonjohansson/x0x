@@ -3,8 +3,9 @@
 The silent-first priority set on 26 October 2026 is complete: all three native
 mod milestones are accepted, with the DT reset bug deferred to #78. In #9, the
 [first audible 808 body](808-body.md) now runs in all three emulators. It is a
-uncalibrated damped sine. Live Decay now changes its feedback retention; Tone
-and further 808 circuit detail follow while retaining these integrations.
+uncalibrated damped sine. Live Decay changes its feedback retention and is
+verified through native controls/audio on all three machines. Tone and further
+808 circuit detail follow while retaining these integrations.
 
 The product remains one mod per device containing 808 and 909 behind a saved
 per-sound/track MODEL selector. Different tracks/voices can select different
