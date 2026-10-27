@@ -1,4 +1,4 @@
-// First 808 resonator body; 909 remains silent.
+// First provisional 808 resonator/Tone and unshaped 909 triangle bodies.
 // Per slot: {callback count since model change, selected code}; 0=inactive, 1=808, 2=909.
 // SDK input is in R4. Metadata is at L2 base, x/y pairs at +128, Tone states at +256.
 .SECTION/SW callback_code;
@@ -128,7 +128,7 @@ selected:
     DM(I4,M5)=R6;
     R0=1;
     COMP(R6,R0);
-    IF NE JUMP silent;
+    IF NE JUMP body909;
     I4=R15;
     R6=DM(I4,M5);
     R0=4;
@@ -221,6 +221,51 @@ body_sample:
     DM(I4,M5)=R1;
     I4=R13;
     DM(I4,M5)=R12;
+    JUMP finish;
+body909:
+    R0=124;
+    R14=R3+R0;
+    R0=4;
+    R15=R14+R0;
+    R7=PASS R7;
+    IF EQ JUMP continue909;
+    // shortcut: fixed 50 Hz, 250 ms envelope and zero-crossing START until 909 circuit modeling.
+    R0=0x40000000;
+    R1=0x3e800000;
+    JUMP render909;
+continue909:
+    I4=R14;
+    R0=DM(I4,M5);
+    I4=R15;
+    R1=DM(I4,M5);
+render909:
+    R2=0xb8aec161;
+    R3=4473924;
+    R9=32;
+    R10=4;
+sample909:
+    R0=R0+R3;
+    R4=LSHIFT R0 BY 1;
+    R5=0x80000000;
+    R4=R4 XOR R5;
+    R0=PASS R0;
+    IF GE JUMP rising909;
+    R4=NOT R4;
+rising909:
+    R5=-31;
+    F4=FLOAT R4 BY R5;
+    F5=F1*F2;
+    F1=F1+F5;
+    F4=F4*F1;
+    I4=R8;
+    DM(I4,M5)=R4;
+    R8=R8+R10;
+    R9=R9-1;
+    IF NE JUMP sample909;
+    I4=R14;
+    DM(I4,M5)=R0;
+    I4=R15;
+    DM(I4,M5)=R1;
     JUMP finish;
 silent:
     R0=0;

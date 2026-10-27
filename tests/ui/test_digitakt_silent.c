@@ -8,7 +8,7 @@ extern void x0x_dt_render(int32_t *blocks);
 volatile uint8_t fw_render_machine[8];
 volatile uint32_t fw_voice_start;
 const char cm_ui_v3[] = "test";
-static uint32_t reads[8], calls[8], starts[8], models[8], body_calls, tone_calls;
+static uint32_t reads[8], calls[8], starts[8], models[8], body_calls, tone_calls, body909_calls;
 static int32_t values[8][8];
 
 int32_t cm_src_value(int32_t track, int32_t parameter)
@@ -36,6 +36,13 @@ void x0x_808_body(int32_t state[2], int32_t output[32], uint32_t start, uint32_t
     assert(state && start == 1 && decay_raw == 12345);
     ++body_calls;
     for (unsigned i = 0; i < 32; ++i) output[i] = 17;
+}
+
+void x0x_909_body(int32_t state[2], int32_t output[32], uint32_t start)
+{
+    assert(state && start == (body909_calls == 0));
+    ++body909_calls;
+    for (unsigned i = 0; i < 32; ++i) output[i] = 29;
 }
 
 void x0x_808_tone(int32_t *state, int32_t output[32], uint32_t tone_raw)
@@ -78,14 +85,14 @@ int main(void)
         assert(reads[track] == (active ? 0x27 : 0));
         assert(calls[track] == (unsigned)active);
         for (unsigned i = 0; i < 32; ++i)
-            assert(blocks[32 * track + i] == (active ? 0 : (int32_t)(32 * track + i + 1)));
+            assert(blocks[32 * track + i] == (track == 7 ? 29 : active ? 0 : (int32_t)(32 * track + i + 1)));
     }
     assert(starts[0] == 0 && starts[7] == 1 && models[0] == 16383 && models[7] == 16384);
-    assert(body_calls == 0);
+    assert(body_calls == 0 && body909_calls == 1 && tone_calls == 0);
     fw_voice_start = 1;
     x0x_dt_render(blocks);
-    assert(body_calls == 1 && tone_calls == 1);
+    assert(body_calls == 1 && tone_calls == 1 && body909_calls == 2);
     for (unsigned i = 0; i < 32; ++i) assert(blocks[i] == 17);
-    for (unsigned i = 224; i < 256; ++i) assert(blocks[i] == 0);
+    for (unsigned i = 224; i < 256; ++i) assert(blocks[i] == 29);
     return 0;
 }

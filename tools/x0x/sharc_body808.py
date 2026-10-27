@@ -1,4 +1,4 @@
-"""Execute the first 808 body in SHARC instructions; no native OS or fidelity claim."""
+"""Execute the first 808 and 909 bodies in SHARC; no native OS or fidelity claim."""
 from __future__ import annotations
 
 import hashlib
@@ -7,7 +7,7 @@ import math
 import struct
 import sys
 
-from . import analysis, body808, cpu, tone808, sharc_callback as callback, sharc_selector as selector
+from . import analysis, body808, body909, cpu, tone808, sharc_callback as callback, sharc_selector as selector
 
 SOURCE = cpu.ROOT / "targets/sharc/body808.s"
 FOLDER = cpu.ROOT / "out/sharc/body808"
@@ -31,16 +31,24 @@ def component() -> tuple[dict, bytes]:
     policy = runner()
     inputs = selector.cases()
     expected, provenance = selector.c_reference(FOLDER, inputs)
+    position909 = [0] * 16
     for row, reference in zip(inputs, expected, strict=True):
         samples, state = policy.call_raw(row, state_writable=reference["notices"] == 1)
         assert state[:32] == reference["state"], row["label"]
         if samples is not None:
             assert all(math.isfinite(x) and abs(x) <= .25 for x in samples), row["label"]
-            if not reference["notices"] or state[2 * row["slot"] + 1] == 2:
+            if not reference["notices"]:
                 assert samples == [0.0] * 32, row["label"]
-            if reference["notices"] and state[2 * row["slot"] + 1] == 2:
-                assert state[32 + 2 * row["slot"]:34 + 2 * row["slot"]] == [0, 0], row["label"]
-                assert state[64 + row["slot"]] == 0, row["label"]
+            elif state[2 * row["slot"] + 1] == 2:
+                slot = row["slot"]
+                if row["flags"]:
+                    position909[slot] = 0
+                begin = position909[slot]
+                wave = body909.reference(begin + 32)[begin:]
+                assert max(abs(a-b) for a,b in zip(samples, wave)) < 1e-5, row["label"]
+                position909[slot] += 32
+                assert state[32 + 2 * slot] == (0x40000000 + position909[slot] * body909.PHASE_STEP) & 0xffffffff
+                assert state[64 + slot] == 0, row["label"]
 
     def body_case(label, raw=16384, tone=16384, **kwargs):
         row = selector.case(label, **kwargs)
@@ -106,14 +114,33 @@ def component() -> tuple[dict, bytes]:
     live_tone, _, live_tone_error = render(16384, 6400, tone=0, tone_changes={3200: 32512})
     tone_runs.append(live_tone)
 
+    triangle = runner()
+    triangle_samples = []
+    for block in range(FRAMES // 32):
+        chunk, _ = triangle.call_raw(body_case("909-body", flags=int(block == 0), model=32512), True)
+        triangle_samples.extend(chunk)
+    triangle_reference = body909.reference(FRAMES)
+    triangle_error = max(abs(a-b) for a,b in zip(triangle_samples, triangle_reference))
+    assert triangle_error < 1e-5, triangle_error
+    triangle_measured = analysis.analyze(triangle_samples, body909.SAMPLE_RATE)
+    assert abs(triangle_measured["frequency"]["median_hz"] - body909.FREQUENCY) < .02
+    assert abs(triangle_measured["decay_positive"]["time_constant_s"] - body909.TAU) < .001
+    triangle_path = FOLDER / "samples_909.f32"
+    triangle_path.write_bytes(struct.pack(f"<{len(triangle_samples)}f", *triangle_samples))
+    triangle_retrigger, _ = triangle.call_raw(body_case("909-retrigger", model=32512), True)
+    assert triangle_retrigger == triangle_samples[:32], "909 START did not reset phase/envelope"
+
     retrigger, _ = stream.call_raw(body_case("retrigger"), True)
     assert retrigger == samples[:32], "START must reset body and Tone for a possibly reassigned slot"
     pending, state = stream.call_raw(body_case("pending-909", flags=0, model=32512), True)
     assert pending == samples[32:64] and state[1] == 1, "MODEL changed before START"
-    silent, state = stream.call_raw(body_case("switch-909", model=32512), True)
-    assert silent == [0.0] * 32 and state[1] == 2 and state[32:34] == [0, 0] and state[64] == 0
+    switched, state = stream.call_raw(body_case("switch-909", model=32512), True)
+    assert switched == triangle_samples[:32] and state[1] == 2 and state[64] == 0
+    triangle_state = state[32:34]
     other, state = stream.call_raw(body_case("other-slot", slot=15), True)
-    assert other == samples[:32] and state[1] == 2 and state[32:34] == [0, 0]
+    assert other == samples[:32] and state[1] == 2 and state[32:34] == triangle_state
+    continuing909, _ = stream.call_raw(body_case("909-interleaved", flags=0, model=32512), True)
+    assert continuing909 == triangle_samples[32:64], "808 slot changed the 909 body"
     returned, _ = stream.call_raw(body_case("back-to-808"), True)
     assert returned == samples[:32], "model change left an old tail"
     # Editing the other slot's Decay cannot change this slot's continuing body.
@@ -123,11 +150,11 @@ def component() -> tuple[dict, bytes]:
 
     output = FOLDER / "samples.f32"
     output.write_bytes(struct.pack(f"<{len(samples)}f", *samples))
-    report = dict(status="passed", scope="actual SHARC 808 body with synthetic SDK frames",
+    report = dict(status="passed", scope="actual SHARC 808 and unshaped 909 bodies with synthetic SDK frames",
                   project_revision=cpu.revision(cpu.ROOT),
                   elekloader_revision=cpu.revision(cpu.ROOT / "vendor/elekloader"),
                   emulator_revision=cpu.revision(cpu.ROOT / "vendor/digikit"),
-                  calls=policy.calls + live.calls + sum(r[0].calls for r in rendered.values())
+                  calls=policy.calls + live.calls + triangle.calls + sum(r[0].calls for r in rendered.values())
                         + sum(r.calls for r in tone_runs),
                   code_bytes=len(code), state_bytes=STATE_BYTES,
                   source_sha256=hashlib.sha256(SOURCE.read_bytes()).hexdigest(),
@@ -140,7 +167,13 @@ def component() -> tuple[dict, bytes]:
                                                                maximum_error_fs=live_error),
                   tone_cases=tone_cases, live_tone_change=dict(sample=3200, before_raw=0, after_raw=32512,
                                                              maximum_error_fs=live_tone_error),
-                  worst_instructions=max(policy.worst_instructions, live.worst_instructions,
+                  body909=dict(frames=FRAMES, maximum_error_fs=triangle_error,
+                               frequency_hz=triangle_measured["frequency"]["median_hz"],
+                               decay_time_constant_s=triangle_measured["decay_positive"]["time_constant_s"],
+                               samples_path=str(triangle_path),
+                               samples_sha256=hashlib.sha256(triangle_path.read_bytes()).hexdigest(),
+                               worst_instructions=triangle.worst_instructions),
+                  worst_instructions=max(policy.worst_instructions, live.worst_instructions, triangle.worst_instructions,
                                          *(r[0].worst_instructions for r in rendered.values()),
                                          *(r.worst_instructions for r in tone_runs)),
                   instruction_bound=selector.BOUND, c_reference=provenance,
@@ -148,9 +181,10 @@ def component() -> tuple[dict, bytes]:
                            "continuous live DECAY edit", "source-derived Tone RC and continuous edits",
                            "provisional body/Tone reset on every START", "all 16 independent slots",
                            "START-only MODEL latch", "provisional same-model retrigger",
-                           "model-change body clear", "909 silence", "invalid-input atomicity",
+                           "model-change body clear", "909 triangle and independent mixed models", "invalid-input atomicity",
                            "state/output guards", "SDK context preservation"],
-                  unqualified=["808 circuit fidelity", "stock Decay circuit and Tone pot taper calibration", "native OS integration",
+                  unqualified=["808/909 circuit fidelity", "909 diode shaper, pitch/amp/attack circuits and controls",
+                               "stock 808 Decay circuit and Tone pot taper calibration", "native OS integration",
                                "VST or hardware comparison", "real-device timing"])
     (FOLDER / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     return report, code

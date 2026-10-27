@@ -20,6 +20,8 @@ static uint32_t body_calls, body_start, body_decay;
 static int32_t *body_state, body_before[2];
 static uint32_t tone_calls, tone_raw;
 static int32_t *tone_state, tone_before;
+static uint32_t calls909, start909;
+static int32_t *state909, before909[2];
 int32_t dnm_knob(int32_t slot, int32_t knob) { (void)slot; (void)knob; assert(0); return 0; }
 void dnm_knob_range(int32_t knob, int32_t *lo, int32_t *hi) { (void)knob; (void)lo; (void)hi; assert(0); }
 int x0x_selector(uint32_t bank[8][3], uint32_t notice[4], const uint32_t input[4])
@@ -48,6 +50,13 @@ void x0x_808_tone(int32_t *state, int32_t output[32], uint32_t raw)
     ++tone_calls; tone_raw = raw; tone_state = state; tone_before = *state;
     ++*state;
 }
+void x0x_909_body(int32_t state[2], int32_t output[32], uint32_t start)
+{
+    ++calls909; start909 = start; state909 = state;
+    memcpy(before909, state, sizeof before909);
+    if (start) { state[0] = -100; state[1] = -200; }
+    for (unsigned k = 0; k < 32; ++k) output[k] = --state[0];
+}
 
 int main(void)
 {
@@ -70,13 +79,15 @@ int main(void)
     words[3 * 79 + 29] = 16384; words[3 * 79 + 32] = 32767;
     x0x_dn_begin(); x0x_dn_capture(words); x0x_dn_ready(0);
     m->render(3, guarded + 1, &voice);
-    assert(calls == 1 && zeroes == 1);
+    assert(calls == 1 && zeroes == 0 && calls909 == 1 && start909 == 1);
+    assert(before909[0] == 0 && before909[1] == 0 && body_calls == 0 && tone_calls == 0);
     assert(input_seen[0] == 3 && input_seen[1] == 32512 && input_seen[2] == 1 && input_seen[3] == 1);
-    for (unsigned k = 1; k < 33; ++k) assert(!guarded[k]);
+    assert(guarded[1] == -101 && guarded[32] == -132);
     assert(guarded[0] == 12345 && guarded[33] == 12345);
     x0x_dn_end();
     m->render(3, guarded + 1, &voice);
-    assert(calls == 2 && zeroes == 2 && input_seen[3] == 0);
+    assert(calls == 2 && zeroes == 1 && input_seen[3] == 0);
+    for (unsigned k = 1; k < 33; ++k) assert(!guarded[k]);
     words[3 * 79 + 32] = 0;
     x0x_dn_begin(); x0x_dn_capture(words); x0x_dn_ready(0);
     m->render(3, guarded + 1, &voice);
@@ -100,9 +111,15 @@ int main(void)
     assert(body_calls == 3 && body_start == 0);
     voice.fresh = 1;
     m->render(3, guarded + 1, &voice);
-    assert(body_calls == 3 && zeroes == 3 && slot3[0] == 0 && slot3[1] == 0);
+    assert(body_calls == 3 && zeroes == 1 && calls909 == 2 && state909 == slot3);
+    assert(start909 == 1 && before909[0] == 0 && before909[1] == 0);
     assert(tone_calls == 3 && *tone3 == 0);
+    voice.fresh = 0;
+    m->render(3, guarded + 1, &voice);
+    assert(calls909 == 3 && start909 == 0 && before909[0] == -132 && guarded[1] == -133);
+    assert(body_calls == 3 && tone_calls == 3);
     words[3 * 79 + 32] = 0;
+    voice.fresh = 1;
     m->render(3, guarded + 1, &voice);
     assert(body_calls == 4 && body_before[0] == 0 && body_before[1] == 0);
     assert(tone_calls == 4 && tone_before == 0);

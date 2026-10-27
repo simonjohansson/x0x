@@ -10,6 +10,7 @@ extern int x0x_selector(uint32_t bank[8][3], uint32_t notice[4],
                         const uint32_t input[4]);
 extern void x0x_silence(int32_t output[32]);
 extern void x0x_808_tone(int32_t *state, int32_t output[32], uint32_t tone_raw);
+extern void x0x_909_body(int32_t state[2], int32_t output[32], uint32_t start);
 extern void x0x_808_body(int32_t state[2], int32_t output[32], uint32_t start, uint32_t decay_raw);
 
 void x0x_dt_render(int32_t *blocks)
@@ -41,10 +42,11 @@ void x0x_dt_render(int32_t *blocks)
                 if (input[2]) tone_state[track] = 0;
                 x0x_808_body(body_state[track], blocks + 32 * track, input[2], (uint32_t)values[1]);
                 x0x_808_tone(&tone_state[track], blocks + 32 * track, (uint32_t)values[0]);
-                continue;
+            } else {
+                x0x_909_body(body_state[track], blocks + 32 * track, input[2]);
             }
+            continue;
         }
-        /* shortcut: 909 stays silent until its first body is implemented in #25. */
         x0x_silence(blocks + 32 * track);
     }
 }

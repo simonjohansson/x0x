@@ -2,7 +2,7 @@
   "id": "x0x",
   "version": "0.1",
   "title": "X0X KICKS",
-  "description": "Combined kick controls with a provisional 808 body and silent 909",
+  "description": "Combined kick controls with provisional 808 and unshaped 909 bodies",
   "license": "GPL-2.0-or-later",
   "device": "digitone-mk1",
   "os": "1.44",
@@ -14,6 +14,7 @@
     "../../targets/coldfire/selector.s",
     "../../targets/coldfire/body808.s",
     "../../targets/coldfire/tone808.s",
+    "../../targets/coldfire/body909.s",
     "../../targets/coldfire/silence.s"
   ],
   "cflags": [
