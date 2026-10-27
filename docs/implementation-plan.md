@@ -278,3 +278,17 @@ Actual-CPU reference measurements confirm the trial: first 6 ms residuals
 improve, all first 25/150 ms windows worsen, and whole-clip default/short errors
 increase while long errors decrease. Keep the source switch as an incomplete
 development slice; companion retrigger/forcing is the next planned work.
+
+## C39 companion reference — 27 October 2026
+
+The next existing #9/#79 foundation is a checked, isolated
+[C39/R161/D52 host reference](808-retrigger.md). Its ideal positive clamp
+updates capacitor charge and produces a negative falling pulse; the model
+retains the ground-loading and diode/envelope approximations explicitly.
+125 host tests and C/UI suites pass. Production DSP/native audio is unchanged,
+so the initial-switch reference regressions remain open.
+
+Next derive the correct band-pass forcing and consistent voltage/state scale,
+then integrate that input on both CPUs and rerun all three native scenarios and
+the five training settings. Do not add a raw pulse to the current y input or fit
+away phase/gain errors. The HTML and held-out recordings remain untouched.
