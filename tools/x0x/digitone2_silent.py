@@ -48,8 +48,9 @@ def build() -> dict:
     if errors:
         raise AssertionError("DN2 mod does not link: " + "; ".join(errors))
     linked = link.link(mods, image, sharc_stream=stock.section(7))
+    binding_address = release.sharc["voice_range"][0] + release.sharc["voice_binding_offset"]
     binding = next(record for record in sharc.parse(linked.sharc_stream, release.sharc)
-                   if record.target == 0x20093e00)
+                   if record.target == binding_address)
     if binding.raw[16:] != struct.pack("<II", 0xbc8400, 20):
         raise AssertionError("installed SHARC binding does not select the approved ID20 callback")
     output = FOLDER / "x0x.syx"
@@ -126,7 +127,9 @@ def full_os() -> dict:
             assert report["boot_status"]["audio"]["missing_blocks"] == 0, report[
                 "boot_status"
             ]
-            report["binding"] = emu.dsp_peek(0x20093E00, 8)
+            from elekloader.devices.digitone_mk2 import DEVICE
+            profile = DEVICE.releases["1.12"].sharc
+            report["binding"] = emu.dsp_peek(profile["voice_range"][0] + profile["voice_binding_offset"], 8)
             assert bytes.fromhex(report["binding"]["hex"]) == struct.pack(
                 "<II", 0xBC8400, 20
             ), report["binding"]
@@ -162,8 +165,8 @@ def full_os() -> dict:
                                       frames=len(pcm) // 2, scope="isolated native 808 note")
             assert 0 < pcm_peak < 1, "808 body did not reach bounded downstream PCM"
             report["after_note"] = emu.dsp_peek(0x20092800, 128)
-            report["callback_frame"] = emu.dsp_peek(0x20093D00, 20)
-            report["callback_params"] = emu.dsp_peek(0x20093D14, 160)
+            report["callback_frame"] = emu.dsp_peek(0x2009FD00, 24)
+            report["callback_params"] = emu.dsp_peek(0x2009FD18, 160)
             counters=struct.unpack("<16I",bytes.fromhex(emu.dsp_peek(0x200929c0,64)["hex"]))
             assert counters == (0,)*16, counters
             report["excitation_808"] = dict(pulse_samples=body808.PULSE_SAMPLES,initial_frequency_samples=body808.ATTACK_SAMPLES,counters_after_settled_note=list(counters),
@@ -172,7 +175,7 @@ def full_os() -> dict:
             assert any(state[2 * i] > 0 and state[2 * i + 1] == 1 for i in range(16)), (
                 state
             )
-            frame = struct.unpack("<5I", bytes.fromhex(report["callback_frame"]["hex"]))
+            frame = struct.unpack("<6I", bytes.fromhex(report["callback_frame"]["hex"]))
             output_base = frame[0] - 128 * frame[1]
             report["voice_outputs"] = {
                 str(i): emu.dsp_peek(output_base + 128 * i, 128)
@@ -230,7 +233,7 @@ def full_os() -> dict:
                               for v in (0xB0, cc[str(k)], value)))
             emu.run_until(frames=emu.status()["dsp_frames"] + 300, timeout_wall_s=120)
             edited = struct.unpack(
-                "<40I", bytes.fromhex(emu.dsp_peek(0x20093D14, 160)["hex"])
+                "<40I", bytes.fromhex(emu.dsp_peek(0x2009FD18, 160)["hex"])
             )
             report["ordinary_abc_edits"] = {
                 "cc_targets": {str(k): v << 8 for k, v in edits.items()},
@@ -302,7 +305,7 @@ def full_os() -> dict:
                 native = struct.unpack("<40H", bytes.fromhex(
                     emu.dsp_peek(0x25C48C + 2*(0x6D + 0x49*last), 80)["hex"]))
                 delivered = struct.unpack("<40I", bytes.fromhex(
-                    emu.dsp_peek(0x20093D14, 160)["hex"]))
+                    emu.dsp_peek(0x2009FD18, 160)["hex"]))
                 report["lfo_tntun"].append({"slot": last, "native": list(native),
                                             "delivered": list(delivered)})
                 assert native == delivered, (native, delivered)

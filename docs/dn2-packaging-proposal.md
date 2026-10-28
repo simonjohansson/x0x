@@ -28,8 +28,10 @@ adopted; there is no existing production format to migrate.
 
 ## Current upstream SDK
 
-The 27 October 2026 refresh pins upstream main at
-`b893c9317936633d7a32829b618c2867ee99277c`. Its `mk2_synth` descriptor no longer
+The 28 October 2026 dependency update pins PR #211 head
+`3ce40f6faaf87166c4a34ad1f6f48bafc3085991`, assuming its merge. The owner is
+64 KiB, with a guarded L1 callback stack and an appended callback state pointer.
+Its `mk2_synth` descriptor no longer
 has a `clone` field: all custom SHARC synths use FM TONE as their stock host.
 x0x retains that same host behavior and requires Core 0.2. ID 20, names,
 parameter slots/defaults and MODEL/START policy are unchanged. Current runtime
@@ -152,13 +154,14 @@ The one-mod selector design requires no multiple-registration extension. Keep
 one native identity while adding both kernels to its payload. The earlier
 multi-ID extension discussion is superseded and is not implementation work.
 
-The SDK's default split provides 6,080 usable code bytes / 7 KiB data. The
-qualified [x0x private allocation](dn2-private-layout.md) instead provides
+The SDK default provides 30 KiB code including a 64-byte guard and 31 KiB data
+including all sixteen voice states. The existing
+[x0x private allocation](dn2-private-layout.md) instead provides
 **8,128 usable author-code bytes** (8 KiB minus the same 64-byte guard) and
-**5 KiB author data**, including all per-slot state. Both partitions fit the
-same existing voice owner with the pinned adapter and adapter-state regions.
-No adjacent filter reservation, public SDK/default format, saved layout,
-one-ID bridge, linker cardinality or page allocation changes. Actual code/data
+**53 KiB author data**, including all per-slot state, retaining legacy ASM
+addresses. Both partitions fit the 64 KiB voice owner. The separate filter
+owner is now `0x200a0000..0x200b0000`. Saved layout, one-ID bridge, linker
+cardinality and page allocation are unchanged. Actual code/data
 usage and workload qualification remain separate; this allocation change does
 not establish realtime or reference-fidelity acceptance.
 

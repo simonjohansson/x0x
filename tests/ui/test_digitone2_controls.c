@@ -81,7 +81,7 @@ static void fractions(enum x0x_instrument instrument)
         audio[index] = .375f;
     defaults(params);
     params[5] = instrument == X0X_808 ? 0 : 32512;
-    struct dn2_voice_input input = {audio, 15, 60 * 256 + 127, DN2_VOICE_START, params};
+    struct dn2_voice_input input = {audio, 15, 60 * 256 + 127, DN2_VOICE_START, params, 0};
     x0x_dn2_controls_init(&state);
     const uint32_t values[] = {0, 1, 128, 12345, 32512};
     for (unsigned index = 0; index < sizeof(values) / sizeof(values[0]); ++index) {
@@ -115,7 +115,7 @@ static void selector_and_tails(void)
     struct fake_dsp dsp = {0};
     uint32_t params[DN2_VOICE_PARAMS];
     defaults(params);
-    struct dn2_voice_input input = {0, 2, 12345, 0, params};
+    struct dn2_voice_input input = {0, 2, 12345, 0, params, 0};
     x0x_dn2_controls_init(&state);
     params[5] = 32512;
     deliver(&state, &input, &dsp);
@@ -161,7 +161,7 @@ static void ignored_and_invalid(void)
     struct fake_dsp dsp = {0};
     uint32_t params[DN2_VOICE_PARAMS];
     defaults(params);
-    struct dn2_voice_input input = {0, 0, 0, DN2_VOICE_START, params};
+    struct dn2_voice_input input = {0, 0, 0, DN2_VOICE_START, params, 0};
     x0x_dn2_controls_init(&state);
     deliver(&state, &input, &dsp);
     dsp.tail[0] = 900;

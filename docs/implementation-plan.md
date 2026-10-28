@@ -491,10 +491,19 @@ and proper bridge input on both CPUs, then compare again. Do not add another
 research-only checkpoint or fit away the missing input physics. HTML and
 held-out audio remain untouched; full fidelity and combined acceptance stay open.
 
-## Qualified upstream SDK — 27 October 2026
+## Current SDK dependency — 28 October 2026
 
-The user replaced the PR200-only requirement with upstream Elekloader. The
-submodule and firmware manifest now pin `b893c9317936633d7a32829b618c2867ee99277c`
+The submodule and firmware manifest pin Elekloader PR #211 head
+`3ce40f6faaf87166c4a34ad1f6f48bafc3085991`, assuming its merge as requested.
+Use its 64 KiB voice owner, 30 KiB code / 31 KiB data SDK default and 2,048-byte
+callback stack budget for the replacement 808/909 plan. The prior 8 KiB/5 KiB
+proposal is historical. Current pin-update checks and evidence limits are in
+[development](development.md#setup); the replacement ASM remains pending.
+
+## Qualified upstream SDK — 27 October 2026 — historical
+
+The user replaced the PR200-only requirement with upstream Elekloader. At that
+checkpoint the submodule and firmware manifest pinned `b893c9317936633d7a32829b618c2867ee99277c`
 (upstream main, verified current at refresh). DN2 uses the current descriptor
 and Core 0.2 while retaining its approved saved contract. Firmware verification,
 134 host/C checks, the actual SHARC suite and all three native emulator scenarios

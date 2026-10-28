@@ -47,7 +47,7 @@ int main(void)
             assert(scanf("%u", &params[parameter]) == 1);
         reference.controls = reference.notices = reference.sum = reference.numerator = 0;
         reference.initialize = reference.changed = reference.clear = 0;
-        struct dn2_voice_input input = {0, slot, pitch, flags, params_present ? params : 0};
+        struct dn2_voice_input input = {0, slot, pitch, flags, params_present ? params : 0, 0};
         int valid = x0x_dn2_controls_deliver(&state, input_present ? &input : 0,
                                              control, notice, &reference);
         printf("%u %u %u %u %u %u %u", valid, reference.notices, reference.controls,

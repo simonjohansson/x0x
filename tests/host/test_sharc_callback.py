@@ -7,7 +7,7 @@ from x0x.sharc_callback import input_words, negative_immediate_shifts, validate_
 class CallbackFixtureTests(unittest.TestCase):
     def test_slot_and_delivered_value_boundaries(self):
         for slot in [0, 15]:
-            self.assertEqual(len(input_words(slot, 0xFFFF, 1, [32512] * 40)), 83)
+            self.assertEqual(len(input_words(slot, 0xFFFF, 1, [32512] * 40)), 84)
         for slot in [-1, 16, True]:
             with self.assertRaises(ValueError):
                 input_words(slot, 0, 0, [0] * 40)

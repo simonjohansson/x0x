@@ -32,7 +32,7 @@ def input_words(slot: int, pitch: int, flags: int, params: list[int]) -> dict[in
         raise ValueError("only SDK START or zero flags are defined")
     if len(params) != 40 or any(type(x) is not int or not 0 <= x <= 32512 for x in params):
         raise ValueError("40 unsigned 8.8 parameter words in 0..32512 are required")
-    words = dict(zip(range(INPUT, INPUT + 20, 4), [OUTPUT, slot, pitch, flags, PARAM]))
+    words = dict(zip(range(INPUT, INPUT + 24, 4), [OUTPUT, slot, pitch, flags, PARAM, 0]))
     words.update({PARAM + 4 * i: value for i, value in enumerate(params)})
     words.update({OUTPUT + 4 * i: GUARD for i in range(-1, 33)})
     # Exactly the software frame produced by the pinned adapter's delayed JUMP.
@@ -61,12 +61,13 @@ def check_header(folder: Path) -> str:
     source = folder / "header.c"
     source.write_text('''#include <stddef.h>
 #include "digitone-mk2/voice.h"
-_Static_assert(sizeof(struct dn2_voice_input) == 20, "input extent");
+_Static_assert(sizeof(struct dn2_voice_input) == 24, "input extent");
 _Static_assert(offsetof(struct dn2_voice_input, output) == 0, "output offset");
 _Static_assert(offsetof(struct dn2_voice_input, slot) == 4, "slot offset");
 _Static_assert(offsetof(struct dn2_voice_input, pitch) == 8, "pitch offset");
 _Static_assert(offsetof(struct dn2_voice_input, flags) == 12, "flags offset");
 _Static_assert(offsetof(struct dn2_voice_input, param) == 16, "parameter offset");
+_Static_assert(offsetof(struct dn2_voice_input, state) == 20, "state offset");
 _Static_assert(DN2_VOICE_PARAMS == 40 && DN2_VOICE_START == 1, "constants");
 ''')
     compiler = cpu.require_program(os.environ.get("ELEKLOADER_CROSS", "m68k-elf-") + "gcc")

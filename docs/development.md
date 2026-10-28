@@ -40,11 +40,31 @@ The dependency revisions are Git submodule pins, not floating branches:
 
 | Dependency | Pin | Purpose |
 | --- | --- | --- |
-| Elekloader | `b893c9317936633d7a32829b618c2867ee99277c` (upstream main, 27 October 2026) | Firmware profiles, build/patch tools and matching DN2 voice interface |
+| Elekloader | `3ce40f6faaf87166c4a34ad1f6f48bafc3085991` (PR #211 head, 28 October 2026) | Firmware profiles, build/patch tools and matching DN2 voice interface |
 | digiemu | `f57c2f237e84b8ff91bc3adb2a2931bccf9928e9` | Digitakt/Digitone ColdFire instruction and later firmware tests |
 | Digikit | `a28817d61c06cdea4fb0dbc1625a238fce0b39b9` | Digitone II SHARC instruction and later firmware tests |
 
-The 27 October upstream refresh replaces the PR200-only baseline. DN2's
+The 28 October pin update adopts [Elekloader PR #211](https://github.com/elekloader/elekloader/pull/211),
+assuming its merge. DN2 has a 64 KiB voice owner; the SDK default is 30 KiB code
+including the guard and 31 KiB data including all sixteen voice states. Callbacks
+use a guarded L1 stack with a 2,048-byte author budget and a 24-byte input.
+The existing ASM keeps its private code/data addresses; the bridge and native
+observers follow the new adapter-state/binding addresses. See
+[the current layout](dn2-private-layout.md).
+
+Current checks pass: all three local stock-image identities, 19 focused host
+tests, DN2 C/UI controls, and 82 synthetic calls through the actual new bridge.
+Both the core-only firmware and a packaging smoke check of the existing combined
+ASM pass SDK link/patch verification. The latter receipt is
+`out/dn2/pin-211-packaging/report.json` (7,176 code bytes, 1,664 state bytes,
+binding `0x2009fe00`). The longer legacy full-body regression was interrupted;
+it is not a passing check. No new full native-emulator boot, physical-device
+run, or replacement 808 ASM qualification is claimed.
+The existing 808/909 engine equations and frozen listening candidate are unchanged.
+
+The following **27 October evidence is historical**, from the previous
+`b893c93` SDK, and does not qualify PR #211's bridge, stack or firmware.
+The 27 October upstream refresh replaced the PR200-only baseline. DN2's
 `mk2_synth` no longer has a clone field and requires Core 0.2; its fixed FM TONE
 host preserves x0x's approved ID20, names, saved slots/defaults and MODEL policy.
 The voice header/bridge and DT companion sources are unchanged. The existing

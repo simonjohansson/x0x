@@ -139,15 +139,16 @@ def _bridge_window(code: bytes, entry: int) -> bytearray:
         raise AssertionError("the pinned voice bridge extent changed")
     layout = voice_layout()
     device = cpu.require_module("elekloader.devices.digitone_mk2", "elekloader")
-    guard = device.DEVICE.releases["1.12"].sharc["code_guard_bytes"]
+    profile = device.DEVICE.releases["1.12"].sharc
+    guard = profile["code_guard_bytes"]
     code_bytes = layout["code_bytes"]
     if not code or len(code) % 2 or len(code) + guard > code_bytes:
         raise ValueError("bridge fixture code exceeds the private region or its guard")
     prefix = len(bridge)
-    window = bytearray(16384)
+    window = bytearray(profile["voice_range"][1] - profile["voice_range"][0])
     window[:prefix] = bridge
     window[prefix:prefix + code_bytes] = code + b"\1\0" * ((code_bytes - len(code)) // 2)
-    struct.pack_into("<II", window, 0x3e00, entry, 31)
+    struct.pack_into("<II", window, profile["voice_binding_offset"], entry, 31)
     return window
 
 
@@ -167,8 +168,8 @@ def bridge_check(code: bytes, entry: int) -> dict:
         offset += size
     memory = sharcldr.LoadedMemory.from_stream(payload, blocks)
     state = {address: 0 for address in range(0x20092800, 0x20092880, 4)}
-    state.update({address: 0 for address in range(0x20093c00, 0x20094000, 4)})
-    state.update({0x20093e00: entry, 0x20093e04: 31})
+    state.update({address: 0 for address in range(0x2009fc00, 0x200a0000, 4)})
+    state.update({0x2009fe00: entry, 0x2009fe04: 31, 0x2de000: 0x57ac6a2d})
     expected_count = [0] * 16
     observations, worst = [], 0
 
@@ -203,8 +204,8 @@ def bridge_check(code: bytes, entry: int) -> dict:
             raise AssertionError("upstream bridge failed: " + str(result.halt.to_json()))
         worst = max(worst, result.instructions)
         from tools.sharc_dev.sharc_core.memory import _canonical_dm_address
-        allowed = [(0x20093c00, 0x20094000), (0x20092800 + slot * 8, 0x20092808 + slot * 8),
-                   (output, output + 128), (stack - 4, stack + 4)]
+        allowed = [(0x2009fc00, 0x200a0000), (0x20092800 + slot * 8, 0x20092808 + slot * 8),
+                   (output, output + 128), (0x2deff4, 0x2df000)]
         check_bridge_writes(runner.watch_log, allowed,
                             lambda address: _canonical_dm_address(runner.state, address, 1, for_write=True))
         read = lambda address: trace._dm_read(runner.state, trace.Const(address), 4)
@@ -219,14 +220,14 @@ def bridge_check(code: bytes, entry: int) -> dict:
                 if read(address) != trace.Const(previous):
                     raise AssertionError("bridge changed an unrelated author slot")
         state = {address: read(address).value for address in state}
-        if state[0x20093e00] != entry or state[0x20093e04] != 31:
+        if state[0x2009fe00] != entry or state[0x2009fe04] != 31:
             raise AssertionError("bridge changed its callback binding")
         words = [read(output + 4 * index) for index in range(32)]
         if any(not isinstance(word, trace.Const) for word in words):
             raise AssertionError("bridge left unknown output")
         samples = [struct.unpack("<f", struct.pack("<I", word.value))[0] for word in words]
         callback_count = state[0x20092800 + slot * 8]
-        flags = state[0x20093d0c]
+        flags = state[0x2009fd0c]
         return samples, callback_count, flags, pitch, params, read
 
     for slot in range(16):
@@ -246,7 +247,7 @@ def bridge_check(code: bytes, entry: int) -> dict:
                 expected_count[slot] += 1
                 if count != expected_count[slot] or state[0x20092804 + slot * 8] != pitch:
                     raise AssertionError("bridge delivered incorrect slot or pitch")
-                if [read(0x20093d14 + 4 * index).value for index in range(40)] != params:
+                if [read(0x2009fd18 + 4 * index).value for index in range(40)] != params:
                     raise AssertionError("bridge did not copy all forty packed parameter halfwords")
             observations.append(dict(slot=slot, block=block, trigger=trigger, raw=value,
                                      silent_edge=edge, callback_count=count,

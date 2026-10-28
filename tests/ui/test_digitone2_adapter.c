@@ -55,7 +55,7 @@ int main(int argc, char **argv)
     float audio[32];
     for (unsigned index = 0; index < 32; ++index)
         audio[index] = .25f;
-    struct dn2_voice_input input = {audio, 15, 60 * 256 + 127, DN2_VOICE_START, params};
+    struct dn2_voice_input input = {audio, 15, 60 * 256 + 127, DN2_VOICE_START, params, 0};
     assert(x0x_dn2_pages(X0X_808, bindings, 2, pages, 2));
     assert(pages[0].knob[0] == &level && pages[1].knob[0] == &decay);
     for (unsigned index = 1; index < 8; ++index)

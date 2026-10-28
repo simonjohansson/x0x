@@ -121,10 +121,12 @@ and delivered-to-audible timing; waveform alignment cannot erase either delay.
 For DN2, the inspected callback has a silent trigger-edge block followed by a
 block carrying `START`. It does not provide a separate accent field or track
 identity. These are adapter constraints, not definitions of the analog trigger
-pulse. The development dependency is now the validated upstream Elekloader
-revision `b893c9317936633d7a32829b618c2867ee99277c`, recorded in
+pulse. The development dependency is now Elekloader PR #211 head
+`3ce40f6faaf87166c4a34ad1f6f48bafc3085991`, recorded in
 `firmware/manifest.json` and the submodule gitlink. This supersedes the earlier
-PR200-only pin. Keep its matching voice header/adapter and exercise the exact
+upstream-main pin, assuming PR #211 merges. Its callback appends a state
+pointer, making the input 24 bytes, and uses a guarded L1 stack. Keep its
+matching voice header/adapter and exercise the exact
 boundary; a matching textual ABI name alone is not compatibility evidence.
 
 ### Worked fixture
@@ -156,8 +158,8 @@ Digitone's replacement path runs on the main ColdFire, overwriting stock FM
 audio. Its machine companion reapplies AMP/velocity unless `DNM_OWN_ENV` is
 selected. DN2 applies stock AMP/filter processing downstream. Raw kernel tests
 exclude those stages; device tests record their settings and behavior. See the
-[pinned Digitone adapter explanation](https://github.com/irpina/elekloader/blob/b893c9317936633d7a32829b618c2867ee99277c/docs/ADAPTING.md)
-and [inspected DN2 callback](https://github.com/irpina/elekloader/blob/b893c9317936633d7a32829b618c2867ee99277c/docs/MACHINES-DN2-VOICE.md#L81-L90).
+[pinned Digitone adapter explanation](https://github.com/elekloader/elekloader/blob/3ce40f6faaf87166c4a34ad1f6f48bafc3085991/docs/ADAPTING.md)
+and [inspected DN2 callback](https://github.com/elekloader/elekloader/blob/3ce40f6faaf87166c4a34ad1f6f48bafc3085991/docs/MACHINES-DN2-VOICE.md).
 
 The user explicitly approved all three combined saved layouts on 26 October
 2026. Each uses one native identity for both engines and the shared START-latched
