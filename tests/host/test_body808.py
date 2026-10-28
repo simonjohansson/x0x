@@ -23,8 +23,8 @@ class Decay808Tests(unittest.TestCase):
     def test_lower_curve_corrects_interiors_and_preserves_all_upper_words(self):
         import math
         from x0x.body808 import decay_tau, retention, RETENTION_DEFAULT, RETENTION_MAX
-        for raw, tau in ((0, .0333), (4096, .04015625),
-                         (8192, .060725), (12288, .09500625), (16384, .143)):
+        for raw, tau in ((0, .0333), (4096, .04786953125),
+                         (8192, .08129375), (12288, .11814609375), (16384, .143)):
             self.assertAlmostEqual(decay_tau(raw), tau, delta=1e-12)
         for raw in range(16384, 32513):
             previous = RETENTION_DEFAULT + (RETENTION_MAX-RETENTION_DEFAULT)*(raw-16384)/16128

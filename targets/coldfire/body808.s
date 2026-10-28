@@ -70,17 +70,28 @@ x0x_808_body:
 .Lcontinue:
     move.l #0xb0, %d0 /* fractional, saturated, nearest-even */
     move.l %d0, %macsr
-    /* Empirical lower-half quadratic tau; upper retention/anchors stay unchanged. */
+    /* Empirical lower-half cubic tau; upper retention/anchors stay unchanged. */
     move.l 112(%sp), %d6
     cmpi.l #16384, %d6
     bge .Ldecay_high
     move.l #131072, %d0 /* low branch excludes 16384, keeping the product signed-positive */
     mulu.l %d0, %d6
-    /* tau=.0333+(.143-.0333)*x*x; no change to the audio/state recurrence. */
+    /* tau=.0333+(.143-.0333)*q; keep the audio/state recurrence. */
+    move.l %d6, %d1 /* Preserve x until the lower-coordinate correction. */
     moveq #0, %d0
     move.l %d0, %acc0
     mac.l %d6, %d6, %acc0
     movclr.l %acc0, %d6 /* x*x */
+    /* Empirical q=x*x+1.5*x*x*(1-x), preserving both endpoints. */
+    move.l #2147483647, %d0
+    sub.l %d1, %d0
+    mac.l %d6, %d0, %acc0
+    movclr.l %acc0, %d0 /* x*x*(1-x) */
+    move.l #805306368, %d1 /* k/4 in Q31: bounded training calibration k=1.5. */
+    mac.l %d0, %d1, %acc0
+    movclr.l %acc0, %d0
+    lsl.l #2, %d0
+    add.l %d0, %d6 /* q replaces only the existing squared coordinate. */
     move.l #71511205, %d0
     move.l %d0, %acc0
     move.l #235578956, %d0
@@ -88,8 +99,8 @@ x0x_808_body:
     movclr.l %acc0, %d2 /* tau in Q31 seconds */
     move.l #307090162, %d0
     mac.l %d6, %d0, %acc0
-    movclr.l %acc0, %d3 /* .143*x*x */
-    /* t_sigma=.143*x*x/tau, unsigned fractional division. */
+    movclr.l %acc0, %d3 /* .143*q */
+    /* t_sigma=.143*q/tau, unsigned fractional division. */
     moveq #0, %d6
     moveq #31, %d1
 .Ldecay_divide:

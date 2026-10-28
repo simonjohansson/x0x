@@ -9,6 +9,7 @@ SAMPLE_RATE = 48000
 # Rounded settled-body pitch from #2's five-setting training diagnostic, not circuit alignment.
 FREQUENCY = 47.65
 TAU = 0.143
+LOWER_SHAPE = 1.5  # One bounded training fit; gain and all three anchors stay fixed.
 GAIN = 0.25
 PULSE_SAMPLES = 48  # Nominal 1 ms trigger in S01/S03, at 48 kHz.
 ATTACK_SAMPLES = 288  # S03 section8.1: 6 ms, distinct from the 1 ms drive.
@@ -25,7 +26,7 @@ RETENTION_DEFAULT = math.exp(-1 / (SAMPLE_RATE * TAU))
 
 
 def retention(decay_raw):
-    """Empirical lower-half quadratic tau; unchanged upper retention law.
+    """Empirical lower-half cubic tau; unchanged upper retention law.
 
     The full training grid supports this small control correction, not a stock
     VR6 taper model. The three anchors and settled frequency stay unchanged.
@@ -34,7 +35,8 @@ def retention(decay_raw):
         raise ValueError("Decay must be an exact native word in 0..32512")
     if decay_raw < DEFAULT_DECAY:
         position = decay_raw / DEFAULT_DECAY
-        tau = .0333 + (TAU - .0333) * position * position
+        shape = position*position + LOWER_SHAPE*position*position*(1-position)
+        tau = .0333 + (TAU - .0333) * shape
         return math.exp(-1 / (SAMPLE_RATE * tau))
     return RETENTION_DEFAULT + (RETENTION_MAX - RETENTION_DEFAULT) * (decay_raw - DEFAULT_DECAY) / (RAW_MAX - DEFAULT_DECAY)
 

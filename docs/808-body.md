@@ -64,8 +64,8 @@ a join at the approved default 16384:
 - `r_default = exp(-1/(48000*.143))`;
 - `r_max = exp(-1/(48000*.366))`.
 
-Below the default, use `tau=.0333+(.143-.0333)*(d/16384)^2`, then convert
-that time constant to retention. Above it, retain the original interpolation
+Below the default, use `s=d/16384`, `q=s*s+1.5*s*s*(1-s)` and
+`tau=.0333+(.143-.0333)*q`, then convert that time constant to retention. Above it, retain the original interpolation
 between default and maximum using `(d-16384)/16128`. The raw-body amplitude
 time constant is `-1/(48000*log(r(d)))`.
 These anchors bring the short/default/long output fits near the fixed-Tone
@@ -73,7 +73,10 @@ training recordings; the unloaded coupling stage changes the short fit.
 This changes feedback loss, not a separate output envelope. It is a reference
 calibration, not stock VR6 feedback/pot modeling or full-curve qualification.
 See the [initial calibration](808-decay.md) and the measured
-[lower-half correction and retained regressions](808-decay-lower-half.md).
+[original lower-half correction](808-decay-lower-half.md). The subsequent
+[lower-interior shape correction](808-decay-shape.md) preserves all three
+anchors at fixed gain; its component/reference qualification is recorded
+separately. Full-device evidence remains at the prior integration checkpoint.
 
 Coefficients update once per delivered 32-sample block without clearing body
 state. Native smoothing/fractions, parameter locks and LFO delivery therefore

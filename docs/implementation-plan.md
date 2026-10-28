@@ -65,11 +65,22 @@ criteria; this neither changes nor confirms the current upper law. Preserve
 these findings rather than refitting rejected windows. See the
 [remaining source/model work](808-pitch-sigh-investigation.md).
 The human [declined output-gain fitting](808-output-calibration-proposal.md):
-keep current internal gain and the raw reference comparison unchanged. Resume
-existing lower-interior Decay work at that fixed scale; screen one bounded
-control-shape correction preserving all three anchors and the upper law before
-any CPU adoption. Prior rejected upper bends and unqualified quiet-pole
-estimates are not new calibration targets.
+keep current internal gain and the raw reference comparison unchanged. The
+[lower-interior Decay correction](808-decay-shape.md) now has a reviewed
+fixed-gain model/full-tail screen and an actual guarded CF candidate. Finish
+this single correction through both actual CPU components and references;
+start no additional model experiments while its qualification is pending.
+All three anchors and the upper law stay fixed. Retain its late/peak-slope
+regressions; rejected quiet-pole estimates are not calibration targets.
+
+For DSP-only sound changes, actual ColdFire/SHARC execution and reference
+comparison are the increment gate. Repeat full-device integration when device
+plumbing, parameter mapping, voice-state layout, calling conventions, firmware
+dependencies or packaging changes, and at integration/release milestones.
+Stock firmware and Elekloader handle native controls/modulation, allocation and
+mixing; rerunning their complete scenarios for every sound coefficient is not
+required. Preserve previous native results as previous evidence, and keep #20
+whole-product acceptance separate.
 
 The 909 [diode shaper](909-shaping.md), [C9/IC12 Tune path](909-tune.md) and
 [loaded ENV1/Q12 VCA](909-vca.md) run on both CPUs and all three emulators.
