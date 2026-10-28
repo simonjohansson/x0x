@@ -266,3 +266,17 @@ run = [
   'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --python "$(mise which python)" python -m x0x.fit808 benchmark',
   'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --python "$(mise which python)" python -m x0x.fit808 benchmark --partition validation --output out/808-model/protocol-validation.json',
 ]
+
+[tasks."test:808:capacity"]
+description = "Test the compact 808 capacity equations and synthetic optimizer recovery"
+env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
+run = 'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --with scipy==1.18.0 --python "$(mise which python)" python -m unittest discover -s tests/host -p test_capacity808.py'
+
+[tasks."research:808:capacity"]
+description = "Fit the two predeclared compact 808 candidates to fitting-only measurements"
+env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
+run = [
+  'mise run test:808:capacity',
+  'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --with scipy==1.18.0 --python "$(mise which python)" python -m x0x.capacity808',
+  'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --with scipy==1.18.0 --python "$(mise which python)" python -m x0x.capacity808 --candidate harmonic',
+]

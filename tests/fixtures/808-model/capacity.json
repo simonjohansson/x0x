@@ -1,0 +1,79 @@
+{
+  "version": "808-capacity-v1",
+  "pairs": [
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      2
+    ],
+    [
+      0,
+      17
+    ],
+    [
+      0,
+      68
+    ],
+    [
+      0,
+      127
+    ],
+    [
+      17,
+      0
+    ],
+    [
+      68,
+      0
+    ],
+    [
+      127,
+      0
+    ],
+    [
+      17,
+      17
+    ],
+    [
+      17,
+      68
+    ],
+    [
+      17,
+      127
+    ],
+    [
+      68,
+      17
+    ],
+    [
+      68,
+      68
+    ],
+    [
+      68,
+      127
+    ],
+    [
+      127,
+      17
+    ],
+    [
+      127,
+      127
+    ]
+  ],
+  "selection": "Predeclared fitting-only corners, axis extremes, low/mid/high Decay, and interior. No validation/test waveforms are used for this capacity experiment.",
+  "purpose": "Individually optimized diagnostic coefficients are not a shipping lookup or held-out evaluation.",
+  "candidates": [
+    "fundamental-two-envelope-two-pitch-plus-exponential-transient",
+    "same-plus-one-decaying-second-harmonic"
+  ],
+  "starts": 3,
+  "max_nfev": 400,
+  "scipy": "1.18.0",
+  "amplitude_units": "capture FS; multiply by 4 only at the target DSP boundary"
+}
