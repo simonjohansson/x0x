@@ -1,16 +1,15 @@
 # 808 output-gain decision
 
-**Decision, 28 October 2026: keep the current internal gain.** The human
-declined reference-trained output-volume calibration. No gain coefficient was
-fitted or applied; the existing volts-to-digital encoding and downstream native
-track-level path stay unchanged. Continue feedback/control/excitation work at
-that fixed scale, retaining amplitude mismatches in the raw comparisons.
+**Latest decision, 28 October 2026: fixed DSP output scaling is approved.**
+After clarifying the distinction between the DSP's baseline output amplitude
+and the device's normal LEVEL control, the human explicitly approved changing
+the internal scaling factor. This supersedes the earlier same-day decision to
+keep gain fixed. Normal native AMP/track-level volume handling remains in use;
+there is no additional x0x LEVEL knob or saved gain parameter.
 
-The [render contract](render-contract.md) and #9 include fixed internal output
-calibration, with native track level handling volume. The continuation loop
-also says no fitted gain. The human resolved that ambiguity by retaining the
-current internal gain. The earlier proposal below is preserved as declined
-history, not a pending task or permission to fit gain.
+The human also approved the [808 starting fidelity targets](808-fidelity-target.md).
+Calibration is authorized, not implemented or qualified by this decision.
+Current production DSP remains `5963a34` with its previous scaling.
 
 ## Current evidence
 
@@ -30,10 +29,10 @@ and envelope errors remain. No result promises that a gain constant solves them.
 Raw source/render hashes and diagnostics are in
 `out/808-output-calibration-proposal/measurements.json`.
 
-## Declined proposal (historical)
+## Authorized calibration scope
 
 Fit **one positive 808 engine constant**, shared by both CPUs and every setting,
-from the existing training corpus with a declared raw first-500-ms objective.
+from the existing training corpus with a declared objective fixed before fitting.
 Apply it in ASM after output coupling and before native AMP/track level; the
 independent model uses the same frozen constant. Controls, saved sounds, IDs,
 MODEL policy, trigger strength and state ownership stay unchanged.
@@ -41,16 +40,23 @@ MODEL policy, trigger strength and state ownership stay unchanged.
 Freeze that value before rerunning full training tails and seven histories.
 Retain every setting/repetition and all early, late, level and shape regressions.
 The reference recordings and their scheduled timing remain unchanged. There is
-no per-recording, per-setting or per-device scale selection during comparison,
-and held-out audio remains unused until its criteria are frozen.
+no per-recording, per-setting or per-device scale selection during comparison.
+The accepted thresholds still need frozen measurement rules before held-out
+audio is used; see the target document. No comparison-time gain fitting is allowed.
 
 Preserve the existing .25 FS internal-body, .5 FS rendered-chain and 1e-5 FS
 backend numerical limits. A gain would amplify existing implementation error;
 current worst SHARC agreement is already close to 1e-5. Improve implementation
 accuracy if needed or reject the candidate. Do not relax those limits, clip a
 result to pass, or treat a trained constant as a fidelity acceptance result.
-Qualify any adopted constant on both actual CPU components and DT/DN/DN2
-installed emulators, with existing native #78/#20 distinctions retained.
+Qualify any adopted constant on both actual CPU components and reference
+recordings. Run full-device DT/DN/DN2 checks for boundary changes and the next
+integration/release milestone, following the agreed DSP-only test cadence.
+Existing native #78/#20 distinctions remain explicit.
 
-The selected path is to keep the current unit conversion and continue circuit
-modeling. No extra LEVEL knob or native gain multiplication is introduced.
+## Historical decision
+
+Earlier on 28 October the human declined the calibration proposal and chose
+to keep the existing internal gain. Prior qualification documents correctly
+describe their unchanged gain at that checkpoint; they are historical results,
+not a continuing prohibition after the explicit approval above.

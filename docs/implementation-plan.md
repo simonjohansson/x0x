@@ -1,5 +1,15 @@
 # Implementation plan: one combined mod, silent first
 
+The human approved [starting 808 fidelity targets](808-fidelity-target.md) on
+28 October and explicitly authorized fixed DSP output scaling after clarifying
+that native track LEVEL remains the user volume control. This supersedes the
+earlier gain freeze. Work sequentially: freeze the measurement protocol, assess
+the current engine against these targets, then implement/qualify shared fixed
+scaling and remaining single-hit corrections in #79/#2. Targets are approved;
+measurement-rule freeze, scaling implementation and fidelity acceptance are
+not complete. Held-out audio and HTML remain untouched. Accent and faithful
+residual-state retrigger remain separate refinements; #9 stays complete.
+
 The historical [full training-grid baseline](full-reference-grid-baseline.md) compares
 243 808 and 2,187 909 recordings against accepted commit `65aeaf7` on both
 actual CPUs, plus seven declared-voice histories per engine. This is component
@@ -71,8 +81,9 @@ regressions. All 135 upper-Decay quiet-pole windows fail frozen inference
 criteria; this neither changes nor confirms the current upper law. Preserve
 these findings rather than refitting rejected windows. See the
 [remaining source/model work](808-pitch-sigh-investigation.md).
-The human [declined output-gain fitting](808-output-calibration-proposal.md):
-keep current internal gain and the raw reference comparison unchanged. The
+The human's earlier gain freeze is superseded by explicit approval of
+[fixed DSP output calibration](808-output-calibration-proposal.md). Existing
+qualification retains its original gain and raw comparison provenance. The
 [lower-interior Decay correction](808-decay-shape.md) now has a reviewed
 fixed-gain model/full-tail screen and complete actual CPU/reference qualification.
 The supported baseline is delivered; remaining source/fidelity work stays in
