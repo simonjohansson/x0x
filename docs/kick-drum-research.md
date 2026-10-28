@@ -414,6 +414,24 @@ automatic normalization or reseeding.
 
 ### 5.3 Grow a small corpus
 
+The user resumed the 808 capture portion on 27 October 2026 with an explicit
+fixed-Level scope: 81 Tone/Decay combinations, sixteen held-out combinations,
+three repeats and seven history sequences. The local handover and exact
+capture-integrity results are in `research/reference/808/README.md`. The broader
+Level/accent experiments below remain proposed work; they are not part of
+that authorized corpus or passing acceptance checks. The subsequent fixed-Level
+909 corpus is described next. No physical-device or
+mod-fidelity claim follows from those software renders.
+
+The subsequent user-authorized 909 capture increment uses a 729-setting
+Tune/Attack/Decay grid, 64 held-out settings and the same fixed-Level principles.
+Its local protocol, status and repeatability limits are in
+`research/reference/909/README.md`; source variation is not hidden by sample
+averaging or normalization. All 2,386 main WAVs and 44 support WAVs pass
+capture-integrity validation; CPU-saving mode is verified off. Of 793 triplets,
+344 vary during the first 50 ms, while every triplet matches thereafter. This
+is source variation, not a mod-fidelity pass.
+
 Start with isolated hits separated by enough time to observe the full tail:
 
 | Set | 808 | 909 |

@@ -129,6 +129,57 @@ Useful next source-to-model-to-ASM increments remain:
    executable evidence for envelopes/noise/VCA ideas, not the stock circuit oracle.
 
 #79 remains open for the missing stock models, corrections and final alignment
-report. #9/#25 own the integrated ASM changes. This increment adds no native
-emulator or VST/physical-device proof; #2 remains deferred. Existing #78, #80 and
+report. #9/#25 own the integrated ASM changes. This Plaits increment adds no native
+emulator or VST/physical-device proof. The subsequently resumed 808 capture
+portion of #2 is described below. Existing #78, #80 and
 DN's failed capture baseline in #20 are unchanged and were not re-probed.
+
+## 808 reference corpus complete, 27 October 2026
+
+The user authorized an 81-position Tone/Decay grid, sixteen separate held-out
+settings, three fresh repeats per setting and seven history sequences, at one
+fixed level and trigger strength. The local `research/reference/808/README.md`
+is the handover for the raw float WAVs, exact sessions, parameter readbacks,
+scripts, provenance and capture-integrity results. These are software reference
+renders, not physical-device evidence. Audio stays local and ignored by Git.
+
+All 298 WAVs pass capture-integrity checks. All 97 isolated-setting triplets are
+sample-identical, and the three online/offline pilot comparisons are identical.
+Maximum peak is 0.104705609381 FS; maximum preroll and final-200-ms peaks are
+2.91527395215e-14 and 4.75298467251e-9 FS. No normalization or alignment is applied.
+Source Level/gain and trigger strength stay fixed. Dedicated project hardware
+outputs are disconnected. The small warm/fresh baseline difference is retained
+in the local pilot evidence rather than hidden by resetting or normalizing it.
+
+The corpus changes no production code, saved controls or firmware. Level,
+tuning and accent sweeps, fitting, fidelity thresholds and
+CPU/emulator comparisons remain open in #2; a successful capture does not
+close the fidelity gate. The original circuit sources remain the authority
+for claims about stock hardware.
+
+## 909 reference corpus completed, 27 October 2026
+
+The user authorized the same clean, fixed-Level workflow for the installed
+909 reference. Its three stock controls use a 9 x 9 x 9 Tune/Attack/Decay grid
+(729 settings), 64 separate held-out settings, three fresh repeats and seven
+history sequences. All **2,386 main WAVs** and **44 support WAVs** pass automated
+capture-integrity checks. The local handover is `research/reference/909/README.md`;
+raw audio, exact sessions, readbacks, scripts, source identity and checksums
+remain local and ignored by Git.
+
+Of the 793 isolated-setting triplets, 449 are sample-identical and 344 vary in
+the first 50 ms; every triplet is identical after that window. Three-corner
+online/offline probes, five fresh repeats per mode, also match after 50 ms.
+Maximum main peak is 0.124897368252 FS; maximum preroll and final-200-ms peaks
+are 3.07506061901e-14 and 9.46765297272e-8 FS. The tiny late DC residual is
+preserved. Every main onset is six samples after scheduled MIDI, with identical
+L/R samples. There is no normalization, DC subtraction or alignment.
+
+Level/gain/strength remain fixed. CPU-saving mode is verified off by the user
+and retained screenshot. The captured transport-lock option remains on; every
+case sends an explicit sequencer-stop event and the no-kick pilot is silent.
+All saved capture projects have no hardware sends or input monitoring, one
+source instrument and unchanged host faders. A separate empty, stopped and
+disconnected final baseline is retained. This is software-reference evidence;
+no production DSP, mod-fitting, physical-device or calibrated fidelity acceptance
+is claimed. #2 remains open for those broader comparisons and excitation scopes.

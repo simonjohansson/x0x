@@ -214,8 +214,14 @@ every control, model stage, CPU implementation and matrix cell.
 
 The three silent device issues and supported 808 baseline #9 are closed:
 the body is integrated and audible on all three devices' emulators. The DT reset
-correction in #78 remains deferred. The [initial five-setting 808 comparison](808-reference-baseline.md)
-in #2 is complete; pitch/Decay calibration now uses the training recordings; full fidelity remains unqualified. Use
+correction in #78 remains deferred. The user resumed the 808 capture portion
+of #2 on 27 October: 298 local raw recordings pass capture integrity and their
+handover is under `research/reference/808/`. Only Tone and Decay vary, with Level fixed; the
+mod now has an [initial five-setting raw-ASM comparison](808-reference-baseline.md); pitch/Decay calibration now uses the training recordings; full fidelity remains unqualified. The user subsequently
+authorized the same 909 workflow under `research/reference/909/`, covering
+Tune/Attack/Decay at fixed Level: 2,386 main WAVs pass capture integrity, plus
+44 support WAVs. The source attack variation is retained and CPU-saving mode
+is verified off. Calibrated fidelity remains open in #2. Use
 subagents for non-overlapping work when authorized; one blocked device does
 not stop useful work on another device.
 
@@ -316,7 +322,8 @@ two actual ASM implementations. Reuse the existing analyzers, fixtures and CPU r
 each backend to that model and compare matching outputs across CPUs. Record
 bounds, fixed-point overflow/limit cycles, floating-point stability and state
 isolation as part of the engine issue. Initial research-based sound is explicitly
-uncalibrated until #2 reference comparisons pass.
+uncalibrated until #2 reference comparisons pass. The fixed-level reference
+corpora do not themselves establish passing comparisons.
 
 The six device/model combinations remain rows in the integration results, not
 six issue trees. #20 checks the accumulated mixed-model, persistence, routing,

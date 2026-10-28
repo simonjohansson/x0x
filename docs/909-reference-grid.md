@@ -1,5 +1,9 @@
 # Full 909 training-grid diagnostic
 
+The later [control-interaction diagnostic](909-control-interactions.md) tests
+single-control and pairwise predictions using the existing reference corpus.
+It changes neither the accepted engine nor this historical CPU baseline.
+
 This diagnostic compares the accepted implementation at `65aeaf7` against all
 729 Tune/Attack/Decay training settings, with all three fresh takes per setting.
 Each recording is cropped only at its scheduled MIDI time (one second), retaining

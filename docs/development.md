@@ -689,7 +689,14 @@ dependency artifacts. Older profiles inside
 Elekloader do not expand the supported OS set. New official firmware requires
 an explicit baseline/profile update rather than a fallback to an old version.
 
-VST selection, plugin captures and calibrated kick-fidelity gates remain deferred.
+The user resumed the fixed-level 808 reference-capture portion of #2 on
+27 October 2026; its local handover is `research/reference/808/README.md` and
+the [reference report](reference-renders.md) records the scope. The user then
+authorized the corresponding fixed-Level 909 capture workflow, recorded in
+`research/reference/909/README.md`. All 2,386 main 909 WAVs and 44 support
+WAVs pass capture-integrity checks, with CPU-saving mode verified off. Source
+attack variation is retained. Both fixed-level corpora are complete; calibrated
+kick-fidelity gates remain open.
 All runs in this phase use host test equipment or the required emulators; no
 real device is operated.
 
