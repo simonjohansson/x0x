@@ -1,5 +1,8 @@
 # 808 upper-middle Decay correction
 
+The subsequent [lower-interior duration correction](808-lower-duration.md)
+keeps every upper setting below byte-identical. This document records `7716145`.
+
 The previous qualified DSP is `e0adf4e`. Reference Decay 159, 191 and 223 fade
 roughly 16–20% too quickly by cumulative-energy t99, while the default and
 maximum are closer. This increment changes only the upper control curve, on

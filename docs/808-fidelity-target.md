@@ -71,12 +71,15 @@ work; passing this milestone does not qualify either. Repeated playback for
 listening is not proof of retained-state retrigger behavior.
 
 Fixed output scaling was [qualified at 0f7ef30](808-output-calibration.md).
-The [minimum-Decay correction at e0adf4e](808-minimum-decay.md) and
-[upper-middle correction at 7716145](808-upper-decay.md) retain that factor.
-The upper-middle increment brings all 162 affected duration checks per CPU
-inside the agreed margin, while retaining waveform, peak and broad-band
-regressions. Whole-surface duration passes are 432/486, with remaining Decay32
-t99 and default t90 failures; full level and tone acceptance remain open.
-Continue sequentially on remaining onset/body-shape/Tone differences and finish
-the measurement/listening protocols before held-out use. #9 stays complete;
-#2 owns reference acceptance and #79 owns engine refinement. HTML is unchanged.
+The [minimum-Decay correction](808-minimum-decay.md),
+[upper-middle correction](808-upper-decay.md) and
+[lower-interior duration correction at 53c4e66](808-lower-duration.md) retain
+that factor. Current duration checks are 456/486 per CPU, with no previous
+passing duration or level check lost in the latest increment. The darkest
+Tone/Decay32 t99 misses by .167 ms, and all default t90 misses remain. Level
+checks remain 1,380/1,890 across CPUs; full level, harmonic and listening
+acceptance remain open. Preserve the recorded waveform and broad-band regressions.
+Continue sequentially on onset/body-shape/Tone differences and finish the
+measurement/listening protocols before held-out use. #9 stays complete;
+#2 owns reference acceptance and #79 owns engine refinement. Website updates
+are paused at the user's request.

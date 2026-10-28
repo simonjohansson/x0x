@@ -15,7 +15,8 @@ The subsequent [effective feedback calibration](808-feedback-calibration.md)
 changes the two internal Q43 coefficients together; its CPU/native qualification
 and retained early/short-setting regressions are recorded separately.
 Current component/reference qualification is the
-[upper-middle Decay correction](808-upper-decay.md), `7716145`, following the
+[lower-interior duration correction](808-lower-duration.md), `53c4e66`, following the
+[upper-middle correction](808-upper-decay.md),
 [minimum-Decay correction](808-minimum-decay.md) and fixed output calibration. Prior full-device
 evidence remains at `9e78ca9`; no new native pass is claimed. The human accepted
 #9 as the fixed-strength/reset-on-START baseline, retaining intrinsic accent,
@@ -68,9 +69,9 @@ a join at the approved default 16384:
 - `r_max = exp(-1/(48000*.366))`.
 
 Below raw4096, the [minimum-Decay segment](808-minimum-decay.md) interpolates
-retention from the new minimum to the unchanged raw4096 anchor, matching its
+retention from the minimum to the current raw4096 anchor, matching its
 value and slope. From raw4096 to the default, use `s=d/16384`,
-`q=s*s+1.5*s*s*(1-s)` and `tau=.0333+(.143-.0333)*q`, then convert tau to retention.
+`q=s*s+1.33*s*s*(1-s)` and `tau=.0333+(.143-.0333)*q`, then convert tau to retention.
 Above the default, use `p=(d-16384)/16128`, `q=p+.9499298*p*(1-p)` and interpolate
 retention between default and maximum with q. The raw-body amplitude time
 constant is `-1/(48000*log(r(d)))`. Default and maximum anchors stay unchanged;
@@ -78,7 +79,7 @@ the minimum now has its separately qualified shorter response.
 
 These are reference-calibrated control curves, not identification of stock
 VR6 taper or full circuit fidelity. They change feedback loss, not a separate
-output envelope. The [upper-middle correction](808-upper-decay.md) records its
+output envelope. The [lower-interior duration correction](808-lower-duration.md) records its
 training tradeoffs and numerical qualification; the earlier
 [lower-interior correction](808-decay-shape.md) is historical. The raw modal
 encoding stays fixed; one shared post-C47 factor 1.601664543 supplies the

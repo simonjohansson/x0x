@@ -1,6 +1,21 @@
 # Implementation plan: one combined mod, silent first
 
-Current 808 DSP is `7716145`: the [upper-middle Decay correction](808-upper-decay.md)
+Current 808 DSP is `53c4e66`: the [lower-interior duration correction](808-lower-duration.md)
+changes the existing lower shape from 1.5 to 1.33 with a no-new-level-failures
+training guard. Duration checks rise 432→456 of 486 per CPU; 24 of 27 short-tail
+misses are resolved. Darkest Tone/Decay32 still misses t99 by .167 ms on three
+takes, and the default t90 failures remain. No previously passing duration or
+level check is lost; level passes remain 1,380/1,890. Preserve the .185% mean
+whole-waveform error increase and broad-band regressions. 203 host tests, guarded
+components, both fresh full 81-setting/243-take/12-second grids and seven histories
+pass numerical limits. All 54 unaffected settings and seven histories per CPU
+remain byte-identical, including minimum/default/upper sounds. Instructions,
+state, ABI, controls, gain and dependency pins are unchanged. Next continue
+onset/body-shape/Tone work and measurement/listening protocols in #79/#2; #9
+remains complete and final #20 stays open. No fresh OS/physical or held-out
+acceptance. Website work is paused and its files are preserved.
+
+Previous 808 DSP is `7716145`: the [upper-middle Decay correction](808-upper-decay.md)
 brings all 162 affected duration checks per CPU within the agreed margin; mean
 absolute duration error falls 80.43→15.69 ms. Whole-surface duration checks rise
 270→432 of 486, leaving Decay32 t99 and default t90 failures. Level checks rise
