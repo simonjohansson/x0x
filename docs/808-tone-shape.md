@@ -88,7 +88,7 @@ curve, while retaining isolated interior-transfer regressions. The selected
 curve targets the independent Tone-control defect, not the best of several
 whole-waveform fits.
 
-Implementation and component/native qualification are in progress. Numeric
+Implementation and guarded component qualification are complete. Numeric
 limits remain unchanged; no full-tail, installed-emulator, held-out or complete
 engine-fidelity pass follows from this screen. No HTML or website changes.
 The host model passes 191 tracked tests and seven compiled C/UI checks; those
@@ -103,8 +103,14 @@ composed chain 2.333e-6 FS, with endpoint audio and final state byte identical.
 The extra live interior-control sequence passes at 7.46e-9 FS. Its measured
 maximum is 2,213 instructions per block including the fixture wrapper; this is
 cost evidence, not a real-device deadline qualification. Independent review
-finds no source/math integration blocker. Full SHARC, paired tails/histories
-and all three installed scenarios remain pending at this implementation step.
+finds no source/math integration blocker. SHARC's full ordinary suite passes
+16,008 guarded callbacks, with maximum 808 error 8.265e-6 FS under the unchanged
+1e-5 bound. Both endpoint files and all twelve stored 909 files remain byte
+identical. The suite began on the precommit working tree at `91d913d`; its
+generic report records HEAD at completion. Explicit source/model/image binding
+to `f59f129` preserves that execution distinction rather than claiming a new
+Git-sourced run. The committed image rebuild also matches exactly.
+Fresh paired tails/histories and all three installed scenarios remain pending.
 Local source/readback receipts, synthetic proofs and fit trace are under
 `out/808-tone-discretization/` and `out/808-tone-sqrt-curve/`; the independent
 integrated screen is `out/808-tone-sqrt-screen/fitted/`.
