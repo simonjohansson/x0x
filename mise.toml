@@ -258,3 +258,11 @@ run = "python -m x0x.plaits_reference"
 [tasks."research:808:reference"]
 description = "Compare current 808 ASM against five captured settings and build the portable report"
 run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:{{config_root}}/vendor/digikit:$PYTHONPATH" MPLCONFIGDIR="{{config_root}}/out/matplotlib" uv run --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --with matplotlib==3.11.2 --python "$(mise which python)" python -m x0x.reference808_compare'
+
+[tasks."test:808:model"]
+description = "Check the fresh 808 protocol and reproduce the evaluated waveform teacher"
+run = [
+  'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --python "$(mise which python)" python -m unittest discover -s tests/host -p test_fit808.py',
+  'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --python "$(mise which python)" python -m x0x.fit808 benchmark',
+  'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --python "$(mise which python)" python -m x0x.fit808 benchmark --partition validation --output out/808-model/protocol-validation.json',
+]
