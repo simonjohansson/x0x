@@ -190,6 +190,21 @@ x0x_808_body:
     subi.l #16384, %d6
     move.l #133152, %d0 /* floor(2^31 / 16128) */
     mulu.l %d0, %d6
+    move.l 112(%sp), %d0
+    cmpi.l #32512, %d0
+    beq.s .Ldecay_high_shaped /* Keep the exact maximum anchor. */
+    /* Upper duration curve q=p+k*p*(1-p), sharing all existing coefficient banks. */
+    moveq #0, %d0
+    move.l %d0, %acc0
+    move.l #2147483647, %d0
+    sub.l %d6, %d0
+    mac.l %d6, %d0, %acc0
+    movclr.l %acc0, %d0
+    move.l #2039958712, %d1
+    mac.l %d0, %d1, %acc0
+    movclr.l %acc0, %d0
+    add.l %d0, %d6
+.Ldecay_high_shaped:
     tst.l %d7
     beq.s .Lsteady_high
     move.l #2146855100, %d2

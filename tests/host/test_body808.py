@@ -20,17 +20,27 @@ class Body808Tests(unittest.TestCase):
 
 
 class Decay808Tests(unittest.TestCase):
-    def test_lower_curve_corrects_interiors_and_preserves_all_upper_words(self):
+    def test_lower_curve_and_upper_anchors_preserve_their_durations(self):
         import math
         from x0x.body808 import decay_tau, retention, RETENTION_DEFAULT, RETENTION_MAX, MIN_TAU
         for raw, tau in ((0, MIN_TAU), (4096, .04786953125),
                          (8192, .08129375), (12288, .11814609375), (16384, .143)):
             self.assertAlmostEqual(decay_tau(raw), tau, delta=1e-12)
-        for raw in range(16384, 32513):
-            previous = RETENTION_DEFAULT + (RETENTION_MAX-RETENTION_DEFAULT)*(raw-16384)/16128
-            self.assertEqual(retention(raw), previous)
+        self.assertEqual(retention(16384), RETENTION_DEFAULT)
+        self.assertEqual(retention(32512), RETENTION_MAX)
         for raw in (0, 16384, 32512):
             self.assertTrue(math.isfinite(retention(raw)))
+
+    def test_upper_curve_extends_interiors_without_moving_anchors(self):
+        from x0x.body808 import retention, UPPER_SHAPE, RETENTION_DEFAULT, RETENTION_MAX
+        self.assertGreater(UPPER_SHAPE, 0)
+        self.assertLess(UPPER_SHAPE, 1)
+        for raw in (16385, 20480, 24576, 28672, 32511):
+            position = (raw-16384)/16128
+            previous = RETENTION_DEFAULT + (RETENTION_MAX-RETENTION_DEFAULT)*position
+            expected = previous + (RETENTION_MAX-RETENTION_DEFAULT)*UPPER_SHAPE*position*(1-position)
+            self.assertGreater(retention(raw), previous)
+            self.assertAlmostEqual(retention(raw), expected, delta=2e-16)
 
     def test_short_segment_preserves_every_later_word_and_joins_smoothly(self):
         import math

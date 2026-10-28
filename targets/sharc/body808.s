@@ -322,6 +322,20 @@ steady_short:
     R4=0x36878f89;
     JUMP decay_coefficients;
 decay_high:
+    R4=0x3f800000;
+    COMP(F11,F4);
+    IF EQ JUMP decay_high_shaped; // Preserve the maximum anchor bit for bit.
+    R4=0x3f010204;
+    F5=F11-F4;
+    R4=0x40010410; // p=(raw-default)/(maximum-default)
+    F5=F5*F4;
+    R4=0x3f800000;
+    F4=F4-F5;
+    F5=F5*F4;
+    R4=0x3ef14468; // k*(63/127), converted back to existing coefficient coordinates.
+    F5=F5*F4;
+    F11=F11+F5;
+decay_high_shaped:
     R4=DM(I0,M5);
     R4=PASS R4;
     IF EQ JUMP steady_high;

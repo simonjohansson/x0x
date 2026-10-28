@@ -10,6 +10,7 @@ SAMPLE_RATE = 48000
 FREQUENCY = 47.65
 TAU = 0.143
 LOWER_SHAPE = 1.5
+UPPER_SHAPE = .9499298  # Training duration fit, bounded below one for a monotonic upper curve.
 MIN_TAU = .01922924  # Minimum-Decay duration fit; controls >=4096 keep the prior law.
 SHORT_END = 4096
 GAIN = 0.25
@@ -36,7 +37,7 @@ SHORT_SHAPE = 2 - (RETENTION_SHORT_END * _short_tau_slope /
 
 
 def retention(decay_raw):
-    """Calibrated short retention, previous lower tau and upper retention laws.
+    """Calibrated retention curves with the existing lower tau law.
 
     The full training grid supports this small control correction, not a stock
     VR6 taper model. Default/maximum anchors and settled frequency stay unchanged.
@@ -52,7 +53,9 @@ def retention(decay_raw):
         shape = position*position + LOWER_SHAPE*position*position*(1-position)
         tau = .0333 + (TAU - .0333) * shape
         return math.exp(-1 / (SAMPLE_RATE * tau))
-    return RETENTION_DEFAULT + (RETENTION_MAX - RETENTION_DEFAULT) * (decay_raw - DEFAULT_DECAY) / (RAW_MAX - DEFAULT_DECAY)
+    position = (decay_raw - DEFAULT_DECAY) / (RAW_MAX - DEFAULT_DECAY)
+    shape = position + UPPER_SHAPE * position * (1-position)
+    return RETENTION_DEFAULT + (RETENTION_MAX - RETENTION_DEFAULT) * shape
 
 
 def decay_tau(decay_raw):
