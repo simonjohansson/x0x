@@ -4,8 +4,9 @@ The historical [full training-grid baseline](full-reference-grid-baseline.md) co
 243 808 and 2,187 909 recordings against accepted commit `65aeaf7` on both
 actual CPUs, plus seven declared-voice histories per engine. This is component
 diagnostic evidence; held-out/native fidelity gates remain open and the HTML
-report is unchanged. Current 808 qualification is `f59f129`, with the
-[reference-calibrated Tone control shape](808-tone-shape.md) after the
+report is unchanged. Current 808 qualification is `9e78ca9`, with the
+[main-pulse timescale correction](808-main-pulse-time.md) after the
+[Tone control shape](808-tone-shape.md) and
 [effective Q43 feedback calibration](808-feedback-calibration.md). Both CPUs
 have full tails and histories; all three installed scenarios finish with DT
 #78 retained, DN's current single-window pass distinct from historical #20,
@@ -46,12 +47,26 @@ these remain explicit. The standalone initial-frequency and updated soft-knee
 trials are rejected for their early-window/full-waveform regressions. Continue
 existing excitation and declared-same-voice retention experiments using this
 qualified source; no native owner identity or gain calibration is inferred.
-The next [main-pulse timescale calibration](808-main-pulse-time.md) changes
+The qualified [main-pulse timescale calibration](808-main-pulse-time.md) changes
 only C40's effective source evolution. Its bounded host screen improves all
 81 settings at 6/25/150/500 ms; nine late minimum-Decay regressions remain.
-Both actual raw-body preflights preserve the tight .25 FS bound. Full
-component, paired-tail/history and native qualification are in progress;
-the body-bound-limited fit is not a stationary optimum.
+Both actual raw-body checks preserve the tight .25 FS bound. Full component,
+paired 12-second tails / seven histories and installed scenarios are complete.
+All 81 cumulative-window/full-tail settings and all seven histories improve;
+mean whole error falls .796%. Nine minimum-Decay settings regress slightly in
+the isolated 150–500 ms window. The body-bound-limited fit is not a stationary
+optimum; raw headroom and SHARC numeric margins remain tight.
+
+Two subsequent output/Decay diagnostics do not justify another production
+change: fixed physical output division worsens every screened take; a unit-HF
+output-pair replacement has a tiny mixed improvement with minimum-Decay
+regressions. All 135 upper-Decay quiet-pole windows fail frozen inference
+criteria; this neither changes nor confirms the current upper law. Preserve
+these findings rather than refitting rejected windows. See the
+[remaining source/model work](808-pitch-sigh-investigation.md).
+The planned [fixed internal output calibration](808-output-calibration-proposal.md)
+awaits clarification of the loop's no-fitted-gain restriction. No gain is fitted
+or applied; existing raw reference comparison remains unchanged.
 
 The 909 [diode shaper](909-shaping.md), [C9/IC12 Tune path](909-tune.md) and
 [loaded ENV1/Q12 VCA](909-vca.md) run on both CPUs and all three emulators.
@@ -69,7 +84,7 @@ bounded pieces with serial shared-source integration; no new ticket tree.
 
 DT retains only deferred reset #78. DN's [historical one-count investigation](dn-silence-residue.md)
 proves exact-zero x0x inputs into stock filters with nonzero native downstream
-output. The current Tone-shape run passes its first zero 100 ms windows; the
+output. The current main-pulse run passes its first zero 100 ms windows; the
 earlier feedback-calibration run reproduced the residue through all sixty
 windows. Neither intermittent result establishes a fix; #20 remains unresolved.
 [DN2 MIDI delivery](dn2-late-model.md) is fixed in public Digikit draft PR200,

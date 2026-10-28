@@ -86,7 +86,28 @@ under `out/808-retrigger-model-f59/`; its original failed 8→16 check and the
 private helper's exact-6-ms rejection fix remain preserved. All source snapshots,
 receipts, failures and rejected outputs remain distinct from accepted audio.
 The source/equation checks and model screens are not new native-emulator or
-physical-device evidence. Current full-grid and native qualification is in
-[the feedback calibration](808-feedback-calibration.md); Tone-specific gates
-are recorded [separately](808-tone.md). #78 and historical #20 remain unresolved,
+physical-device evidence. Current full-grid and native qualification is the subsequent
+[main-pulse timescale correction](808-main-pulse-time.md), `9e78ca9`; feedback
+and Tone records retain their historical qualification. #78 and historical #20 remain unresolved,
 and broad #9/#79/#2 fidelity gates remain open.
+
+
+## Subsequent output and upper-Decay diagnostics
+
+On qualified `9e78ca9`, a fixed C49/C50 replacement for the provisional C47
+stage was screened separately from earlier additive-output trials. Physical
+100/182 division worsens all 243 first-500-ms takes. Unit-HF shape alone
+improves 216 and worsens 27 (all minimum Decay), with only .0779% mean
+improvement; all 27 minimum-Decay full tails also regress slightly. Later
+minimum-Decay tail shape improves, but this conditional replacement omits full
+C47/Q44 loading and is not adopted. No poles, gain or timing were fitted.
+Evidence: `out/808-output-pair-replacement/`.
+
+A separately validated upper-Decay estimator rejects every one of 135 declared
+windows across 45 training takes. An analysis filter magnifies weak
+nonfundamental content, invalidating its homogeneous quiet-pole assumption;
+independent raw recomputation confirms the result. No rejected estimate is a
+usable Decay measurement. This neither justifies changing nor confirms the
+existing upper law. Frozen criteria remain unchanged, and no production
+correction or further estimator variants follow from this run. Evidence:
+`out/808-upper-decay/{validation,reference,review}/`.

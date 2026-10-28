@@ -5,13 +5,15 @@ retains an unresolved historical failure. A bounded investigation of the reprodu
 baseline places the residual after the x0x body and native AMP output.
 It does not establish an emulator arithmetic defect or justify a mod workaround.
 
-The current [Tone-shape correction](808-tone-shape.md) at `f59f129` passes its
-original scenario: 109,213 callbacks, 71 audible mixed blocks, no observer
+The current [main-pulse correction](808-main-pulse-time.md) at `9e78ca9` passes
+its original scenario: 108,769 callbacks, 75 audible mixed blocks, no observer
 violations. Dark, bright and 909 each reach their first zero 100 ms window;
 that early exit does not test sixty-window stability or establish a fix.
-Fresh delivered interior-control raw callback errors stay below 7.286e-6 FS.
-The exact source/runtime/firmware ledger is under `out/808-tone-shape/` in
+Fresh delivered interior-control raw callback errors stay below 8.152e-6 FS.
+Exact source/runtime/firmware binding is under `out/808-c40-time-cpu/` in
 `coldfire/native-qualification.json` and `native/dn/native-report.json`.
+The previous Tone-shape run at `f59f129` also passed its first zero windows
+(109,213 callbacks / 71 mixed blocks); neither pass attributes a fix.
 
 The preceding [feedback correction](808-feedback-calibration.md) at `fb343b5`
 reproduces the bright-Tone baseline failure: one PCM16 count throughout all

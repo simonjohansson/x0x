@@ -14,6 +14,10 @@ Q43 as the late-error source and records the corrections rejected before porting
 The subsequent [effective feedback calibration](808-feedback-calibration.md)
 changes the two internal Q43 coefficients together; its CPU/native qualification
 and retained early/short-setting regressions are recorded separately.
+Current bounded numeric/reference/native qualification is the
+[main-pulse timescale correction](808-main-pulse-time.md), `9e78ca9`, following
+the [Tone control-shape calibration](808-tone-shape.md). Both retain the
+remaining fidelity and historical native limitations.
 The [first 909 body](909-body.md) follows separately. The [reference-informed Decay increment](808-decay.md) shortens the
 previously excessive tails. The raw-body equations below
 describe the 808 oscillator before Tone and the [C47 coupling filter](808-coupling.md).
@@ -160,13 +164,13 @@ Raw/direct and downstream measurements have different windows and host effects;
 compare short against long within each test, not the ratios across devices.
 
 #9's first body is integrated in all three emulators. The three-point Decay response is now reference-informed but
-provisional; stock feedback/pot mapping, shaped excitation/pitch sigh, full output loading,
-calibrated scale and circuit-state retrigger behavior remain open. Tone filtering
-is now implemented with a provisional resistance-linear control mapping; see
-[the current Tone evidence](808-tone.md).
+provisional; full stock feedback/pot mapping, finite excitation/transistor
+behavior, full output loading, calibrated scale and circuit-state retrigger
+remain open. Tone filtering now uses the reference-calibrated control shape;
+see [current Tone evidence](808-tone-shape.md).
 [#79](https://github.com/simonjohansson/x0x/issues/79) owns reference-implementation
 and schematic alignment; its [source/code audit](reference-alignment.md) records
-the current gaps and pinned source baselines. #2 now has an initial five-setting
-software-reference comparison; the [pitch increment](808-pitch.md) uses that
-training evidence without consuming held-out settings. Full calibrated fidelity
+the current gaps and pinned source baselines. #2 has the
+[full 81-setting training comparison](808-grid-comparison.md) and successive
+paired corrections, without consuming held-out settings. Full calibrated fidelity
 and physical-device timing remain unqualified.

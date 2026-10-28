@@ -2,7 +2,10 @@
 
 The measurements below describe the main-input checkpoint. The subsequent
 [Q43 leakage increment](808-leakage.md) adds amplitude-dependent pitch sigh;
-keep these earlier results distinct from the current comparison.
+keep these earlier results distinct from the current comparison. Current
+qualification is the subsequent [C40 timescale correction](808-main-pulse-time.md),
+`9e78ca9`; it preserves the transfer/topology below while scaling the nominal
+source time constant by one training-calibrated factor.
 
 This #9/#79 increment replaces the provisional y-drive with the C40/D53 pulse
 shaper and the main bridged-T input on both CPUs. It keeps the calibrated

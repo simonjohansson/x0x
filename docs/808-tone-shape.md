@@ -1,5 +1,9 @@
 # 808 reference-calibrated Tone curve
 
+This document preserves qualification of `f59f129`. Current engine qualification
+is the subsequent [main-pulse correction](808-main-pulse-time.md), `9e78ca9`;
+its C40 change preserves this Tone algorithm and control law.
+
 This #9/#79 increment corrects the remaining interior Tone control shape after
 [the nominal C15 correction](808-tone.md). The RC topology, trapezoidal filter,
 5220/220 Ω endpoints, body/Q43 parameters, output gain, live history, START,
