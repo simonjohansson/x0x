@@ -239,7 +239,7 @@ mise run research:808:sharc-model
 mise run firmware:dn2:808-model
 ```
 
-Six focused tests cover exported tables versus the independent frozen model,
+Seven focused tests cover exported tables versus the independent frozen model,
 ELF/region refusal, explicit future 909 reservations, actual ASM fractional
 output, slot/reset/MODEL/silence behaviour, immutable tables and independent
 Python/native instruction traces with every DSP write bounded to its own voice
@@ -266,3 +266,31 @@ has been booted. Instruction counts are not cycle counts or available stock-DSP
 headroom. Request a physical Digitone II for native integration, listening,
 polyphony and timing after local qualification; prefer it over a full-device
 emulator for those next checks. #84 stays open through that qualification.
+
+Local candidate result: all **22 full-length ASM renders** pass the port gate.
+Maximum error against the frozen model is **2.6764e-6 DSP FS**; maximum relative
+L2 port error is **1.8517e-6** (0.0001852%). On the sixteen recorded listening
+settings, source waveform error is **0.5596% median / 0.6954% worst**. These are
+separate quantities: the ASM reproduces the existing listening candidate; it
+does not remove that model's residual source error or establish inaudibility.
+
+The maximum observed complete-hit block is **21,100 instructions**. A separate
+cold-cache witness jumped to age 960 takes **21,608 instructions**. Both Python
+instruction witnesses match the native runner's output and entire voice state
+bit for bit, with writes confined to that voice and its output; no software-stack
+writes occur. These are software instruction measurements, not physical cycles.
+
+Seven focused SHARC tests, six existing layout tests, seven existing diagnostic
+tests and native-media/ABX controller checks pass. A real browser check decoded
+5.5 seconds of PCM24 ASM audio, reached readyState 4 and advanced playback without
+an error. No human discrimination result is inferred. The repository-wide suite
+was not rerun; the three historical feedback-model failures preserved in
+`cb7f2b2` remain separate research limitations.
+
+The ready test firmware SHA256 is
+`fe55ed39f8a77f70867d2ccf78097446fe10a68afd31088072068e18348f004a`.
+The callback/coefficient artifact SHA256 is
+`c0f979058674a634c0f89bdebbdf69a3aee8b4722ce0783bbf4afe341dc5eb0c`.
+No device has been flashed. The next required equipment is a physical Digitone II
+on OS 1.12 for native callback/routing, audible output, lifecycle and measured
+voice-count/deadline checks.

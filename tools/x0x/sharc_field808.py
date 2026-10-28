@@ -413,6 +413,10 @@ def qualify(folder=OUT):
         build=receipt,records=rows,source_sha256=hashes['808-corpus.wav'],model_sha256=MODEL_SHA,
         artifact_sha256=receipt['artifact_sha256'],protocol_sha256=fit808.digest(fit808.FIXTURES/'protocol.json'),
         driver_sha256=hashlib.sha256(driver_bytes).hexdigest(),source_asm_sha256=receipt['source_sha256'],
+        reference_driver_sha256=fit808.digest(Path(field808.__file__)),
+        tone_driver_sha256=fit808.digest(Path(tone_factor808.__file__)),
+        benchmark_driver_sha256=fit808.digest(Path(fit808.__file__)),
+        project_revision=cpu.revision(cpu.ROOT),
         native_library_sha256=fit808.digest(Path(runner.native.DEFAULT_LIB)),native_info=runner.core.info(),
         digikit_revision=cpu.revision(cpu.ROOT/'vendor/digikit'),elekloader_revision=cpu.revision(cpu.ROOT/'vendor/elekloader'),
         controls=dict(native_words=32513,finite_weights=True,stable_poles=True),
@@ -443,9 +447,9 @@ def make_plots(folder,references,predictions,rows):
         a,b=references[pair],predictions[pair]
         axes[i,0].plot(np.arange(2400)/48,a[:2400],label='Recorded',color='#333333')
         axes[i,0].plot(np.arange(2400)/48,b[:2400],'--',label='SHARC ASM',color='#00838c')
-        axes[i,0].set(xlabel='Time (ms)',ylabel=f'Tone {pair[0]}, Decay {pair[1]} / capture FS')
+        axes[i,0].set(xlabel='Time (ms)',ylabel=f'Capture FS\nTone {pair[0]} / Decay {pair[1]}')
         axes[i,1].plot(np.arange(24000)/48,(b-a)[:24000],color='#00838c')
-        axes[i,1].set(xlabel='Time (ms)',ylabel='ASM minus recording / capture FS')
+        axes[i,1].set(xlabel='Time (ms)',ylabel='Residual (capture FS)')
         axes[i,0].grid(alpha=.2);axes[i,1].grid(alpha=.2)
     axes[0,0].legend()
     fig.suptitle('Executed SHARC ASM — frozen 808 candidate')

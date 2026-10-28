@@ -3,15 +3,21 @@ import struct
 import tempfile
 from pathlib import Path
 import unittest
+from unittest import mock
 
-import numpy as np
-
-from x0x import field808, sharc_field808 as dsp, sharc_layout
+from x0x import cpu, field808, sharc_field808 as dsp, sharc_layout
 
 
 class SharcFieldTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        global np
+        try:
+            import numpy as np
+            import scipy
+            cpu.require_module('tools.sharc_dev.sharc_transpile_run','digikit')
+        except (ImportError,cpu.Unavailable) as error:
+            raise unittest.SkipTest('Run mise run test:808:sharc-model: '+str(error))
         cls.model=dsp.load_model()
         cls.tables=dsp.export_tables(cls.model)
         cls.folder=tempfile.TemporaryDirectory(prefix='x0x-sharc-field-')
@@ -64,6 +70,23 @@ class SharcFieldTests(unittest.TestCase):
             self.assertEqual(runner.call(32512,32512)[0],(0.,)*32)
         state=runner.core.peek(self.receipt['state_base']+232)
         self.assertEqual(state,264000)
+        runner.check_tables()
+
+    def test_bad_slot_flags_and_state_pointer_leave_voice_untouched(self):
+        runner=dsp.Runner(self.receipt,self.artifact)
+        runner.call(32512,32512,True)
+        base=self.receipt['state_base']
+        before=[runner.core.peek(base+i) for i in range(0,dsp.STATE_BYTES,4)]
+        for index,value in ((1,16),(3,2),(4,0),(5,base+4)):
+            original=runner.core.poke
+            def corrupt(address,data,width=1):
+                if address==runner.INPUT:
+                    words=list(struct.unpack('<6I',data));words[index]=value
+                    data=struct.pack('<6I',*words)
+                return original(address,data,width)
+            with mock.patch.object(runner.core,'poke',side_effect=corrupt):
+                self.assertEqual(runner.call(32512,32512,True)[0],(0.,)*32)
+            self.assertEqual(before,[runner.core.peek(base+i) for i in range(0,dsp.STATE_BYTES,4)])
         runner.check_tables()
 
     def test_fractional_assembled_waveform_and_invalid_controls(self):
