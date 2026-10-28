@@ -4,12 +4,13 @@ The historical [full training-grid baseline](full-reference-grid-baseline.md) co
 243 808 and 2,187 909 recordings against accepted commit `65aeaf7` on both
 actual CPUs, plus seven declared-voice histories per engine. This is component
 diagnostic evidence; held-out/native fidelity gates remain open and the HTML
-report is unchanged. Current 808 qualification is `fb343b5`, with the
-[effective Q43 feedback calibration](808-feedback-calibration.md), following
-the [nominal C-taper correction](808-tone.md). Both CPUs have fresh full tails
-and histories; all three emulator scenarios finish with known DT #78 / DN #20
-failures retained and DN2 passing. Use the full measured surfaces to prioritize
-subsequent #9/#25/#79 corrections, rather than only the original five settings.
+report is unchanged. Current 808 qualification is `f59f129`, with the
+[reference-calibrated Tone control shape](808-tone-shape.md) after the
+[effective Q43 feedback calibration](808-feedback-calibration.md). Both CPUs
+have full tails and histories; all three installed scenarios finish with DT
+#78 retained, DN's current single-window pass distinct from historical #20,
+and DN2 passing. Use the full measured surfaces to prioritize subsequent
+#9/#25/#79 corrections, rather than only the original five settings.
 
 The three silent native milestones are complete. The current 808 has a
 reference-calibrated settled pole/Decay range, switched capacitor state,
@@ -35,12 +36,16 @@ whole-engine fidelity acceptance. Next investigate remaining Tone/onset and
 short-Decay residuals before adopting another correction. Omitted output and
 faithful residual-state behavior remain open; held-out audio remains unused.
 
-The next [Tone control-shape correction](808-tone-shape.md) replaces the nominal
+The [Tone control-shape correction](808-tone-shape.md) replaces the nominal
 linear-position C15 approximation with one reference-calibrated sqrt-position
-curve. It improves all 189 isolated interior Tone-transfer comparisons, with
-endpoints preserved. Both CPU ports pass their full guarded component suites;
-fresh full-tail/native results remain separate pending gates. The standalone
-initial-frequency trial was rejected for its broad early-window regressions.
+curve. All 189 isolated interior transfer comparisons improve; both endpoints
+remain exact. Both guarded CPU suites, full 81-setting / 243-take tails, seven
+histories and installed numeric checks pass. Whole-engine improvement is small
+(.0194% mean full-tail), with 25 whole-tail settings and four histories regressing;
+these remain explicit. The standalone initial-frequency and updated soft-knee
+trials are rejected for their early-window/full-waveform regressions. Continue
+existing excitation and declared-same-voice retention experiments using this
+qualified source; no native owner identity or gain calibration is inferred.
 
 The 909 [diode shaper](909-shaping.md), [C9/IC12 Tune path](909-tune.md) and
 [loaded ENV1/Q12 VCA](909-vca.md) run on both CPUs and all three emulators.
@@ -58,9 +63,9 @@ bounded pieces with serial shared-source integration; no new ticket tree.
 
 DT retains only deferred reset #78. DN's [historical one-count investigation](dn-silence-residue.md)
 proves exact-zero x0x inputs into stock filters with nonzero native downstream
-output. The current feedback-calibration run reproduces the bright baseline residue
-through sixty 100 ms windows. The historical C15 first-zero-window pass did
-not establish a fix; #20 remains unresolved.
+output. The current Tone-shape run passes its first zero 100 ms windows; the
+earlier feedback-calibration run reproduced the residue through all sixty
+windows. Neither intermittent result establishes a fix; #20 remains unresolved.
 [DN2 MIDI delivery](dn2-late-model.md) is fixed in public Digikit draft PR200,
 now pinned here. The unchanged-production candidate passes full and original
 late-MODEL scenarios; the normal pinned daemon passes the new full Tune run.

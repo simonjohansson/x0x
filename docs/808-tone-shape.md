@@ -110,7 +110,92 @@ identical. The suite began on the precommit working tree at `91d913d`; its
 generic report records HEAD at completion. Explicit source/model/image binding
 to `f59f129` preserves that execution distinction rather than claiming a new
 Git-sourced run. The committed image rebuild also matches exactly.
-Fresh paired tails/histories and all three installed scenarios remain pending.
+Fresh paired tails/histories and installed-emulator results follow below.
 Local source/readback receipts, synthetic proofs and fit trace are under
 `out/808-tone-discretization/` and `out/808-tone-sqrt-curve/`; the independent
 integrated screen is `out/808-tone-sqrt-screen/fitted/`.
+
+
+## Paired full tails and installed firmware
+
+Committed `f59f129` is qualified against all 81 settings / 243 separate training
+takes / full 12-second tails on both actual CPUs, plus seven full 13/16-second
+histories. ColdFire reuses only the source/model/rebuilt-image-proved actual
+`fb343b5` bodies and freshly executes Tone/C47. SHARC freshly executes the
+entire combined kernel. Both grids retain all 18 endpoint files byte identically;
+63 interior files change. The unchanged START policy and visible ceil-to-32
+musical scheduling remain. This does not establish faithful retained charge.
+
+| Window | Previous CF mean RMS FS | Current | Improved / regressed / unchanged |
+| --- | --- | --- | --- |
+| First 6 ms | .05868299 | .05849928 | 42 / 21 / 18 |
+| First 25 ms | .07359259 | .07359106 | 29 / 34 / 18 |
+| First 150 ms | .06107990 | .06107184 | 38 / 25 / 18 |
+| First 500 ms | .03936188 | .03935446 | 39 / 24 / 18 |
+| Whole 12 s | .00815222 | .00815064 | 38 / 25 / 18 |
+
+SHARC agrees with these trends. Max oracle errors are 7.351e-6 CF / 8.377e-6
+SHARC FS; CPU differences are 8.567e-6 for the grid and 8.535e-6 for histories,
+all under the unchanged 1e-5 limit. The means above are per-setting RMS means,
+not the relative-identity objective used to calibrate the control curve.
+An independent six-setting / 18-take audit recomputes 360 before/after RMS
+values at both reported gain conventions within 1.638e-15 FS.
+
+All absolute full-engine regressions remain, despite the improved isolated
+control. Listed positions are displayed reference controls, not native words:
+
+| Tone | Regressing Decays, first 150 ms | Regressing Decays, whole 12 s |
+| --- | --- | --- |
+| 32 | 128, 159 | 128, 159 |
+| 64 | 0, 32, 96, 128, 159, 191 | 0, 32, 96, 128, 159 |
+| 96 | 0, 32, 64, 96, 128, 159, 191, 223 | 0, 32, 64, 96, 128, 159, 191 |
+| 128 | 0, 32, 64, 96, 128, 159, 191, 223 | 0, 32, 64, 96, 128, 159, 191 |
+| 159 | 255 | 223, 255 |
+| 191 | None | 255 |
+| 223 | None | 255 |
+
+The first-500-ms cohort is the whole-tail cohort excluding Tone 223 / Decay
+255. All other positions improve or are the unchanged endpoints. Three history
+residuals improve and four regress:
+
+| History | Previous CF RMS FS | Current |
+| --- | --- | --- |
+| Default pair, 50 ms | .01626155 | .01626072 |
+| Default pair, 150 ms | .01456417 | .01456497 |
+| Default pair, 500 ms | .01057712 | .01057802 |
+| Long pair, 50 ms | .02736753 | .02736456 |
+| Long pair, 150 ms | .02460064 | .02459799 |
+| Long pair, 500 ms | .02159523 | .02159543 |
+| Musical | .06288947 | .06289002 |
+
+All three latest-listed firmware builds complete their installed emulator
+scenarios. Source archives, firmware and runtime identities are retained:
+
+| Device | Current result | New numeric evidence |
+| --- | --- | --- |
+| DT | Only deferred #78 reset failures; 53,154 callbacks | Fresh raw callback maximum 7.272e-6 FS over 40,064 samples per interior Decay case |
+| DN | Pass; 109,213 callbacks, 71 audible mixed blocks, no observer violations | Fresh raw callback maximum 7.286e-6 FS over 38,304 samples per interior Decay case |
+| DN2 | Pass; 42,055 audio / 42,056 DSP frames, no halt/missing/controller error | Added Tone raw 4096/24320 snapshot-continuation capacitor errors 3.842e-8 / 3.992e-8 FS over 576/544 samples |
+
+DT/DN use unchanged observers and scenarios. DN2 preserves every original
+check and adds those two interior Tone entries to the existing capture loop;
+exact original/expanded function hashes are bound in its receipt. No waits or
+limits change. The first sandbox attempt could not create a control socket
+before emulation; the identical driver passed with local-socket permission.
+All existing control, persistence, locks/LFOs, mixed-model, stock-track and 909
+checks retain their scope. Raw callback/state evolution evidence remains
+separate from stock-processed PCM and the component/reference grid.
+
+DN's silence checker sees one zero 100 ms window for each dark/bright/909
+baseline. This does not prove sixty-window stability or fix historical #20:
+`fb343b5` reproduced one count through all sixty windows. Its downstream-cause
+qualification remains [separate](dn-silence-residue.md). DT #78 stays deferred.
+
+Final local evidence is under `out/808-tone-shape/`: `analysis/paired-summary.json`,
+`full-grid/{measurements.json,history/measurements.json}`, the independent audit,
+`coldfire/native-qualification.json`, `native/dn2/qualification.json` and
+`review/review.json`. All original fit/guard failures remain preserved. Broad
+#9/#79/#2 fidelity gates remain open; no held-out audio, physical devices,
+HTML or website changes. This completes this control increment, not the engine.
+The consolidated local `final-qualification.json` has SHA256
+`817fe9a78666eae66720f24e58e71034a91c8c52adffd092ebd3b067f2bbeaf4`.

@@ -7,7 +7,7 @@ sample timing and gain. It is not a native firmware capture or a fidelity
 acceptance result. The existing HTML report remains unchanged.
 
 This document preserves the original `65aeaf7` results. Current 808 qualification
-is recorded with the [feedback calibration at `fb343b5`](808-feedback-calibration.md), including
+is recorded with the [Tone-shape correction at `f59f129`](808-tone-shape.md), including
 fresh paired full tails/histories, every regression and native evidence limits.
 
 The source is the captured Roland TR-808 VST3 1.1.4 build22074 in REAPER7.82

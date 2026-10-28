@@ -1,8 +1,10 @@
 # 808 passive Tone stage
 
 Current whole-engine qualification follows the
-[effective Q43 calibration at `fb343b5`](808-feedback-calibration.md). Its DN
-run reproduces historical #20; the C15 single-window pass below is historical.
+[reference-calibrated Tone shape at `f59f129`](808-tone-shape.md), after the
+[Q43 calibration](808-feedback-calibration.md). The nominal C15 curve below
+is historical; its topology/endpoints remain, but the interior mapping changes.
+Native DN currently passes one zero window; historical #20 remains unresolved.
 
 The measurements below predate [finite rectangular excitation](808-excitation.md).
 The RC topology is unchanged. The control taper is now corrected as described

@@ -23,7 +23,12 @@ but historical #20 remains unresolved. The subsequent
 fresh paired full tails/histories and all three native scenarios. Mean whole
 error improves 15.62%, all seven histories improve, and 32 settings regress;
 DT #78 and reproduced DN #20 failures remain, while DN2 passes. Use that
-record for current 808 results; the tables below preserve `65aeaf7`.
+record for the body correction. Current qualification is the subsequent
+[Tone-shape correction](808-tone-shape.md), `f59f129`: every isolated interior
+Tone transfer improves, with a small whole-engine mean improvement and all 25
+whole-tail / four history regressions retained. All three installed scenarios
+complete; DT retains #78 and DN's one-zero-window pass does not fix historical
+#20. The tables below preserve `65aeaf7`.
 
 | Engine | Training coverage | Actual CPU output per setting | Main measured gaps |
 | --- | --- | --- | --- |

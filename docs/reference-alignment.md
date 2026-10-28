@@ -5,9 +5,10 @@ Source/code audit for [#79](https://github.com/simonjohansson/x0x/issues/79),
 below includes the subsequent [Tone RC implementation](808-tone.md),
 [isolated C47 coupling](808-coupling.md), [finite excitation](808-excitation.md) and
 [first 909 triangle body](909-body.md).
-Current 808 qualification is the [effective feedback calibration](808-feedback-calibration.md),
-`fb343b5`: both CPUs, fresh full training tails/histories and installed-emulator
-numeric checks, retaining known native failures and reference regressions.
+Current 808 qualification is the [reference-calibrated Tone shape](808-tone-shape.md),
+`f59f129`, after the [effective feedback calibration](808-feedback-calibration.md):
+both CPUs, full training tails/histories and installed-emulator numeric checks,
+retaining known native limitations and every reference regression.
 Saved controls remain unchanged. This is an alignment inventory, not evidence
 that either engine reproduces original hardware or a reference VST.
 
@@ -82,7 +83,7 @@ its SHARC payload directly through the SDK bridge.
 | Decay | S03 §6 Eq.6 and Fig.7; VR6 changes a frequency-dependent R164/R169/C43 feedback shelf returned through R170 | `retention()` and each ASM coefficient setup interpolate radius through three training-calibrated anchors versus delivered B | Short/default/long calibration against the recordings; not the stock shelf/pot response or a qualified full curve |
 | Initial pitch shift | S01 p.5 and S03 §8.1: Q41–Q43 switched resistance during attack | Pole-ratio approximation: about 131.006 Hz for 6 ms, then 47.65 Hz; modal conversion retains C41/C42 voltage at the switch | Initial switch and physical-state conversion implemented with calibrated effective damping; S01 4 ms / S03 6 ms timing difference retained. Companion C39 forcing is integrated; hard-knee leakage is integrated separately; the complete feedback network remains missing |
 | Internal retrigger/pitch sigh | S03 §§8.1–8.2: C39/R161/D52 event and Q43 leakage behavior | Source-separated 33 ms C39 pulse drives the negative band-pass channel on both CPUs, with an ideal positive clamp and fixed private voltage encoding | Companion input and hard-knee Q43 leakage integrated on both CPUs; mutual loading, the fitted soft knee and residual-state retrigger remain missing |
-| Tone | S01 pp.9/16; S03 §9 Table1/Eq.11; S49 modern C-taper midpoint | TPT RC on both CPUs with a nominal rational 15%-midpoint curve; TNTUN changes it live | Original C-pot/wiring and reference RC identify the former linear-map error; `3c3db81` passes paired full-grid/native qualification. Exact vintage curve/finer calibration remain open; see [Tone evidence](808-tone.md). |
+| Tone | S01 pp.9/16; S03 §9 Table1/Eq.11; S49 modern C-taper midpoint | TPT RC on both CPUs with a single reference-calibrated sqrt-position curve; TNTUN changes it live | Original C-pot/wiring and relative reference transfers identify the provisional-curve error; `f59f129` improves every isolated interior transfer and passes paired full-grid/native numeric checks. Exact vintage curve/fidelity remain open; see [Tone-shape evidence](808-tone-shape.md). |
 | Coupling/output | S03 §9 Table1 (VR4 correction); S01 p.9; S04 §1.7 | Isolated C47=.47µF / VR4=100k HP at fixed full level, after isolated Tone | C47 RC implemented; full loading, C49/R176/R177, transistor buffer and C50 remain missing. Native level remains downstream |
 | Accent | S01 trigger logic and S03 §3 | Fixed 14 V shaped 1 ms drive; device AMP/velocity remains downstream | Intrinsic accent/excitation absent; do not add the native gain twice |
 | Same-voice retrigger | S03 §11/Fig.12: new excitation interacts with residual circuit state | START replaces the oscillator state | Provisional restart, not circuit-state retrigger behavior |

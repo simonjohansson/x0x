@@ -6,7 +6,8 @@ This preserves the investigation at the separate [Tone correction](808-tone.md),
 changes two Q43 coefficients on both CPUs and improves late pitch from
 49.72 to 47.65 Hz against 47.78 Hz recorded. Its full paired/native results
 supersede the old pending status; the rejected corrections below remain
-unadopted. The website is cancelled and remains unpublished.
+unadopted. The current [Tone-shape correction](808-tone-shape.md), `f59f129`,
+retains that body. The website is cancelled and remains unpublished.
 
 ## Cause in the actual CPU output
 
@@ -45,6 +46,9 @@ a full-tail comparison or an emulator qualification.
 | Finite C39/R161 mutual loading with the physical D52 clamp | All 81 settings / 243 takes / first 500 ms; three independent KCL/refinement tests | Mean 500 ms error improves .0460243→.0445667 FS and long late pitch becomes 49.1784 Hz, but extra loss changes the already calibrated decay. All first-25-ms settings worsen. Not ported. |
 | The same C39 loading with analytically de-embedded quiet poles | Separate complete bounded screen; four characteristic/KCL/switch/refinement tests | The full quiet pole and loss remain unchanged without new fitted parameters, but mean 500 ms error worsens to .0463642 FS and long late pitch to 49.7814 Hz. Not ported. |
 | Fixed 4 ms switch/C39 event, after the separate C15 Tone correction | All 81 settings / 243 takes / first 500 ms; refinement and source/event review | Every take worsens at 25/150/500 ms. Mean 500 ms error .0459027→.0719778 FS and long late pitch 49.72→51.26 Hz. Not ported. |
+| Initial switched-frequency calibration after `fb343b5` | One scalar fit on original five settings / 15 takes / first 150 ms; independent capacitor continuity, synthetic recovery, refinement and 81-setting / 500 ms screen | 131.006→131.475 Hz; five-point SSE improves .438%, but 76/81 first-25-ms settings worsen and default 500 ms worsens. Mean 500 ms improves only .110%. Rejected; production frequency unchanged. |
+| Finite Q43 soft knee with current effective lambda/k, after `f59f129` | Fixed source alpha 14.315/V; no fit/zero-current subtraction; independent KCL, equilibrium and 8→16 refinement, all 81 settings / 243 takes / first 500 ms | All 81 first-25-ms settings worsen, 54 first-150-ms settings worsen; mean 500 ms .03935443→.03951943 FS. Rejected, despite numeric checks passing. |
+| Same-owned-voice retained circuit state on `f59f129`, after the major Q43 calibration | Seven complete 13/16-second histories, reset/retained at 16 substeps; independent capacitor/continuity tests and unchanged 1e-7 refinement guard | Five histories worsen / two improve; mean RMS .02540739→.03555512 FS (+39.94%), musical .0628900→.0880407. First hits agree; reset model agrees with actual CF within 2.334e-6 FS. Rejected; native owner identity and retained-body headroom remain unqualified. |
 
 The manufacturer specifies about 4 V for an unaccented hardware trigger and
 4–14 V with accent. The recordings have Total Accent zero, verified in all
@@ -76,7 +80,10 @@ Local reproducible evidence is preserved under `out/808-pitch-sigh-audit/`,
 `out/808-soft-leakage/`, `out/808-saturation/`, `out/808-trigger-baseline/`,
 `out/808-feedback-audit/` and `out/808-c39-loading/`.
 The later timing screen and cache/source binding are under
-`out/808-attack-window-4ms/`. All source snapshots,
+`out/808-attack-window-4ms/`, `out/808-initial-frequency-screen/` and
+`out/808-q43-soft-calibrated/`. The updated same-owner history experiment is
+under `out/808-retrigger-model-f59/`; its original failed 8→16 check and the
+private helper's exact-6-ms rejection fix remain preserved. All source snapshots,
 receipts, failures and rejected outputs remain distinct from accepted audio.
 The source/equation checks and model screens are not new native-emulator or
 physical-device evidence. Current full-grid and native qualification is in
