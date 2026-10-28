@@ -32,3 +32,10 @@ class Coupling808Tests(unittest.TestCase):
         self.assertLessEqual(max(map(abs,samples)),.5)
         for bad in (float('nan'),float('inf')):
             with self.assertRaises(ValueError): coupling.filter_reference([0,bad])
+
+    def test_fixed_output_scaling_is_after_the_capacitor_state(self):
+        samples = [.2] * 1000 + [-.2] * 1000 + [0.] * 1000
+        unscaled = coupling.filter_reference(samples)
+        calibrated = coupling.render_reference(samples)
+        self.assertEqual(calibrated, [coupling.OUTPUT_GAIN * x for x in unscaled])
+        self.assertEqual(coupling.render_reference([0.] * 32), [0.] * 32)

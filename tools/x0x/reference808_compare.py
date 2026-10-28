@@ -92,7 +92,7 @@ def render(backend):
                 row['params'][0],row['params'][1],row['params'][2]=tr,dr,16384
                 block,_=machine.call_raw(row,True)
                 samples.extend(block)
-        expected=coupling808.filter_reference(tone808.filter_reference(body808.reference(FRAMES,dr),tr))
+        expected=coupling808.render_reference(tone808.filter_reference(body808.reference(FRAMES,dr),tr))
         error=max(abs(a-b) for a,b in zip(samples,expected))
         assert error<=1e-5,(backend,label,error)
         path=OUT/f'{backend}-{label}.f32'

@@ -37,6 +37,10 @@ measurement floor, and the listening protocol. Unreliable estimates are
 unresolved, not passes. Existing diagnostics remain useful but do not silently
 become validated acceptance measurements.
 
+The [level protocol](808-output-calibration.md) now freezes attack/body windows,
+the level floor and the training-only fixed-scale objective. Other measurement
+rules and held-out acceptance remain open.
+
 After training checks pass, use the 16 held-out settings / 48 recordings and
 perform the listening review. Until then those recordings stay unused. Record
 any later human-approved criterion refinement and its reason; retain previous

@@ -8,8 +8,9 @@ keep gain fixed. Normal native AMP/track-level volume handling remains in use;
 there is no additional x0x LEVEL knob or saved gain parameter.
 
 The human also approved the [808 starting fidelity targets](808-fidelity-target.md).
-Calibration is authorized, not implemented or qualified by this decision.
-Current production DSP remains `5963a34` with its previous scaling.
+The [calibration implementation and level protocol](808-output-calibration.md)
+now apply one fixed factor on both CPUs. Full-grid qualification is in progress;
+`5963a34` remains the previous qualified DSP baseline for before/after evidence.
 
 ## Current evidence
 

@@ -1,10 +1,32 @@
 import math
+from pathlib import Path
+import re
 import unittest
 
 from x0x import body808, leakage808 as leakage, pulse808, retrigger808
 
 
 class Leakage808Tests(unittest.TestCase):
+    def test_cubic_coefficient_remainder_improves_existing_model_precision(self):
+        source = (Path(__file__).resolve().parents[2] / 'targets/coldfire/body808.s').read_text()
+        for label, lo, hi in (('low', 0, 16384), ('high', 16384, 32512)):
+            block = source.split(f'.Lleakage_{label}_data:\n')[1].split('\n.')[0]
+            table = [[int(word) / 2**31 for word in line.split(',')]
+                     for line in re.findall(r'\.long ([^\n]+)', block)]
+            self.assertEqual([len(row) for row in table], [4, 4, 4])
+            old_error = new_error = 0.
+            left, right = body808.retention(lo), body808.retention(hi)
+            for raw in range(lo, hi + 1, 17):
+                t = (body808.retention(raw) - left) / (right - left)
+                exact = leakage.coefficients(raw)
+                for index, (a, b, c, d) in enumerate(table):
+                    target = exact[(0, 1, 3)[index]]
+                    old = a + b * t + c * t * (1 - t)
+                    new = old + d * t * (1 - t) * (t - .5)
+                    old_error = max(old_error, abs(old - target))
+                    new_error = max(new_error, abs(new - target))
+            self.assertLess(new_error, old_error / 10)
+
     def test_hard_knee_sign_and_half_kick_match_configured_capacitor_kcl(self):
         self.assertEqual(leakage.KNEE,-.018011980654046803)
         self.assertEqual(leakage.LEAK_RATE,2933.2119129807006)

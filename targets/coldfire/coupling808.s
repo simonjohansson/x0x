@@ -1,7 +1,8 @@
 /* Isolated unloaded C47/VR4 output coupling: 470 nF and fixed 100 kohm.
  * void x0x_808_coupling(int32_t state[2], int32_t output[32]).
  * Q1.31 state {previous input,previous output}; caller owns lifecycle resets.
- * Input |x| <= .25; the high-pass impulse L1 norm bounds output below .5.
+ * Input |x| <= .25; unscaled RC L1 bound is .5; output has fixed calibration.
+ * C47 history stays unscaled. The complete synth chain retains its .5 FS bound.
  * shortcut: fixed full VR4 and unloaded RC; C49/buffer/loading remain unmodeled.
  */
     .text
@@ -54,7 +55,13 @@ x0x_808_coupling:
     moveq #0, %d5
 .Lcoupling_store:
     move.l %d2, %d4
-    move.l %d5, (%a1)+
+    moveq #0, %d0
+    move.l %d0, %acc0
+    move.l #1719774208, %d0 /* Fixed output factor / 2 in Q31 (1.601664543...). */
+    mac.l %d5, %d0, %acc0
+    movclr.l %acc0, %d0
+    add.l %d0, %d0
+    move.l %d0, (%a1)+
     subq.l #1, %d7
     bne.s .Lcoupling_sample
     move.l %d4, (%a0)

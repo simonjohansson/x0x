@@ -358,7 +358,7 @@ def full_os():
                 tones = set(captured_controls["tone_words"])
                 assert tones == {stored()[1]}, (name,tones,stored())
                 tone_raw = tones.pop()
-                expected = coupling808.filter_reference(tone808.filter_reference(body808.reference(len(raw), target),tone_raw))
+                expected = coupling808.render_reference(tone808.filter_reference(body808.reference(len(raw), target),tone_raw))
                 error = max(abs(actual / 2**31 - wanted) for actual, wanted in zip(raw, expected))
                 assert error <= 1e-5, (name, error)
                 oracle = dict(tone_raw=tone_raw,maximum_reference_error_fs=error, reference_frames=len(raw),

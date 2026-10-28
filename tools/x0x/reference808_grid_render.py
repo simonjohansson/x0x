@@ -67,7 +67,7 @@ def render(backend, output, captures, frozen_metadata):
                 error = max(abs(x/2**31-y) for x,y in zip(words, oracle_body))
                 bodies[str(decay)] = dict(path=body_path.name, sha256=digest(body_path),
                     oracle_maximum_error_fs=error, numeric_status='passed' if error<=1e-5 else 'failed')
-        expected = coupling808.filter_reference(tone808.filter_reference(oracle_body, tr))
+        expected = coupling808.render_reference(tone808.filter_reference(oracle_body, tr))
         if backend == 'coldfire':
             t = modules[1].Runner(kernels['tone808']); c = modules[2].Runner(kernels['coupling808'])
             samples = array.array('f')

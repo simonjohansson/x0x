@@ -599,7 +599,7 @@ def full_os():
             assert set(state["decay_words"]) == {position << 8}, (label, state["decay_words"])
             oracle = {}
             if label.startswith("lower-"):
-                expected = coupling808.filter_reference(tone808.filter_reference(
+                expected = coupling808.render_reference(tone808.filter_reference(
                     body808.reference(len(samples), position << 8)))
                 error = max(abs(actual / 2**31 - wanted) for actual, wanted in zip(samples, expected))
                 assert error <= 1e-5, (label, error)

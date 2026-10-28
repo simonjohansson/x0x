@@ -88,11 +88,17 @@ def run(folder=None):
     assert Runner(image).render([0]*32)==[0]*32
     words=stream(inputs)
     samples=[x/2**31 for x in words]
-    expected=coupling808.filter_reference(quantized)
+    expected=coupling808.render_reference(quantized)
     error=max(abs(a-b) for a,b in zip(samples,expected))
     assert error<=1e-5, error
-    assert max(map(abs,samples))<.5
-    assert abs(samples[0]-.25*coupling808.B)<=1/2**31
+    # Adversarial +/- DC steps exercise the RC L1 bound, not a synth waveform.
+    assert max(map(abs,samples))<.5*coupling808.OUTPUT_GAIN < 1
+    assert abs(samples[0]-.25*coupling808.B*coupling808.OUTPUT_GAIN)<=2/2**31
+    impulse = Runner(image)
+    emitted = impulse.render([1 << 29] + [0] * 31)
+    previous_input, previous_output = struct.unpack(">2i", impulse.uc.mem_read(impulse.STATES, 8))
+    assert previous_input == 0
+    assert abs(emitted[-1] - previous_output * coupling808.OUTPUT_GAIN) <= 2
     interleaved=Runner(image)
     for block in range(80):
         interleaved.render([-1<<29]*32,7)
@@ -108,7 +114,7 @@ def run(folder=None):
         filtered=json.loads(path.read_text())
         assert len(filtered)>=24000 and len(filtered)%32==0, "run the ColdFire Tone component first"
         result=[x/2**31 for x in stream([round(x*2**31) for x in filtered])]
-        expected=coupling808.filter_reference(tone808.filter_reference(body808.reference(len(result),decay),tone))
+        expected=coupling808.render_reference(tone808.filter_reference(body808.reference(len(result),decay),tone))
         composed_error=max(abs(a-b) for a,b in zip(result,expected))
         assert composed_error<=1e-5 and max(map(abs,result))<.5, (decay,tone,composed_error)
         output=folder/f"body_{decay}_{tone}.json"
@@ -116,7 +122,7 @@ def run(folder=None):
         composed.append(dict(decay_raw=decay,tone_raw=tone,frames=len(result),
             waveform_peak_error_fs=composed_error,peak_fs=max(map(abs,result)),samples=str(output),
             input_sha256=hashlib.sha256(path.read_bytes()).hexdigest()))
-    report=dict(status="passed",scope="actual ColdFire isolated unloaded C47/VR4 and composed 808 chain; no native OS",
+    report=dict(status="passed",scope="actual ColdFire C47/VR4 plus fixed output calibration and composed chain; no native OS",
         source_sha256=hashlib.sha256(SOURCE.read_bytes()).hexdigest(),image_sha256=hashlib.sha256(image).hexdigest(),
         emulator_revision=cpu.revision(cpu.ROOT/"vendor/digiemu"),frames=len(inputs),
         waveform_peak_error_fs=error,peak_fs=max(map(abs,samples)),composed=composed,

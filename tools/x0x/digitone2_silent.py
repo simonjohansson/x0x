@@ -575,7 +575,7 @@ def full_os() -> dict:
                                           abs(late["main"]-final[1]),abs(late["companion"]-final[2])))
                     assert all(math.isfinite(v) and v<=1e-5 for v in errors.values()), (label,errors)
                     oracle=dict(prediction_samples=frames,predicted_raw_output_fs=predicted_output,
-                        reference_errors=errors,reference_scope="constant-control nonlinear body/Tone/C47 continuation; terminal raw callback sample, no alignment or gain correction")
+                        reference_errors=errors,reference_scope="constant-control nonlinear body/Tone/C47 continuation; terminal unscaled C47 history, before fixed DSP output scaling; no alignment or comparison-time gain correction")
                 first = sum(float(x)*float(x) for x in pcm[:9600])
                 tail = sum(float(x)*float(x) for x in pcm[19200:28800])
                 report["decay_audio"][label] = dict(**oracle, target=position, slot=lane, early=early, late=late,

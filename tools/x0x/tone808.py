@@ -67,7 +67,7 @@ def compare():
         sharc = struct.unpack(f"<{len(raw)//4}f", raw)
         frames = min(len(cf), len(sharc))
         assert frames >= 8192, "matching CPU output is too short"
-        expected = coupling808.filter_reference(filter_reference(body808.reference(frames, decay), tone))
+        expected = coupling808.render_reference(filter_reference(body808.reference(frames, decay), tone))
         errors = dict(coldfire_oracle=max(abs(a-b) for a,b in zip(cf[:frames], expected)),
                       sharc_oracle=max(abs(a-b) for a,b in zip(sharc[:frames], expected)),
                       cross_cpu=max(abs(a-b) for a,b in zip(cf[:frames], sharc[:frames])))

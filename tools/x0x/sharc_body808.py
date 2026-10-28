@@ -76,7 +76,7 @@ def component(folder=None) -> tuple[dict, bytes]:
             chunk, state = machine.call_raw(body_case("body", current, current_tone, flags=int(block == 0)), True)
             assert state[112] == max(body808.ATTACK_SAMPLES-(block+1)*32,0), "initial frequency counter must last 6 ms"
             result.extend(chunk)
-        expected = coupling808.filter_reference(tone808.filter_reference(
+        expected = coupling808.render_reference(tone808.filter_reference(
             body808.reference(frames, decay_raw=raw, changes=changes),
             tone_raw=tone, changes=tone_changes))
         error = max(abs(a - b) for a, b in zip(result, expected, strict=True))
@@ -92,7 +92,7 @@ def component(folder=None) -> tuple[dict, bytes]:
         measured = analysis.analyze(result, body808.SAMPLE_RATE)
         frequency = measured["frequency"]["median_hz"]
         decay = measured["decay_positive"]["time_constant_s"]
-        expected_samples = coupling808.filter_reference(tone808.filter_reference(body808.reference(frames,raw)))
+        expected_samples = coupling808.render_reference(tone808.filter_reference(body808.reference(frames,raw)))
         expected_fit = analysis.analyze(expected_samples,body808.SAMPLE_RATE)
         expected_frequency = expected_fit["frequency"]["median_hz"]
         expected_decay = expected_fit["decay_positive"]["time_constant_s"]

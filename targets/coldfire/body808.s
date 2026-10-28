@@ -255,6 +255,11 @@ x0x_808_body:
 .Lleakage_high:
     lea .Lleakage_high_data(%pc), %a6
 .Lleakage_coefficients:
+    /* Cubic remainder reduces coefficient error before output calibration. */
+    move.l %d6, %d0
+    subi.l #1073741824, %d0
+    mac.l %d1, %d0, %acc0
+    movclr.l %acc0, %d7 /* t*(1-t)*(t-.5); steady branch has counter zero. */
     /* ON biases are unused in the steady stage; reuse their stack words. */
     move.l (%a6)+, %d0
     move.l %d0, %acc0
@@ -262,6 +267,8 @@ x0x_808_body:
     mac.l %d6, %d0, %acc0
     move.l (%a6)+, %d0
     mac.l %d1, %d0, %acc0
+    move.l (%a6)+, %d0
+    mac.l %d7, %d0, %acc0
     movclr.l %acc0, %d0
     move.l %d0, 84(%sp)
     move.l (%a6)+, %d0
@@ -270,6 +277,8 @@ x0x_808_body:
     mac.l %d6, %d0, %acc0
     move.l (%a6)+, %d0
     mac.l %d1, %d0, %acc0
+    move.l (%a6)+, %d0
+    mac.l %d7, %d0, %acc0
     movclr.l %acc0, %d0
     move.l %d0, 88(%sp)
     move.l (%a6)+, %d0
@@ -278,8 +287,11 @@ x0x_808_body:
     mac.l %d6, %d0, %acc0
     move.l (%a6)+, %d0
     mac.l %d1, %d0, %acc0
+    move.l (%a6)+, %d0
+    mac.l %d7, %d0, %acc0
     movclr.l %acc0, %d0
     move.l %d0, 92(%sp)
+    moveq #0, %d7
 .Lleakage_ready:
     movea.l 12(%a0), %a5
     movea.l 16(%a0), %a6
@@ -444,11 +456,12 @@ x0x_808_body:
     .long 93651,511,-17
     .long -2387,1327,-7
 .Lleakage_low_data:
-    .long 47485539,-36322559,508524
-    .long 473421941,4502196,2763962
-    .long 215398591,-165239339,-39652
+    .long 47485539,-36322559,508524,-209502
+    .long 473421941,4502196,2763962,51387
+    .long 215398591,-165239339,-39652,13
+
 .Lleakage_high_data:
-    .long 11162980,-6799472,4412
-    .long 477924137,220915,96699
-    .long 50159252,-30561512,-1356
+    .long 11162980,-6799472,4412,-1375
+    .long 477924137,220915,96699,81
+    .long 50159252,-30561512,-1356,0
     .size x0x_808_body, .-x0x_808_body

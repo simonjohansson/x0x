@@ -107,7 +107,7 @@ def run():
         assert (changed_seed == struct.pack(f"={FRAMES}f", *default)) == (model == "analog"), "noise seed check failed"
     # Descriptive differences only: these control positions/scales are not calibrated equivalents.
     prototypes = {
-        "analog": coupling808.filter_reference(tone808.filter_reference(body808.reference(FRAMES))),
+        "analog": coupling808.render_reference(tone808.filter_reference(body808.reference(FRAMES))),
         "synthetic": body909.reference(FRAMES),
     }
     differences = {}

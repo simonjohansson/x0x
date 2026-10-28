@@ -5,6 +5,8 @@ network. Loading, C49/buffer and C50 remain open in #79. No saved Level control.
 """
 import math
 
+OUTPUT_GAIN = 1.6016645431518555  # One training-calibrated factor, shared across settings/CPUs.
+
 SAMPLE_RATE = 48000
 VR4 = 100000.0
 C47 = .47e-6
@@ -27,3 +29,8 @@ def filter_reference(samples):
         current = (x - voltage) / VR4
         result.append(x - voltage)
     return result
+
+
+def render_reference(samples):
+    """Apply fixed digital output calibration after the unscaled capacitor model."""
+    return [OUTPUT_GAIN * value for value in filter_reference(samples)]

@@ -571,6 +571,9 @@ main_cache_off:
     R4=PASS R4;
     IF NE JUMP main_setup_done;
     // Once OFF, reuse the three zero source-bias words for Q43 coefficients.
+    R4=0x3f000000;
+    F12=F7-F4;
+    F12=F9*F12; // t*(1-t)*(t-.5), zero at existing interpolation anchors.
     R4=0x3f010204;
     COMP(F11,F4);
     IF GE JUMP leakage_cache_high;
@@ -580,6 +583,9 @@ main_cache_off:
     F4=F4+F5;
     R5=0x39784d7c;
     F5=F5*F9;
+    F4=F4+F5;
+    R5=0xb8cc976c;
+    F5=F5*F12;
     F4=F4+F5;
     R5=I1;
     R10=8;
@@ -593,6 +599,9 @@ main_cache_off:
     R5=0x3aa8b2e6;
     F5=F5*F9;
     F4=F4+F5;
+    R5=0x37c8bb18;
+    F5=F5*F12;
+    F4=F4+F5;
     R5=I1;
     R10=12;
     R5=R5+R10;
@@ -604,6 +613,9 @@ main_cache_off:
     F4=F4+F5;
     R5=0xb79ae451;
     F5=F5*F9;
+    F4=F4+F5;
+    R5=0x31caff35;
+    F5=F5*F12;
     F4=F4+F5;
     R5=I1;
     R10=20;
@@ -619,6 +631,9 @@ leakage_cache_high:
     R5=0x3609e3f7;
     F5=F5*F9;
     F4=F4+F5;
+    R5=0xb52bde16;
+    F5=F5*F12;
+    F4=F4+F5;
     R5=I1;
     R10=8;
     R5=R5+R10;
@@ -631,6 +646,9 @@ leakage_cache_high:
     R5=0x383cdd53;
     F5=F5*F9;
     F4=F4+F5;
+    R5=0x3321a923;
+    F5=F5*F12;
+    F4=F4+F5;
     R5=I1;
     R10=12;
     R5=R5+R10;
@@ -642,6 +660,9 @@ leakage_cache_high:
     F4=F4+F5;
     R5=0xb5298d27;
     F5=F5*F9;
+    F4=F4+F5;
+    R5=0x2e24ced5;
+    F5=F5*F12;
     F4=F4+F5;
     R5=I1;
     R10=20;
@@ -882,8 +903,9 @@ main_bias_y_done:
     R1=R4;
     R0=I12;
     R5=I13;
-    R6=0x3f7fd6a4;
-    F5=F5*F6;
+    R6=0xba257156; // C39 expm1 avoids rounding a retention close to one.
+    F6=F5*F6;
+    F5=F5+F6;
     I13=R5;
     R5=I5;
     R6=0x3f3d76b7;
@@ -955,8 +977,10 @@ leakage_after_done:
     R6=0x3f7fe2f5;
     F10=F6*F10;
     F10=F10+F4;
+    R4=0x3fcd0358; // Fixed 808 output calibration; native LEVEL remains downstream.
+    F4=F10*F4;
     I4=R8;
-    DM(I4,M5)=R10;
+    DM(I4,M5)=R4;
     R8=R8+R13;
     R9=R9-1;
     IF NE JUMP body_sample;
