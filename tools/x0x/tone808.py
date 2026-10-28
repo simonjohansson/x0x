@@ -1,6 +1,6 @@
 """808 Tone RC reference from S01 p9 and S03 section9/Table1/Equation11.
 
-Native knob direction follows R23; the taper uses a nominal rational C15 curve.
+Native knob direction follows R23; the taper is calibrated to training transfers.
 The circuit's voltage/current trapezoid is independent of the ASM TPT form.
 """
 import math
@@ -11,14 +11,15 @@ SAMPLE_RATE = body808.SAMPLE_RATE
 RAW_MAX = body808.RAW_MAX
 DEFAULT_TONE = 16384
 R171, R172, VR5, C45 = 220.0, 10000.0, 10000.0, 1e-7
+TAPER = 1.3739869594783976
 
 
 def resistance(tone_raw):
     if type(tone_raw) is not int or not 0 <= tone_raw <= RAW_MAX:
         raise ValueError("Tone must be an exact native word in 0..32512")
-    position = tone_raw / RAW_MAX
-    # shortcut: nominal 15% midpoint; exact vintage curve remains open in #79.
-    pot = VR5 * (1 - position) / (1 + (14 / 3) * position)
+    position = math.sqrt(tone_raw / RAW_MAX)
+    # shortcut: one effective reference curve; exact vintage taper remains open.
+    pot = VR5 * (1 - position) / (1 + TAPER * position)
     return R171 + R172 * pot / (R172 + pot)
 
 

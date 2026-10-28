@@ -24,14 +24,14 @@ class Tone808Tests(unittest.TestCase):
             self.assertLess(max(abs(a-b) for a,b in zip(actual,expected)),1e-12)
             self.assertAlmostEqual(actual[-1],1,places=8)
 
-    def test_nominal_c15_midpoint_and_bounded_cpu_coefficient(self):
-        # R23 is 15% of the 10k pot halfway through physical travel.
-        self.assertAlmostEqual(tone.resistance(16256), 220 + 10000 * 1500 / 11500)
+    def test_calibrated_curve_and_bounded_cpu_coefficient(self):
+        self.assertAlmostEqual(tone.resistance(16384), 1500.584213000323)
         previous = 0
         for raw in range(tone.RAW_MAX + 1):
-            numerator = 750 * tone.RAW_MAX + 1375 * raw
-            denominator = 38334 * tone.RAW_MAX - 31721 * raw
-            self.assertTrue(0 < numerator < denominator < 2**31)
+            position = math.sqrt(raw / tone.RAW_MAX)
+            numerator = 2 + (tone.TAPER - 1) * position
+            denominator = 3.112 * numerator + 96 * (1 - position)
+            self.assertTrue(0 < numerator < denominator)
             coefficient = numerator / denominator
             self.assertAlmostEqual(coefficient, tone.coefficient(raw), places=14)
             self.assertGreater(coefficient, previous)

@@ -642,8 +642,64 @@ leakage_cache_high:
     I4=R5;
     DM(I4,M5)=R4;
 main_setup_done:
-    // Nominal modern C15 rational taper; the exact vintage track is unmeasured.
-    // Physical RC TPT coefficient: (750+1375*t)/(38334-31721*t), t=raw/32512.
+    // Effective reference-calibrated sqrt-position curve; not a vintage pot measurement.
+    // Keep both endpoint paths exact, including the prior coefficient words.
+    R6=PASS R6;
+    IF EQ JUMP tone_legacy_endpoint;
+    R11=32512;
+    COMP(R6,R11);
+    IF EQ JUMP tone_legacy_endpoint;
+    F6=FLOAT R6;
+    R11=0x38010204;
+    F6=F6*F11;
+    R4=R6; // t=raw/32512
+    R11=0x3f000000;
+    F12=F4*F11;
+    // Deterministic inverse-sqrt seed; no unpublished hardware ROM seed is used.
+    R11=-1;
+    R6=LSHIFT R6 BY R11;
+    R11=0x5f375a86;
+    R6=R11-R6;
+    R11=0x3fc00000;
+    F5=F6*F6;
+    F5=F12*F5;
+    F5=F11-F5;
+    F6=F6*F5;
+    F5=F6*F6;
+    F5=F12*F5;
+    F5=F11-F5;
+    F6=F6*F5;
+    F5=F6*F6;
+    F5=F12*F5;
+    F5=F11-F5;
+    F6=F6*F5;
+    F5=F6*F6;
+    F5=F12*F5;
+    F5=F11-F5;
+    F6=F6*F5;
+    R5=R6;
+    F6=F4*F6;
+    // One residual correction reduces the final sqrt multiplication's rounding error.
+    F12=F6*F6;
+    F12=F4-F12;
+    F12=F12*F5;
+    R11=0x3f000000;
+    F12=F12*F11;
+    F6=F6+F12;
+    R11=0x3ebf7b38; // a-1, a=1.3739869594783976
+    F4=F11*F6;
+    R11=0x40000000;
+    F4=F4+F11; // d=2+(a-1)*sqrt(t)
+    R11=0x3f800000;
+    F5=F11-F6;
+    R11=0x42c00000;
+    F5=F5*F11;
+    R11=0x40472b02;
+    F12=F4*F11;
+    F5=F5+F12; // G=d/[3.112*d+96*(1-sqrt(t))], positive denominator terms.
+    JUMP tone_reciprocal;
+tone_legacy_endpoint:
+    // Prior nominal-C15 coefficient calculation is unchanged for raw0/32512.
     F6=FLOAT R6;
     R11=0x38010204;
     F6=F6*F11;
@@ -655,6 +711,7 @@ main_setup_done:
     F5=F11*F6;
     R11=0x4715be00;
     F5=F11-F5;
+tone_reciprocal:
     // Positive normal-float reciprocal seed, refined without an undocumented ROM lookup.
     R6=0x7f000000;
     R6=R6-R5;

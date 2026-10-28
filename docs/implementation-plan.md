@@ -35,6 +35,13 @@ whole-engine fidelity acceptance. Next investigate remaining Tone/onset and
 short-Decay residuals before adopting another correction. Omitted output and
 faithful residual-state behavior remain open; held-out audio remains unused.
 
+The next [Tone control-shape correction](808-tone-shape.md) replaces the nominal
+linear-position C15 approximation with one reference-calibrated sqrt-position
+curve. It improves all 189 isolated interior Tone-transfer comparisons, with
+endpoints preserved. Both CPU ports are undergoing guarded qualification;
+fresh full-tail/native results remain separate pending gates. The standalone
+initial-frequency trial was rejected for its broad early-window regressions.
+
 The 909 [diode shaper](909-shaping.md), [C9/IC12 Tune path](909-tune.md) and
 [loaded ENV1/Q12 VCA](909-vca.md) run on both CPUs and all three emulators.
 Tune changes the initial sweep; settled pitch is separately training-calibrated
