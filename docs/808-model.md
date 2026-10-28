@@ -239,7 +239,7 @@ mise run research:808:sharc-model
 mise run firmware:dn2:808-model
 ```
 
-Seven focused tests cover exported tables versus the independent frozen model,
+Eight focused tests cover exported tables versus the independent frozen model,
 ELF/region refusal, explicit future 909 reservations, actual ASM fractional
 output, slot/reset/MODEL/silence behaviour, immutable tables and independent
 Python/native instruction traces with every DSP write bounded to its own voice
@@ -280,7 +280,7 @@ instruction witnesses match the native runner's output and entire voice state
 bit for bit, with writes confined to that voice and its output; no software-stack
 writes occur. These are software instruction measurements, not physical cycles.
 
-Seven focused SHARC tests, six existing layout tests, seven existing diagnostic
+Eight focused SHARC tests, six existing layout tests, seven existing diagnostic
 tests and native-media/ABX controller checks pass. A real browser check decoded
 5.5 seconds of PCM24 ASM audio, reached readyState 4 and advanced playback without
 an error. No human discrimination result is inferred. The repository-wide suite

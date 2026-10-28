@@ -455,10 +455,14 @@ def make_plots(folder,references,predictions,rows):
     fig.suptitle('Executed SHARC ASM — frozen 808 candidate')
     fig.savefig(folder/'waveforms.png',dpi=140);plt.close(fig)
     # Preserve the native audio/ABX player; append scientific plots and the actual numerical receipt.
-    page=folder/'index.html'
-    text=page.read_text()
+    decorate_html(folder/'index.html',rows)
+
+
+def decorate_html(page,rows):
+    text=page.read_text().replace('src="corners.png"','src="waveforms.png"')
+    text=text.replace('Full numerical report and optimizer diagnostics','Full numerical report and ASM qualification')
     summary=f"<section><h2>Executed ASM qualification</h2><p>Maximum port error: {max(r['port_max_dsp_fs'] for r in rows):.4g} DSP FS. Native integration and physical deadlines remain untested. Tone/Decay latch on START; 909 is silent in this development candidate.</p><img src='waveforms.png' style='width:100%;max-width:1200px' alt='Four-corner recorded and assembled waveforms and residuals'><p><a href='report.json'>Full numerical receipt</a></p></section>"
-    page.write_text(text.replace('</body>',summary+'</body>'))
+    page.write_text(text.replace('</html>',summary+'</html>'))
 
 
 def package(folder=OUT):

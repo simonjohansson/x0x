@@ -30,6 +30,16 @@ class SharcFieldTests(unittest.TestCase):
     def test_native_core_matches_independent_python_traces_and_write_guards(self):
         self.assertEqual(len(dsp.python_witness(self.receipt,self.artifact)),2)
 
+    def test_report_links_the_generated_plot_and_includes_asm_scope(self):
+        page=Path(self.folder.name)/'preview.html'
+        page.write_text('<html><img src="corners.png"></html>')
+        dsp.decorate_html(page,[dict(port_max_dsp_fs=1e-6)])
+        text=page.read_text()
+        self.assertNotIn('corners.png',text)
+        self.assertIn('src="waveforms.png"',text)
+        self.assertIn('Executed ASM qualification',text)
+        self.assertIn('909 is silent',text)
+
     def test_exported_cubic_basis_matches_original_model(self):
         for tone,decay in ((0,0),(32512,32512),(12345,17001)):
             expected=field808.render(self.model,tone,decay,frames=4800)
