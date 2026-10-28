@@ -543,3 +543,30 @@ integration or physical-timing claim is inferred from the isolated listening pag
 DT/DN production cutover and fresh independent acceptance remain later work under
 the parent plan. The repository-wide suite was not rerun; its three historical
 feedback-model research failures remain separate.
+
+
+## ColdFire human listening result — 29 October 2026
+
+The user supplied `808-listening-results-4.json`: **16/16 Can’t tell**, zero
+decided answers. All trial indices/A/B/X fields, answer flags, stimulus settings,
+common 4× gain and exported provenance hashes match the actual assembled ColdFire
+listening page. The archived qualification driver, current ASM, assembled image,
+tables and player-template hashes were checked independently. Duration was
+**51.783 seconds**; input SHA256 is
+`3d3726e85766a2507535f21a8adc220772d60095df30f06dfb6236912bba58a6`.
+
+This descriptive result supports retaining the ColdFire development candidate
+without further sound tuning. Zero decided answers are not a 0% correctness
+score. No forced-choice chance probability is calculated with abstentions, and
+this session does not prove universal inaudibility. It uses the same four fitting
+corners plus twelve development-validation settings as the earlier SHARC test;
+fresh independent source acceptance remains #90. The audio here is isolated
+instruction-rendered output, not the DT1 emulator's downstream PCM or physical
+hardware audio.
+
+Raw input and verification summary are retained locally as
+`research/reference/808-fit-model/listening/2026-10-29-coldfire-abx{,-summary}.json`;
+a convenience summary is `out/808-model/coldfire/listening-result-summary.json`.
+No model, coefficients, DSP source, rendered stimuli or historical results were
+changed. #89 remains complete for its stated kernel/emulator scope, with final
+combined 808/909 cutover and later device integration unchanged.
