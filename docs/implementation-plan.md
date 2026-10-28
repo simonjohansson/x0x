@@ -106,7 +106,7 @@ network fix is retained but still fails to improve on body-only output; a
 conditional Q12 replacement also worsens the declared raw comparisons and is
 rejected without a port. Complete known-truth/reference evidence is linked in
 that status document. Do not repeat these candidates or land a numerically
-passing but worse-sounding branch.
+passing branch with larger reference error.
 
 DT retains only deferred reset #78. DN's [historical one-count investigation](dn-silence-residue.md)
 proves exact-zero x0x inputs into stock filters with nonzero native downstream
