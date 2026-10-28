@@ -88,6 +88,20 @@ def build(health,folder=OUT):
     (folder/'build.json').write_text(json.dumps(receipt,indent=2)+'\n')
     return receipt
 
+def compare_witness(blob,model):
+    import numpy as np
+    if len(blob)!=152:raise ValueError('Invalid frozen-witness length')
+    ready,age,tone,decay=struct.unpack_from('<4I',blob)
+    if ready!=1 or age!=1024 or max(tone,decay)>32767:
+        raise ValueError('Invalid/unready frozen witness')
+    actual=np.asarray(struct.unpack_from('<32f',blob,16))
+    if not np.isfinite(actual).all():raise ValueError('Nonfinite physical output')
+    expected=4*dsp.field808.render(model,tone,decay,frames=age+32)[age:]
+    span,period=struct.unpack_from('<2I',blob,144)
+    return dict(age=age,tone=tone,decay=decay,max_error_dsp_fs=float(abs(actual-expected).max()),
+                span_ticks=span,period_ticks=period)
+
+
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)

@@ -54,3 +54,18 @@ class PhysicalObserverTests(unittest.TestCase):
         self.assertLessEqual(aligned+16*probe.STATE_BYTES,self.base['layout']['data_bytes'])
         self.assertEqual(self.artifact['stack_bytes'],64)
         self.assertEqual(self.artifact['voice_state']['voice_bytes'],probe.STATE_BYTES)
+
+    def test_physical_witness_rejects_unready_corrupt_and_nonfinite_data(self):
+        model=dsp.load_model()
+        from x0x import field808
+        expected=4*field808.render(model,16384,16384,frames=1056)[1024:]
+        blob=struct.pack('<4I32f2I',1,1024,16384,16384,*expected,33077,666860)
+        row=probe.compare_witness(blob,model)
+        self.assertEqual((row['age'],row['tone'],row['decay']),(1024,16384,16384))
+        self.assertLess(row['max_error_dsp_fs'],1e-5)
+        for offset,value in ((0,0),(4,1023),(8,32768)):
+            bad=bytearray(blob);struct.pack_into('<I',bad,offset,value)
+            with self.assertRaises(ValueError):probe.compare_witness(bad,model)
+        bad=bytearray(blob);struct.pack_into('<f',bad,16,float('nan'))
+        with self.assertRaises(ValueError):probe.compare_witness(bad,model)
+        with self.assertRaises(ValueError):probe.compare_witness(blob[:-1],model)

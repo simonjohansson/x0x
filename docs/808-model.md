@@ -4,7 +4,7 @@
 
 ## Current status
 
-28 October 2026: [#83](https://github.com/simonjohansson/x0x/issues/83) is complete in commit `972d30c`. [#84](https://github.com/simonjohansson/x0x/issues/84) now has a complete, quantized spline/carrier candidate: 0.5548% median / 0.7051% worst validation waveform error, with 4,089 bytes of model-array payload. Its first verified human ABX scored 9/16 (`p = 0.40181`), which does not demonstrate reliable discrimination in this session. It is a promising listening baseline; universal inaudibility, the combined resource budget and target realization remain unqualified. The prior procedural candidate was distinguishable in the user's 16/16 session and is historical evidence only. Production DSP has not changed.
+28 October 2026: the hand-written SHARC candidate is installed as **X8D1** on a physical Digitone II, using the requested DigiHealth `codex/dn2-support` branch. Corner-setting frozen output witnesses match the model within **8.255e-7 DSP FS**. The user’s latest development listening session was **15/16 Can’t tell**, with one correct decided answer. One- and four-voice callback spacing stayed near the nominal interval in bounded checks. Sixteen-kick stress exposed a limit, but the user explicitly rejected that as an acceptance requirement. **Next: normal one-track kick patterns/retriggers and downstream audio**, not sixteen-voice optimization. ColdFire is deferred; #84 remains open. Historical host/source/body/quiet-tail limits remain documented below.
 
 The user clarified the acceptance priority during #84: **audible fidelity, rather than exact waveform reproduction**. The original source-error thresholds below remain measured diagnostics; exceeding them no longer automatically rejects a candidate if listening establishes an acceptable result. A 5% error does not itself establish inaudibility. Numerical realization, memory/context safety, gain/timing, independent control validation and native/physical qualification remain necessary.
 
@@ -200,7 +200,7 @@ The user described this comparison as **much harder**, with occasional slight to
 
 Keep this candidate as the development listening baseline while checking SHARC/ColdFire resource and numerical feasibility. This is neither final perceptual acceptance nor closure of #84. The existing body/duration/quiet-tail diagnostics and 4,089-byte table budget are unchanged; fresh independent acceptance remains under #90. No additional source fitting, waveform changes or hardware tests were performed to record this result.
 
-## SHARC ASM candidate — 28 October 2026
+## SHARC ASM candidate — historical isolated qualification
 
 The user chose SHARC first; **ColdFire is deferred**. The new renderer is
 [hand-written assembly](../targets/sharc/field808.s), with the coefficient
@@ -341,3 +341,52 @@ interrupts, and exclude observer work outside the interval. Device busy counters
 are not treated as measured voice headroom. Installation and subsequent physical
 results are recorded in the next increment; the earlier no-device statements
 above describe the historical isolated qualification.
+
+
+## Physical DN2 result and realistic acceptance scope
+
+**Installed X8D1** was verified after the upgrade/reboot using fresh Elektron
+device information and DigiHealth 1.6 uptime. The helper was built using its own
+`build.py` from the clean requested branch/revision above. The callback and
+1232-byte state binding match the build, and the user loaded X0X KICKS on track 1.
+
+The physical corners (0/0, 0/127, 127/0, 127/127) and 64/64 each produced the
+frozen 32-sample witness at age 1024. Maximum error versus the independent frozen
+model was **8.2547e-7 DSP FS**. Initialized code (12,288 bytes including padding)
+and tables (29,980 bytes) matched the artifact before and after testing. The
+stack guard stayed intact and DigiHealth reported zero heap faults. Native MIDI
+CCs are 40/41/42/45 for A/B/C/F. ColdFire control-table reads are big-endian;
+SHARC state/float readbacks are little-endian.
+
+A live edit delivered Tone/Decay 0/0 to the native callback while all captured
+START-latched controls remained unchanged; all tested render windows eventually
+clamped at 264,000 samples. Observer validation now rejects unready, malformed
+and nonfinite physical witnesses. Three focused observer/encoding tests pass,
+in addition to the eight existing SHARC tests passed for this increment.
+
+Sequential live readbacks observed the requested 1/4/8/16 fresh render windows.
+Median sampled callback intervals were 666,938 / 666,716 / 675,347 / 872,966 raw
+EMUCLK ticks, against the approximately 666,667-tick normal interval. The early
+sixteen-voice frozen intervals were longer still. These are sampled observer
+intervals, not total DSP utilization, full-run deadline proof or calibrated
+headroom. Callback counts alone are insufficient: finished silent voices can
+continue receiving callbacks. Timing and waveform accuracy remain separate.
+
+The user explicitly rejected **sixteen parallel kicks** as a product requirement.
+The stress batch completed before interruption could reach it; all notes were
+released. Its failure remains evidence of a known limit, **not a release gate or
+a reason to rework the model for sixteen voices**. The uncommitted large stress
+runner was removed from the reusable tool; the exact executed driver and raw
+readbacks remain under `out/808-model/sharc/device-physical/`, alongside
+`physical-summary.json` and `physical-report.json`. Only the reusable witness
+validator and its focused tests are retained in source.
+
+Next qualification should use normal one-track kick patterns, rapid retriggers,
+long-decay overlap, and downstream/device audio. Sequential raw witnesses do not
+establish any of those audio outcomes. The firmware remains an 808 development
+candidate with MODEL=909 silent, and Tone/Decay latched at START. No full-device
+emulator was used. Device test notes are off, MODEL is 808 and Tone/Decay were
+restored to 64; no project/preset was saved. #84 remains open for these realistic
+checks and final integration, with ColdFire deferred. Future remote navigation
+should batch a verified sequence and inspect the final state once; this run did
+not establish a successful automated X0X selection sequence.
