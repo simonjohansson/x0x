@@ -1,6 +1,6 @@
 # 808 body, finite excitation and Decay control
 
-The #9 prototype now drives a damped mode with a
+The supported #9 baseline drives a damped mode with a
 [1 ms trigger and shaped main input](808-main-input.md), followed by
 [Q43 leakage and pitch sigh](808-leakage.md). Full nonlinear diode/transistor behavior,
 stock feedback/Decay mapping and the complete loaded output network
@@ -14,10 +14,11 @@ Q43 as the late-error source and records the corrections rejected before porting
 The subsequent [effective feedback calibration](808-feedback-calibration.md)
 changes the two internal Q43 coefficients together; its CPU/native qualification
 and retained early/short-setting regressions are recorded separately.
-Current bounded numeric/reference/native qualification is the
-[main-pulse timescale correction](808-main-pulse-time.md), `9e78ca9`, following
-the [Tone control-shape calibration](808-tone-shape.md). Both retain the
-remaining fidelity and historical native limitations.
+Current component/reference qualification is the
+[lower-interior Decay correction](808-decay-shape.md), `5963a34`. Prior full-device
+evidence remains at `9e78ca9`; no new native pass is claimed. The human accepted
+#9 as the fixed-strength/reset-on-START baseline, retaining intrinsic accent,
+residual retrigger and circuit/fidelity refinements in #79/#2.
 The [first 909 body](909-body.md) follows separately. The [reference-informed Decay increment](808-decay.md) shortens the
 previously excessive tails. The raw-body equations below
 describe the 808 oscillator before Tone and the [C47 coupling filter](808-coupling.md).

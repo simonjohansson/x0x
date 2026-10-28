@@ -150,5 +150,5 @@ evidence remain distinct.
 Local fit/numerical evidence is under `out/808-c40-time-screen/`, independent
 model audit under `out/808-next-candidate-review/`, and CPU implementation,
 review and subsequent qualification under `out/808-c40-time-cpu/`. Broad
-#9/#79/#2 fidelity remains open. DT #78 stays deferred, historical DN #20
+#79/#2 fidelity remains open; #9 is accepted as the supported baseline. DT #78 stays deferred, historical DN #20
 unresolved, held-out audio unused and HTML/website untouched.

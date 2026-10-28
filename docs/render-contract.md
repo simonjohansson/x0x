@@ -1,5 +1,10 @@
 # Private instrument and render contract
 
+Implementation status: #9 is accepted as the fixed-strength/reset-on-START
+baseline at `5963a34`. The intrinsic strength and residual-circuit semantics
+below remain intended #79/#2 refinements, not implemented/passing behavior.
+No saved layout, SDK field or lifecycle contract was changed by that acceptance.
+
 This is the development contract for [issue #4](https://github.com/simonjohansson/x0x/issues/4).
 It defines one instrument behavior for the ColdFire and SHARC+ implementations.
 It does not define a firmware ABI, permanent machine ID or saved-sound format.
@@ -190,6 +195,7 @@ review.
 
 Training recordings are available and both engines have a
 [full-grid diagnostic baseline](full-reference-grid-baseline.md); subsequent
-808 qualification is recorded with [the Tone correction](808-tone.md).
+808 component/reference qualification is recorded with
+[the lower-interior Decay correction](808-decay-shape.md), `5963a34`.
 Calibrated timbre acceptance and held-out validation remain open. Diagnostic
 agreement does not establish measured polyphony or original-hardware fidelity.

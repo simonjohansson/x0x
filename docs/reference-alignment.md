@@ -5,11 +5,11 @@ Source/code audit for [#79](https://github.com/simonjohansson/x0x/issues/79),
 below includes the subsequent [Tone RC implementation](808-tone.md),
 [isolated C47 coupling](808-coupling.md), [finite excitation](808-excitation.md) and
 [first 909 triangle body](909-body.md).
-Current 808 qualification is the [main-pulse timescale correction](808-main-pulse-time.md),
-`9e78ca9`, after the [Tone shape](808-tone-shape.md) and
-[effective feedback calibration](808-feedback-calibration.md):
-both CPUs, full training tails/histories and installed-emulator numeric checks,
-retaining known native limitations and every reference regression.
+Current component/reference qualification is the
+[lower-interior Decay correction](808-decay-shape.md), `5963a34`. #9 is accepted
+as the supported fixed-strength/reset baseline; intrinsic strength, residual
+retrigger and full circuit/fidelity remain open here and in #2. Prior full-device
+evidence remains `9e78ca9`, with its known native limitations.
 Saved controls remain unchanged. This is an alignment inventory, not evidence
 that either engine reproduces original hardware or a reference VST.
 

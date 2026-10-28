@@ -199,7 +199,7 @@ Final local evidence is under `out/808-tone-shape/`: `analysis/paired-summary.js
 `full-grid/{measurements.json,history/measurements.json}`, the independent audit,
 `coldfire/native-qualification.json`, `native/dn2/qualification.json` and
 `review/review.json`. All original fit/guard failures remain preserved. Broad
-#9/#79/#2 fidelity gates remain open; no held-out audio, physical devices,
+#79/#2 fidelity gates remain open; no held-out audio, physical devices,
 HTML or website changes. This completes this control increment, not the engine.
 The consolidated local `final-qualification.json` has SHA256
 `817fe9a78666eae66720f24e58e71034a91c8c52adffd092ebd3b067f2bbeaf4`.

@@ -89,7 +89,7 @@ The source/equation checks and model screens are not new native-emulator or
 physical-device evidence. Current full-grid and native qualification is the subsequent
 [main-pulse timescale correction](808-main-pulse-time.md), `9e78ca9`; feedback
 and Tone records retain their historical qualification. #78 and historical #20 remain unresolved,
-and broad #9/#79/#2 fidelity gates remain open.
+and broad #79/#2 fidelity gates remain open; #9 is the accepted baseline.
 
 
 ## Subsequent output and upper-Decay diagnostics

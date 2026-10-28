@@ -17,14 +17,20 @@ dependencies, independent test commands and the latest-only firmware baseline.
 Start with the [architecture](docs/architecture.md),
 [kick-drum research](docs/kick-drum-research.md) and
 [implementation plan](docs/implementation-plan.md). All three silent milestones
-are accepted. The [first 808 body](docs/808-body.md) now makes sound in every
-emulator: an uncalibrated 55 Hz mode with [1 ms excitation](docs/808-excitation.md), live DECAY feedback control
-and [Tone](docs/808-tone.md) and [C47 coupling](docs/808-coupling.md) RC stages. The first
-[909 triangle body](docs/909-body.md) also makes sound in all three emulators;
-its Decay control uses an unloaded RC approximation with a provisional pot mapping. Both engines
-remain provisional; remaining circuit stages follow in #9/#25/#79.
-The Digitakt reset bug is deferred to #78. Digitakt II is outside the active scope.
-A separate late DN2 MODEL transition is being investigated in #80.
+and the supported [808 baseline](docs/808-body.md) are complete. It uses a
+47.65 Hz settled body, shaped excitation, live Tone/Decay and output coupling
+on both CPUs. Intrinsic circuit accent and retained-state retrigger remain
+explicit refinements in #79/#2; current behavior is fixed excitation and reset
+on START. Gain stays unchanged. See the [latest Decay evidence](docs/808-decay-shape.md).
+
+The [909](docs/909-body.md) also makes sound in all three emulators, with Tune,
+Decay and the [loaded VCA](docs/909-vca.md); Attack and remaining implementation
+follow in #25. Both engines' circuit/held-out fidelity remains open in #79/#2.
+DSP-only changes use actual CPU component/reference checks; full-device runs
+cover integration changes and milestones. Prior native evidence stays labelled
+as prior. DT reset #78 and historical DN residue #20 remain unresolved;
+DN2 MIDI delivery #80 and private capacity #81 are complete. Digitakt II is
+outside the active scope.
 
 Downloaded source material is kept locally in `research/`. Its two tracked
 manifests record how to reconstruct the archive; downloaded files remain

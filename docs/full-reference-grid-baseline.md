@@ -28,12 +28,13 @@ record for the body correction. The subsequent
 Tone transfer, with a small whole-engine mean improvement and all 25
 whole-tail / four history regressions retained. All three installed scenarios
 complete; DT retains #78 and DN's one-zero-window pass does not fix historical
-#20. Current qualification is the [main-pulse timescale correction](808-main-pulse-time.md),
-`9e78ca9`: both actual CPU suites, all 243 full 12-second takes, seven histories
-and three installed scenarios are complete. Mean full-tail error improves
+#20. The subsequent [main-pulse timescale correction](808-main-pulse-time.md)
+at `9e78ca9` has completed both actual CPU suites, all 243 full 12-second takes,
+seven histories and three installed scenarios. Mean full-tail error improves
 .796%; all settings and histories improve, while nine isolated 150–500 ms
 minimum-Decay regressions remain. Tight raw-body/numeric margins and known
-#78/#20 distinctions remain. The tables below preserve `65aeaf7`.
+#78/#20 distinctions remain. Current qualification and accepted #9 baseline scope are recorded in the
+[implementation plan](implementation-plan.md); the tables below preserve `65aeaf7`.
 
 | Engine | Training coverage | Actual CPU output per setting | Main measured gaps |
 | --- | --- | --- | --- |

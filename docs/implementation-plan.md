@@ -4,14 +4,21 @@ The historical [full training-grid baseline](full-reference-grid-baseline.md) co
 243 808 and 2,187 909 recordings against accepted commit `65aeaf7` on both
 actual CPUs, plus seven declared-voice histories per engine. This is component
 diagnostic evidence; held-out/native fidelity gates remain open and the HTML
-report is unchanged. Current 808 qualification is `9e78ca9`, with the
-[main-pulse timescale correction](808-main-pulse-time.md) after the
-[Tone control shape](808-tone-shape.md) and
-[effective Q43 feedback calibration](808-feedback-calibration.md). Both CPUs
-have full tails and histories; all three installed scenarios finish with DT
-#78 retained, DN's current single-window pass distinct from historical #20,
-and DN2 passing. Use the full measured surfaces to prioritize subsequent
-#9/#25/#79 corrections, rather than only the original five settings.
+report is unchanged. Current DSP-only 808 qualification is `5963a34`, the
+[lower-interior Decay correction](808-decay-shape.md), after the
+[main-pulse](808-main-pulse-time.md), [Tone](808-tone-shape.md) and
+[feedback](808-feedback-calibration.md) corrections. Both actual CPU suites,
+81-setting / 243-take full tails and seven histories pass. All 27 affected
+settings improve cumulative/whole raw residuals; 54 settings and all histories
+are byte identical. Mean whole-tail error falls 2.536%, with late-window and
+peak-slope regressions retained. Prior full-device evidence remains `9e78ca9`,
+with known #78/#20 distinctions; this DSP-only increment has no fresh OS run.
+
+On 28 October the human accepted **#9 complete as the supported fixed-strength,
+reset-on-START 808 baseline**. Intrinsic circuit accent, retained-state retrigger,
+full feedback/output loading and calibrated/held-out fidelity remain explicit
+#79/#2 work. DN2's current SDK lacks intrinsic strength and logical lifecycle
+identity; do not invent those inputs or change public boundaries without review.
 
 The three silent native milestones are complete. The current 808 has a
 reference-calibrated settled pole/Decay range, switched capacitor state,
@@ -21,7 +28,7 @@ retained default/long pitch-trajectory regressions. The [lower-half Decay correc
 measured interior response on both CPU components, retaining the entire upper
 law and all anchors. Raw display32 regressions remain explicit; full feedback,
 loading, control taper and faithful residual-state retrigger remain incomplete
-in #9/#79. Native and paired full-grid qualification of this correction is
+in #79/#2. Native and paired full-grid qualification of this correction is
 recorded separately in that document.
 
 The [continuing-pitch investigation](808-pitch-sigh-investigation.md) attributes
@@ -67,9 +74,9 @@ these findings rather than refitting rejected windows. See the
 The human [declined output-gain fitting](808-output-calibration-proposal.md):
 keep current internal gain and the raw reference comparison unchanged. The
 [lower-interior Decay correction](808-decay-shape.md) now has a reviewed
-fixed-gain model/full-tail screen and an actual guarded CF candidate. Finish
-this single correction through both actual CPU components and references;
-start no additional model experiments while its qualification is pending.
+fixed-gain model/full-tail screen and complete actual CPU/reference qualification.
+The supported baseline is delivered; remaining source/fidelity work stays in
+#79/#2 rather than leaving #9 open for further parameter experiments.
 All three anchors and the upper law stay fixed. Retain its late/peak-slope
 regressions; rejected quiet-pole estimates are not calibration targets.
 
@@ -135,7 +142,7 @@ every control, model stage, CPU implementation and matrix cell.
 | Done, reset bug deferred | [#39](https://github.com/simonjohansson/x0x/issues/39) | Digitakt: select and exercise the silent combined mod in digiemu |
 | Done | [#40](https://github.com/simonjohansson/x0x/issues/40) | Digitone: select and exercise the silent combined mod in digiemu |
 | Done | [#7](https://github.com/simonjohansson/x0x/issues/7) | Digitone II: select and exercise the silent combined mod in Digikit |
-| In progress | [#9](https://github.com/simonjohansson/x0x/issues/9) | Implement the 808 on both CPUs and integrate each increment into working mods |
+| Done, supported baseline | [#9](https://github.com/simonjohansson/x0x/issues/9) | Fixed-strength/reset-on-START 808 on both CPUs; intrinsic accent, residual retrigger and fidelity remain in #79/#2 |
 | In progress | [#25](https://github.com/simonjohansson/x0x/issues/25) | Implement the 909 on both CPUs alongside the 808 in those same mods |
 | Done | [#80](https://github.com/simonjohansson/x0x/issues/80) | Upstream Digikit mask fix published/pinned; unchanged-production full and original late-MODEL probes pass on the normal runtime |
 | Alongside engines | [#79](https://github.com/simonjohansson/x0x/issues/79) | Align both engines with sources and the full measured training surfaces |
@@ -144,8 +151,8 @@ every control, model stage, CPU implementation and matrix cell.
 | Full training grids complete for both engines; fidelity open | [#2](https://github.com/simonjohansson/x0x/issues/2) | Fixed-level reference corpora; both-model fidelity comparisons remain open |
 | After sound | [#20](https://github.com/simonjohansson/x0x/issues/20) | Combined-mod emulator regression and readiness review |
 
-The three silent device issues are closed. The 808 engine in #9 is underway:
-the basic body is integrated and audible on all three devices' emulators. The DT reset
+The three silent device issues and supported 808 baseline #9 are closed:
+the body is integrated and audible on all three devices' emulators. The DT reset
 correction in #78 remains deferred. The [initial five-setting 808 comparison](808-reference-baseline.md)
 in #2 is complete; pitch/Decay calibration now uses the training recordings; full fidelity remains unqualified. Use
 subagents for non-overlapping work when authorized; one blocked device does
@@ -175,7 +182,7 @@ encountered by this scenario; do not exhaust every combination of controller,
 LFO, MIDI source, tail history or allocation before trying the installed mod.
 Existing tests stay, but adding more edge-case coverage is not the priority.
 
-### Current starting points and blockers
+### Historical silent-milestone starting points
 
 | Device | Useful evidence already available | Work still needed for this milestone |
 | --- | --- | --- |
@@ -210,9 +217,10 @@ Settled pitch and short/default/long Decay now have training-reference calibrati
 The first [initial-frequency switch](808-initial-pitch.md) now follows the
 source pole ratio for a nominal 6 ms window. Companion C39
 retrigger/forcing and the main pulse shaper are now implemented, along with Q43 leakage.
-Next correct the measured interior Decay surface and continuing pitch sigh,
-then excitation/output and retained-state behavior as small integrated commits.
-Each ready increment runs through the already-installed mod. #25 is underway
+The supported 808 baseline is complete in #9. Further source/output and
+retained-state refinements stay in #79/#2, with unsupported lifecycle/strength
+inputs requiring review. DSP-only corrections use component/reference gates;
+full-device checks run at integration changes and milestones. #25 is underway
 with the shaped triangle, Tune CV, loaded VCA and finite reset. The full grid
 now prioritizes missing Attack/transient behavior and body/level/Decay gaps.
 Pulse/noise prototypes remain unadopted; their numeric passes do not establish
@@ -226,7 +234,7 @@ hangs, while measured workload/performance qualification comes later.
 [#79](https://github.com/simonjohansson/x0x/issues/79) makes the source-to-code
 alignment explicit: inspect published reference implementations and primary
 schematics, choose each stock circuit baseline, audit provisional/missing stages,
-and correct the engines incrementally in #9/#25. Reference recordings are now
+and refine the 808 in #79/#2 while completing the 909 implementation in #25. Reference recordings are now
 available: use the training settings to prioritize and calibrate each increment
 while retaining circuit-model gaps. #2 owns broader and held-out fidelity
 validation; source alignment is not a reason to postpone all measurements. The
@@ -283,6 +291,10 @@ Only the [latest supported firmware](../firmware/README.md) is in scope.
 Commit small increments directly to main and push, with evidence on the owning
 issue. Do not close a milestone on partial proof or widen tolerances to conceal
 failures. Other stable API or saved-layout changes still require review.
+
+Historical checkpoints below retain their original next-step wording and
+evidence. They do not reopen the accepted #9 baseline or override the
+[current backlog](#the-working-backlog) and testing cadence above.
 
 ## Initial 808 reference diagnostic — 27 October 2026
 
