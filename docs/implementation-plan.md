@@ -98,10 +98,15 @@ regressions remain explicit. The initial wrong-sign Q11 trial remains rejected.
 Independent Q10/IC11a source checks justify the [finite reset/negative-output
 correction](909-trigger.md), now passing both CPU suites and all three native
 regression paths plus a separate DN2first32sample witness. All five whole errors
-improve, while default25/50ms windows regress. Attack pulse/noise remains the
-next source work; its first isolated pulse-only comparison worsens all measured
-windows, so no production pulse or fidelity claim follows from numeric agreement. Independent workers prepare those
-bounded pieces with serial shared-source integration; no new ticket tree.
+improve, while default25/50ms windows regress. The remaining [Attack integration](909-attack-status.md) requires a supported
+DN2 shared-noise clock, requested in
+[Elekloader #108](https://github.com/simonjohansson/elekloader/issues/108).
+No public API or clock workaround is adopted. A source-consistent joint passive
+network fix is retained but still fails to improve on body-only output; a
+conditional Q12 replacement also worsens the declared raw comparisons and is
+rejected without a port. Complete known-truth/reference evidence is linked in
+that status document. Do not repeat these candidates or land a numerically
+passing but worse-sounding branch.
 
 DT retains only deferred reset #78. DN's [historical one-count investigation](dn-silence-residue.md)
 proves exact-zero x0x inputs into stock filters with nonzero native downstream

@@ -25,7 +25,9 @@ on START. Gain stays unchanged. See the [latest Decay evidence](docs/808-decay-s
 
 The [909](docs/909-body.md) also makes sound in all three emulators, with Tune,
 Decay and the [loaded VCA](docs/909-vca.md); Attack and remaining implementation
-follow in #25. Both engines' circuit/held-out fidelity remains open in #79/#2.
+follow in #25; DN2 shared-noise timing needs
+[Elekloader #108](https://github.com/simonjohansson/elekloader/issues/108).
+Both engines' circuit/held-out fidelity remains open in #79/#2.
 DSP-only changes use actual CPU component/reference checks; full-device runs
 cover integration changes and milestones. Prior native evidence stays labelled
 as prior. DT reset #78 and historical DN residue #20 remain unresolved;
