@@ -1,10 +1,12 @@
 # 808 continuing pitch: measured cause and rejected corrections
 
-The qualified audio checkpoint is the separate
-[Tone correction](808-tone.md) at `3c3db81`; the body is unchanged from `853bb77`. This #9/#79
-investigation changes no production body model or ASM. Its purpose is to distinguish the continuing pitch
-error from output-filter measurements before selecting another correction.
-The website is cancelled and remains unpublished.
+This preserves the investigation at the separate [Tone correction](808-tone.md),
+`3c3db81`, whose body was unchanged from `853bb77`. The later
+[effective feedback calibration](808-feedback-calibration.md), `fb343b5`,
+changes two Q43 coefficients on both CPUs and improves late pitch from
+49.72 to 47.65 Hz against 47.78 Hz recorded. Its full paired/native results
+supersede the old pending status; the rejected corrections below remain
+unadopted. The website is cancelled and remains unpublished.
 
 ## Cause in the actual CPU output
 
@@ -61,7 +63,8 @@ Neither approximate timing text uniquely calibrates this software reference.
 
 ## Next work and evidence limits
 
-The long pitch error remains open. These tests rule out several isolated
+The later joint feedback calibration substantially improves late pitch but
+retains onset/short-Decay regressions. These tests ruled out isolated
 corrections; they do not justify another trigger constant, a fitted pitch
 envelope or a relaxed acceptance limit. The separate nominal Tone correction
 is qualified; the mutually loaded output candidate also worsened
@@ -76,7 +79,7 @@ The later timing screen and cache/source binding are under
 `out/808-attack-window-4ms/`. All source snapshots,
 receipts, failures and rejected outputs remain distinct from accepted audio.
 The source/equation checks and model screens are not new native-emulator or
-physical-device evidence. The fully qualified baseline remains in
-[the lower-half Decay checkpoint](808-decay-lower-half.md); current Tone gates
+physical-device evidence. Current full-grid and native qualification is in
+[the feedback calibration](808-feedback-calibration.md); Tone-specific gates
 are recorded [separately](808-tone.md). #78 and historical #20 remain unresolved,
 and broad #9/#79/#2 fidelity gates remain open.

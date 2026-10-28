@@ -4,10 +4,12 @@ The historical [full training-grid baseline](full-reference-grid-baseline.md) co
 243 808 and 2,187 909 recordings against accepted commit `65aeaf7` on both
 actual CPUs, plus seven declared-voice histories per engine. This is component
 diagnostic evidence; held-out/native fidelity gates remain open and the HTML
-report is unchanged. Current 808 qualification is at `3c3db81`, with the
-[nominal C-taper correction](808-tone.md), paired full tails/histories and all
-three emulator scenarios. Use the full measured surfaces to prioritize subsequent
-#9/#25/#79 corrections, rather than only the original five settings.
+report is unchanged. Current 808 qualification is `fb343b5`, with the
+[effective Q43 feedback calibration](808-feedback-calibration.md), following
+the [nominal C-taper correction](808-tone.md). Both CPUs have fresh full tails
+and histories; all three emulator scenarios finish with known DT #78 / DN #20
+failures retained and DN2 passing. Use the full measured surfaces to prioritize
+subsequent #9/#25/#79 corrections, rather than only the original five settings.
 
 The three silent native milestones are complete. The current 808 has a
 reference-calibrated settled pole/Decay range, switched capacitor state,
@@ -21,22 +23,17 @@ in #9/#79. Native and paired full-grid qualification of this correction is
 recorded separately in that document.
 
 The [continuing-pitch investigation](808-pitch-sigh-investigation.md) attributes
-the remaining long-kick error to Q43. Its isolated source corrections were
-rejected before porting; the accepted body remains unchanged by `3c3db81`.
-The long pitch error remains open while existing feedback/output work continues.
-The [nominal C-taper correction](808-tone.md) now replaces the provisional
-linear Tone law on both CPUs. Its isolated reference-transfer check improves
-all interior settings; absolute raw regressions remain recorded. Host/C UI,
-both guarded CPU suites, full paired 81-setting/243-take tails and seven
-histories pass numeric gates. All three native scenarios complete: DT retains
-#78, DN passes this run without resolving historical #20, and DN2 passes.
-Continue reference-informed Q43 feedback calibration and the omitted output
-stages; exact C-taper/whole-engine/held-out fidelity remains open.
-The active [effective feedback calibration](808-feedback-calibration.md) changes
-only the two Q43 coefficients. Its 81-setting model screen improves the late
-pitch and longer mean errors while retaining short-setting/onset regressions.
-Host/C UI and CF component gates pass; full SHARC, paired tails and native
-qualification remain in progress before accepting this next increment.
+the earlier long-kick error to Q43. Rejected isolated source corrections remain
+unadopted. The [effective feedback calibration](808-feedback-calibration.md)
+now changes only two coefficients on both CPUs: long late pitch moves from
+49.72 to 47.65 Hz against 47.78 Hz recorded, with the quiet pole unchanged.
+Fresh 81-setting / 243-take / full 12 s paired comparison reduces mean error
+15.62%, and all seven history diagnostics improve. All 32 regressing settings
+and the 0.67% early-25-ms regression remain explicit. Host/C UI, both guarded
+CPU suites and installed numeric checks pass unchanged limits; these are not
+whole-engine fidelity acceptance. Next investigate remaining Tone/onset and
+short-Decay residuals before adopting another correction. Omitted output and
+faithful residual-state behavior remain open; held-out audio remains unused.
 
 The 909 [diode shaper](909-shaping.md), [C9/IC12 Tune path](909-tune.md) and
 [loaded ENV1/Q12 VCA](909-vca.md) run on both CPUs and all three emulators.
@@ -54,8 +51,9 @@ bounded pieces with serial shared-source integration; no new ticket tree.
 
 DT retains only deferred reset #78. DN's [historical one-count investigation](dn-silence-residue.md)
 proves exact-zero x0x inputs into stock filters with nonzero native downstream
-output. The current C15 native run passes, but observes only its original first
-zero 100 ms windows; this does not fix or close the historical #20 failure.
+output. The current feedback-calibration run reproduces the bright baseline residue
+through sixty 100 ms windows. The historical C15 first-zero-window pass did
+not establish a fix; #20 remains unresolved.
 [DN2 MIDI delivery](dn2-late-model.md) is fixed in public Digikit draft PR200,
 now pinned here. The unchanged-production candidate passes full and original
 late-MODEL scenarios; the normal pinned daemon passes the new full Tune run.

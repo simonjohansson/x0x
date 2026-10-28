@@ -5,7 +5,16 @@ retains an unresolved historical failure. A bounded investigation of the reprodu
 baseline places the residual after the x0x body and native AMP output.
 It does not establish an emulator arithmetic defect or justify a mod workaround.
 
-The current Tone correction at `3c3db81` passes the original native scenario
+The current [feedback correction](808-feedback-calibration.md) at `fb343b5`
+reproduces the bright-Tone baseline failure: one PCM16 count throughout all
+sixty 100 ms windows/six seconds. The scenario completes 109,162 callbacks
+with 74 audible mixed blocks and no observer violations; fresh interior 808
+raw-waveform checks pass. Dark and 909 each reach one zero window, not a
+sixty-window stability proof. The unchanged observers, source hashes and
+firmware receipt are under `out/808-q43-calibration/native/`. This recurrence
+adds no new downstream-cause proof and does not justify a mod workaround.
+
+The historical Tone correction at `3c3db81` passes the original native scenario
 (113,710 callbacks, 73 audible mixed frames, no observer violations). Its
 byte-identical silence observer exits at the first exact-zero 100 ms window;
 dark, bright and 909 each needed only that one window. Earlier failed bright
@@ -13,7 +22,7 @@ runs actually executed sixty windows/six seconds with one-count residue.
 The new run therefore does not prove sixty-window stability or attribute a fix.
 Earlier Tone history or stock-filter state may affect recurrence; this remains
 a possibility, not a demonstrated cause. See `out/808-tone-c15/native/` and its
-`dn-residue-audit/audit.json` for exact current/historical scope and hashes.
+`dn-residue-audit/audit.json` for that earlier run's exact scope and hashes.
 
 The historical frozen attribution run uses commit `d3ba46f`, Digitone OS 1.44 and firmware SHA256
 `e641724c50928d751b2739bf35bd4dabb529a6c724ad827e75e751ebe3b68d49`.

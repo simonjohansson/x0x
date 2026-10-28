@@ -5,6 +5,9 @@ Source/code audit for [#79](https://github.com/simonjohansson/x0x/issues/79),
 below includes the subsequent [Tone RC implementation](808-tone.md),
 [isolated C47 coupling](808-coupling.md), [finite excitation](808-excitation.md) and
 [first 909 triangle body](909-body.md).
+Current 808 qualification is the [effective feedback calibration](808-feedback-calibration.md),
+`fb343b5`: both CPUs, fresh full training tails/histories and installed-emulator
+numeric checks, retaining known native failures and reference regressions.
 Saved controls remain unchanged. This is an alignment inventory, not evidence
 that either engine reproduces original hardware or a reference VST.
 
@@ -75,7 +78,7 @@ its SHARC payload directly through the SDK bridge.
 | Block | Source target | Current implementation | Alignment status |
 | --- | --- | --- | --- |
 | Trigger/excitation | S01 p.4/p.9; S03 §§3–4, approximately 1 ms accent-dependent pulse and R162/R163/C40/D53 shaping | Both CPUs use a 1 ms fixed 14 V trigger, C40 passive shelf, ideal negative D53 charge clamp and the main bridge channel/direct feedthrough | Main source integrated with calibrated effective feedback and fixed encoding; finite diode/transistor behavior, intrinsic accent and full feedback remain open |
-| Resonator | S03 §5 Eq.5 and §7 Eq.7; S01 p.9 bridged-T around IC12/C41/C42/R165–R167 | `x0x_808_body` / SHARC `body_sample`: two-state damped rotation with a 6 ms initial frequency switch, then 47.65 Hz, and source-separated main/companion inputs | Settled pitch calibrated; proper input channels and state conversion integrated, and a source-derived hard-knee Q43 leakage term; full feedback and soft-knee transistor behavior remain open |
+| Resonator | S03 §5 Eq.5 and §7 Eq.7; S01 p.9 bridged-T around IC12/C41/C42/R165–R167 | `x0x_808_body` / SHARC `body_sample`: two-state damped rotation with a 6 ms initial frequency switch, then 47.65 Hz, and source-separated main/companion inputs | Settled pitch calibrated; proper input channels and state conversion integrated, and a source-motivated hard-knee Q43 leakage term with two training-calibrated effective coefficients; full feedback and transistor fidelity remain open |
 | Decay | S03 §6 Eq.6 and Fig.7; VR6 changes a frequency-dependent R164/R169/C43 feedback shelf returned through R170 | `retention()` and each ASM coefficient setup interpolate radius through three training-calibrated anchors versus delivered B | Short/default/long calibration against the recordings; not the stock shelf/pot response or a qualified full curve |
 | Initial pitch shift | S01 p.5 and S03 §8.1: Q41–Q43 switched resistance during attack | Pole-ratio approximation: about 131.006 Hz for 6 ms, then 47.65 Hz; modal conversion retains C41/C42 voltage at the switch | Initial switch and physical-state conversion implemented with calibrated effective damping; S01 4 ms / S03 6 ms timing difference retained. Companion C39 forcing is integrated; hard-knee leakage is integrated separately; the complete feedback network remains missing |
 | Internal retrigger/pitch sigh | S03 §§8.1–8.2: C39/R161/D52 event and Q43 leakage behavior | Source-separated 33 ms C39 pulse drives the negative band-pass channel on both CPUs, with an ideal positive clamp and fixed private voltage encoding | Companion input and hard-knee Q43 leakage integrated on both CPUs; mutual loading, the fitted soft knee and residual-state retrigger remain missing |

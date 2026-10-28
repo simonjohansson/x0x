@@ -1,5 +1,9 @@
 # 808 passive Tone stage
 
+Current whole-engine qualification follows the
+[effective Q43 calibration at `fb343b5`](808-feedback-calibration.md). Its DN
+run reproduces historical #20; the C15 single-window pass below is historical.
+
 The measurements below predate [finite rectangular excitation](808-excitation.md).
 The RC topology is unchanged. The control taper is now corrected as described
 below; older component/native numbers remain historical evidence.
@@ -178,8 +182,8 @@ No held-out audio, fitted gain/alignment, physical device or website is used.
 Final receipts: `out/808-tone-c15/full-grid/measurements.json`,
 `full-grid/history/measurements.json`, `sharc/paired-summary.json`,
 `full-grid/independent-selected-comparison.json` and `native/qualification.json`.
-The accepted implementation is `3c3db81`; broader #9/#79/#2 fidelity gates and
-the continuing pitch error remain open.
+The Tone implementation is `3c3db81`; the later feedback correction linked
+above improves continuing pitch while retaining broader #9/#79/#2 fidelity gates.
 
 The numerical/native results below are from the completed Tone increment,
 before 909 sound and coupling were added. [808-coupling.md](808-coupling.md)

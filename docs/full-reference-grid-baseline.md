@@ -18,8 +18,12 @@ fidelity acceptance. The subsequent [nominal 808 C-taper correction](808-tone.md
 is qualified at `3c3db81` on both CPUs and all three emulators. It improves
 isolated Tone transfer and mean full-grid error, while retaining seven
 first-150-ms and 27 whole-tail interior regressions. Its current DN run passes,
-but historical #20 remains unresolved. Use that record for current 808 results;
-the tables below preserve the original `65aeaf7` baseline.
+but historical #20 remains unresolved. The subsequent
+[effective feedback calibration](808-feedback-calibration.md), `fb343b5`, has
+fresh paired full tails/histories and all three native scenarios. Mean whole
+error improves 15.62%, all seven histories improve, and 32 settings regress;
+DT #78 and reproduced DN #20 failures remain, while DN2 passes. Use that
+record for current 808 results; the tables below preserve `65aeaf7`.
 
 | Engine | Training coverage | Actual CPU output per setting | Main measured gaps |
 | --- | --- | --- | --- |
