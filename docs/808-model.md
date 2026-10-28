@@ -4,7 +4,7 @@
 
 ## Current status
 
-28 October 2026: **#84’s compact-model and SHARC development mod-specific checks are complete**. Acceptance covers waveform fidelity, correct START/latched-control handling, independent slot state, bounded output/memory/ABI use, and measured per-voice cost. Ten focused SHARC tests plus three observer tests pass; a short installed-X8D1 callback smoke passes. Elekloader owns general MIDI/sequencer delivery, voice allocation/scheduling and stock processing; broad platform qualification is outside this mod milestone. ColdFire is deferred, the development 909 path is silent, and final combined release plus fresh source acceptance remain later work.
+29 October 2026: **ColdFire is now active under #89**, following completed #84 SHARC development qualification. The new hand-written sample loop implements the same frozen model using fixed-point envelopes, a Q31 carrier/Tone stage and a 64-bit phase accumulator. Four focused local tests pass; seven full integer-reference hits are within 2.7e-6 DSP FS of the frozen model. Full-length assembled renders and a bounded DT1 emulator smoke are the next checks. No DT1 hardware is available; no physical ColdFire timing or device qualification is claimed. SHARC sound/artifacts are unchanged.
 
 The user clarified the acceptance priority during #84: **audible fidelity, rather than exact waveform reproduction**. The original source-error thresholds below remain measured diagnostics; exceeding them no longer automatically rejects a candidate if listening establishes an acceptable result. A 5% error does not itself establish inaudibility. The mod’s numerical realization, memory/context safety, gain/timing and control handling remain mandatory. Broad SDK platform qualification is outside this milestone; final fresh source acceptance remains separate.
 
@@ -429,3 +429,47 @@ final combined 808/909 integration remains under #87/#88, and fresh independent
 source acceptance remains #90. The existing source-error diagnostics and human
 listening evidence are unchanged. No broad SDK platform campaign, full-device
 emulator or repository-wide suite was run for this increment.
+
+
+## ColdFire port — implementation checkpoint
+
+The user activated ColdFire after #84 and authorized an emulator because no DT1
+is available. #89 owns the implementation; required numerical work from #86 is
+performed with it. This supersedes earlier ColdFire deferral statements. The
+scope remains the mod: sound, supplied START/control handling, independent state,
+ABI/EMAC/ownership and per-voice resources, plus a bounded emulator wiring smoke.
+General SDK scheduling, sequencer and maximum-polyphony qualification is excluded.
+
+[targets/coldfire/field808.s](../targets/coldfire/field808.s) contains the actual
+32-sample/48 kHz renderer. [coldfire_field808.py](../tools/x0x/coldfire_field808.py)
+exports the unchanged frozen model to private build tables; the separate host
+integer specification in `coldfire_field808_ref.c` is never linked into firmware.
+No floating-point C runtime or compiled C sample loop implements the engine.
+
+The current encoding uses Q29 control weights, Q28 shared field coefficients,
+Q26 combined envelope coefficients/filter state, Q31 carrier and pole values,
+and Q30 gain. Fractional EMAC products use the existing two-stage nearest-even
+narrowing contract. Convex Bezier basis weights retain precision when caching
+power coefficients at segment changes. Rounded integer envelope knots differ
+from the frozen floating breakpoints by less than 0.003 samples; the resulting
+error remains included in comparison against the original model. The carrier
+uses an interpolated 2,048-step full-cycle Q31 sine table and a 64-bit phase.
+Tone/Decay/MODEL latch on START; the standalone development MODEL=909 path is
+silent. Final combined coexistence remains required.
+
+Tables occupy **40,984 bytes**; per-voice state is **1,408 bytes**. No ColdFire
+memory cap is inferred from SHARC's 64 KiB allocation. The callback preserves
+D2–D7/A2–A6 and every EMAC accumulator, extension, MACSR and MASK. Its local frame
+is 128 bytes plus nested return addresses (140 bytes maximum below kernel entry).
+The diagnostic seed/snapshot wrapper raises the total guarded test extent to
+168 bytes; that wrapper is not the production sample loop.
+
+Four focused tests pass: seven full integer-reference hits versus the independent
+frozen model (worst **2.6865e-6 DSP FS**); exact assembled output/full-state matches
+across eight control cases; START/reset, mid-hit latching, independent slots,
+terminal silence; invalid-control refusal. Each guarded assembled call checks
+all writes, callee registers, complete EMAC state, caller stack, output guards
+and other slots. This is component execution in the pinned emulator, not an OS
+boot or physical timing result. The emulator JIT needs executable-memory access
+outside the desktop sandbox. Reproduce with `mise run test:808:coldfire-model`.
+Full 5.5-second assembled qualification and the DT1 OS smoke remain in progress.

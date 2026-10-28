@@ -337,3 +337,8 @@ run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" uv run --offline 
 description = "Package the isolated-hit SHARC ASM 808 candidate for a physical DN2 test"
 env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
 run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" uv run --offline --frozen --project vendor/digikit --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --python "$(mise which python)" python -m x0x.sharc_field808 package'
+
+[tasks."test:808:coldfire-model"]
+description = "Check the frozen-field ColdFire ASM against its independent integer reference"
+env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
+run = 'PYTHONPATH="{{config_root}}/vendor/digikit:{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --python "$(mise which python)" python -m unittest discover -s tests/host -p test_coldfire_field808.py'
