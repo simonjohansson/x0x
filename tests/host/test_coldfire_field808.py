@@ -58,6 +58,12 @@ class ColdFireFieldTests(unittest.TestCase):
         self.assertEqual(state,bytes(a.uc.mem_read(a.STATES,dsp.WORDS*4)))
         a.check_tables();b.check_tables()
 
+    def test_continuous_envelope_bounds_refuse_insufficient_headroom(self):
+        arrays,groups=dsp.export();bounds=dsp.range_bounds(arrays,groups)
+        self.assertLess(bounds['horner_prefix'],24)
+        arrays['cf_body']=arrays['cf_body']*2
+        with self.assertRaises(ValueError):dsp.range_bounds(arrays,groups)
+
     def test_invalid_controls_leave_state_untouched(self):
         a=dsp.Runner(self.image);a.call(16384,16384,True)
         state=bytes(a.uc.mem_read(a.STATES,dsp.WORDS*4))

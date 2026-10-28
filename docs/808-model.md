@@ -4,7 +4,7 @@
 
 ## Current status
 
-29 October 2026: **ColdFire is now active under #89**, following completed #84 SHARC development qualification. The new hand-written sample loop implements the same frozen model using fixed-point envelopes, a Q31 carrier/Tone stage and a 64-bit phase accumulator. Four focused local tests pass; seven full integer-reference hits are within 2.7e-6 DSP FS of the frozen model. Full-length assembled renders and a bounded DT1 emulator smoke are the next checks. No DT1 hardware is available; no physical ColdFire timing or device qualification is claimed. SHARC sound/artifacts are unchanged.
+29 October 2026: **the frozen 808 now has qualified hand-written SHARC and ColdFire development kernels**. ColdFire passes five focused tests and 22 complete assembled renders with exact integer-reference output/end-state agreement, maximum 2.6631e-6 DSP FS versus the frozen model. A bounded DT1 full-OS emulator smoke passes with 505 matching live callbacks and nonzero PCM. No DT1 device is available, so physical ColdFire timing is unmeasured. Final combined 808/909 cutover, Digitone native integration and fresh independent source acceptance remain separate deliverables. The frozen model and SHARC sound/artifacts are unchanged.
 
 The user clarified the acceptance priority during #84: **audible fidelity, rather than exact waveform reproduction**. The original source-error thresholds below remain measured diagnostics; exceeding them no longer automatically rejects a candidate if listening establishes an acceptable result. A 5% error does not itself establish inaudibility. The mod’s numerical realization, memory/context safety, gain/timing and control handling remain mandatory. Broad SDK platform qualification is outside this milestone; final fresh source acceptance remains separate.
 
@@ -424,7 +424,7 @@ The local completion receipt is
 `out/808-model/sharc/device-physical/mod-qualification.json`; its smoke driver,
 raw witness, readback receipt and test logs are beside it. **#84 is complete for
 the compact-model and SHARC development milestone.** This does not mark the
-whole product ready: ColdFire is deferred; the development 909 path is silent;
+whole product ready: ColdFire was deferred at this SHARC-only checkpoint; the development 909 path is silent;
 final combined 808/909 integration remains under #87/#88, and fresh independent
 source acceptance remains #90. The existing source-error diagnostics and human
 listening evidence are unchanged. No broad SDK platform campaign, full-device
@@ -472,4 +472,74 @@ all writes, callee registers, complete EMAC state, caller stack, output guards
 and other slots. This is component execution in the pinned emulator, not an OS
 boot or physical timing result. The emulator JIT needs executable-memory access
 outside the desktop sandbox. Reproduce with `mise run test:808:coldfire-model`.
-Full 5.5-second assembled qualification and the DT1 OS smoke remain in progress.
+The full assembled qualification and bounded DT1 emulator smoke are completed in the result below.
+
+
+## ColdFire complete local and emulator result
+
+The hand-written ColdFire renderer is **1,414 code bytes**, with **40,984 bytes**
+of tables and **1,408 bytes per voice** (eight caller-owned states). Its own stack
+extent is **140 bytes** including nested returns; the diagnostic wrapper uses
+168 bytes in total. The staged DT1 package's whole core/machine-pages/x0x layout
+has 54,928 load bytes and 15,928 BSS bytes, with 191,384 bytes of spare DDR in the
+SDK's declared allocation. These are measured linked figures, not an invented
+ColdFire equivalent of SHARC's memory cap.
+
+All **22 complete 5.5-second assembled renders** match the independent integer
+reference **exactly at every output sample and in final state**. Maximum error
+versus the original frozen mathematical model is **2.66303e-6 DSP FS**. The sixteen
+recorded development-cohort settings retain **0.55958% median / 0.69532% worst**
+source-relative L2 error. Port and source-model errors remain separate; no
+per-recording alignment, normalization or extra fitting was applied.
+
+Five focused ColdFire tests pass, including the continuous envelope-range proof:
+quantized-control Bezier hulls bound combined coefficients by 5.34855 and cached
+Horner intermediates by 23.53751, inside Q26's ±32 range with an explicit rounding
+margin. This covers continuous Decay/time positions for these internal operations;
+it is not an all-control waveform/perceptual acceptance claim. Code/tables remain
+immutable. Ten SHARC regression checks also pass; only the private plot helper
+received a backend label parameter, preserving its default SHARC behaviour.
+
+The maximum **observed counted** block is **26,626 instructions including the
+192-byte EMAC seed/snapshot wrapper**. Counting samples the first 50 blocks of
+each setting, covering onset, blend and body. This is not a complete-hit worst-case
+cycle bound or physical deadline/headroom evidence. Fast full-hit execution still
+checks output/bank/stack/callee/EMAC guards; detailed guest-write hooks are used in
+the focused/counting paths. Numerical reports record exact source/table/image,
+integer-reference, protocol and native Unicorn-library hashes.
+
+The staged **X8C1** DT1 OS 1.54 package boots in the pinned full-OS emulator with
+`hle=False` and the existing no-faked-set-post guard. The existing four-DOWN native
+machine-selection sequence runs as one bounded script and selects machine 80.
+One native front-panel trigger delivers START at Tone/Decay 64/64. **505 callbacks**
+match integer-reference output/full state; **504** have nonzero output. Native
+stereo PCM contains **17,760 frames at 48 kHz**, peak **5,238 / 32,768**, with no
+callback observation failures. The smoke completes an in-progress callback before
+finishing its readback. DIN-MIDI settings, sequencing, generic routing and maximum
+polyphony are outside this bounded mod check.
+
+The package preserves the existing machine ID and page declarations, and reuses
+the already approved x0x-only legacy-default correction in a copied build dependency.
+No vendored SDK source or saved format changes. The development kernel still makes
+MODEL=909 silent; production manifests remain at their existing implementation
+until the later combined cutover. The shared ColdFire kernel is independent of DT
+versus DN glue; Digitone native integration remains #92. The host C integer
+specification is not linked into the firmware. No physical device was flashed.
+
+```sh
+mise run test:808:coldfire-model
+mise run research:808:coldfire-model
+mise run test:808:coldfire-emulator
+```
+
+The desktop sandbox must permit the emulator JIT's executable-memory allocation.
+Outputs are local under `out/808-model/coldfire/`: `report.json`, `completion.json`,
+`waveforms.png`, native-audio/ABX `index.html`, float ASM WAVs, and `dt/smoke.json`,
+`dt/native-808.wav`, `dt/selected.png`, `dt/x0x-coldfire808.syx`. The staged firmware
+SHA256 is `be9c07b286aaae6c381bc869bcd09cde53b209ccba1750abe26e6ef8400e9339`;
+the newly rebuilt image matches the successful smoke image exactly. No native
+integration or physical-timing claim is inferred from the isolated listening page.
+#89 is complete for the shared ColdFire kernel; final combined 808/909 release,
+DT/DN production cutover and fresh independent acceptance remain later work under
+the parent plan. The repository-wide suite was not rerun; its three historical
+feedback-model research failures remain separate.

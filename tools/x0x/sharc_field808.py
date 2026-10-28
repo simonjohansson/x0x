@@ -437,7 +437,7 @@ def qualify(folder=OUT):
     return report
 
 
-def make_plots(folder,references,predictions,rows):
+def make_plots(folder,references,predictions,rows,backend='SHARC'):
     import numpy as np
     import matplotlib
     matplotlib.use('Agg')
@@ -447,13 +447,13 @@ def make_plots(folder,references,predictions,rows):
     for i,pair in enumerate(pairs):
         a,b=references[pair],predictions[pair]
         axes[i,0].plot(np.arange(2400)/48,a[:2400],label='Recorded',color='#333333')
-        axes[i,0].plot(np.arange(2400)/48,b[:2400],'--',label='SHARC ASM',color='#00838c')
+        axes[i,0].plot(np.arange(2400)/48,b[:2400],'--',label=f'{backend} ASM',color='#00838c')
         axes[i,0].set(xlabel='Time (ms)',ylabel=f'Capture FS\nTone {pair[0]} / Decay {pair[1]}')
         axes[i,1].plot(np.arange(24000)/48,(b-a)[:24000],color='#00838c')
         axes[i,1].set(xlabel='Time (ms)',ylabel='Residual (capture FS)')
         axes[i,0].grid(alpha=.2);axes[i,1].grid(alpha=.2)
     axes[0,0].legend()
-    fig.suptitle('Executed SHARC ASM — frozen 808 candidate')
+    fig.suptitle(f'Executed {backend} ASM — frozen 808 candidate')
     fig.savefig(folder/'waveforms.png',dpi=140);plt.close(fig)
     # Preserve the native audio/ABX player; append scientific plots and the actual numerical receipt.
     decorate_html(folder/'index.html',rows)

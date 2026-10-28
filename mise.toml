@@ -342,3 +342,13 @@ run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" uv run --offline 
 description = "Check the frozen-field ColdFire ASM against its independent integer reference"
 env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
 run = 'PYTHONPATH="{{config_root}}/vendor/digikit:{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --python "$(mise which python)" python -m unittest discover -s tests/host -p test_coldfire_field808.py'
+
+[tasks."research:808:coldfire-model"]
+description = "Render the full frozen 808 cohort through actual ColdFire ASM and build the listening report"
+env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", MPLCONFIGDIR = "{{config_root}}/out/matplotlib" }
+run = 'PYTHONPATH="{{config_root}}/vendor/digikit:{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --with matplotlib==3.11.2 --python "$(mise which python)" python -m x0x.coldfire_field808 qualify'
+
+[tasks."test:808:coldfire-emulator"]
+description = "Boot the staged DT1 ColdFire 808 package and verify one native callback/PCM smoke"
+env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
+run = 'PYTHONPATH="{{config_root}}/vendor/digikit:{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --python "$(mise which python)" python -m x0x.coldfire_field808_dt smoke'

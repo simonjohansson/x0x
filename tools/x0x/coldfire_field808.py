@@ -6,6 +6,7 @@ import json
 import math
 import os
 import struct
+import sys
 
 from . import cpu, sharc_field808 as shared
 
@@ -64,8 +65,36 @@ def export():
     return arrays,groups
 
 
+
+def range_bounds(arrays,groups):
+    """Tensor Bezier hulls cover continuous Decay and time, including fractions."""
+    import numpy as np
+    transform=np.array([[0,0,0,1],[0,0,1/3,1],[0,1/3,2/3,1],[1,1,1,1.]])
+    weights=np.einsum('ij,srj->sir',transform,arrays['cf_control'].reshape(16,8,4)/2**29)
+    body=arrays['cf_body'].reshape(300,8).T/2**28
+    coefficient=prefix=0.
+    for count,g,offset,stride,channels,_,_ in groups:
+        at=(offset-208)//4;length=stride//4
+        combined=np.einsum('sar,rcn->sacn',weights,body[:,at:at+channels*length].reshape(8,channels,length))
+        coefficient=max(coefficient,float(np.abs(combined).max()))
+        matrices=arrays[f'cf_segments{g}'].reshape(count,19)[:,3:].reshape(count,4,4)/2**31
+        for j,matrix in enumerate(matrices):
+            b=np.einsum('ij,sacj->saci',matrix,combined[:,:,:,j:j+4])
+            p=np.stack([b[...,3]-3*b[...,2]+3*b[...,1]-b[...,0],
+                        3*(b[...,2]-2*b[...,1]+b[...,0]),3*(b[...,1]-b[...,0]),b[...,0]],axis=-1)
+            for k in range(1,5):
+                degree=k-1;ascending=p[...,:k][...,::-1]
+                hull=np.stack([sum(ascending[...,q]*math.comb(i,q)/math.comb(degree,q)
+                                   for q in range(i+1)) for i in range(k)],axis=-1)
+                prefix=max(prefix,float(np.abs(hull).max()))
+    # Margin covers weight/dot/Horner rounding; this is an internal range proof,
+    # not an all-control waveform or perceptual acceptance claim.
+    if max(coefficient,prefix)>=32-1e-4:raise ValueError('Continuous envelope range exceeds Q26 headroom')
+    return dict(combined_coefficient=coefficient,horner_prefix=prefix,q26_limit=32,rounding_margin=1e-4)
+
+
 def write_tables(folder):
-    arrays,groups=export();assembly=['.section .rodata'];header=['#include <stdint.h>']
+    arrays,groups=export();bounds=range_bounds(arrays,groups);assembly=['.section .rodata'];header=['#include <stdint.h>']
     for name,values in arrays.items():
         assembly+=['.balign 4','.globl '+name,name+':']
         assembly+=['.long '+','.join(str(int(v)) for v in values[i:i+8]) for i in range(0,len(values),8)]
@@ -81,7 +110,7 @@ def write_tables(folder):
     folder.mkdir(parents=True,exist_ok=True)
     (folder/'tables.s').write_text('\n'.join(assembly)+'\n')
     (folder/'tables.h').write_text('\n'.join(header)+'\n')
-    return dict(table_bytes=sum(len(a)*4 for a in arrays.values())+28*len(groups),state_bytes=WORDS*4,
+    return dict(table_bytes=sum(len(a)*4 for a in arrays.values())+28*len(groups),state_bytes=WORDS*4,range_bounds=bounds,
                 model_sha256=shared.MODEL_SHA,tables_sha256=hashlib.sha256((folder/'tables.s').read_bytes()).hexdigest())
 
 
@@ -93,6 +122,7 @@ class Reference:
                      '-I',self.folder,source,'-o',library])
         self.library=ctypes.CDLL(str(library))
         self.library.cf_reference.argtypes=[ctypes.POINTER(ctypes.c_int32),ctypes.POINTER(ctypes.c_int32),ctypes.c_uint32,ctypes.c_uint32,ctypes.c_uint32,ctypes.c_uint32]
+        self.library.cf_reference.restype=None
         self.library.cf_errors.restype=ctypes.c_uint32
         self.state=(ctypes.c_int32*WORDS)()
     def call(self,tone,decay,start=False,model=0):
@@ -114,7 +144,8 @@ def build(folder=OUT):
     call+=['    bsr x0x_field808','    lea 24(%sp),%sp','    movea.l 28(%sp),%a0']
     probe=folder/'probe.s';probe.write_text(seed[:begin]+'\n'.join(call)+'\n'+seed[end:]+'\n'+SOURCE.read_text()+'\n'+(folder/'tables.s').read_text())
     image,_=cpu.build_coldfire(folder,probe)
-    receipt.update(image_sha256=hashlib.sha256(image).hexdigest(),source_sha256=hashlib.sha256(SOURCE.read_bytes()).hexdigest(),image_bytes=len(image))
+    symbol=next(line.split() for line in cpu.command(['m68k-elf-nm','-S',folder/'diagnostic.elf']).splitlines() if line.split()[-1:] == ['x0x_field808'])
+    receipt.update(kernel_bytes=int(symbol[1],16),diagnostic_wrapper_bytes=int(symbol[0],16)-0x40000400,image_sha256=hashlib.sha256(image).hexdigest(),source_sha256=hashlib.sha256(SOURCE.read_bytes()).hexdigest(),image_bytes=len(image))
     (folder/'build.json').write_text(json.dumps(receipt,indent=2)+'\n')
     return receipt,image
 
@@ -159,6 +190,7 @@ class Runner:
         assert all(u.reg_read(k)==v for k,v in saved.items()),'Callee register changed'
         assert bytes(u.mem_read(self.STACK,len(args)))==args
         assert bytes(u.mem_read(self.STACK-184,16))==b'\xa5'*16
+        assert bytes(u.mem_read(self.STACK+len(args),8))==b'\xa5'*8
         snapshot=bytes(u.mem_read(self.SNAPSHOT-4,44));assert snapshot[:4]==snapshot[-4:]==b'\xa5'*4
         assert struct.unpack('>8I',snapshot[4:36])==EMAC_SEED,'EMAC context changed'
         after=bytes(u.mem_read(self.STATES-4,b.extent));at=state-self.STATES+4
@@ -166,3 +198,75 @@ class Runner:
         out=bytes(u.mem_read(self.OUTPUT-4,136));assert out[:4]==out[-4:]==b'\xa5'*4
         self.maximum_instructions=max(self.maximum_instructions,self.steps)
         return list(struct.unpack('>32i',out[4:-4]))
+
+
+def qualify(folder=OUT):
+    import numpy as np
+    import soundfile as sf
+    import time
+    from . import fit808,field808,diagnose808
+    folder=Path(folder);receipt,image=build(folder)
+    (folder/'engine-source.s').write_bytes(SOURCE.read_bytes())
+    (folder/'qualification-driver.py').write_bytes(Path(__file__).read_bytes())
+    model=shared.load_model();reference=Reference(folder)
+    config,events=fit808.protocol();hashes=fit808.verify_artifacts(fit808.CORPUS,config,events)
+    chosen=field808.listening_subset(list({(e['tone_cc'],e['decay_cc']):e for e in reversed(events)}.values()))
+    extra=[(128,0),(255,32512),(63*256+128,63*256+128),(1,1),(32511,32511),(17*256+128,68*256+128)]
+    cohort=[(e['tone_cc']*256,e['decay_cc']*256,e) for e in chosen]+[(t,d,None) for t,d in extra]
+    rows=[];references={};predictions={};runner=Runner(image,guarded=False);maximum_count=0
+    with sf.SoundFile(fit808.CORPUS/'808-corpus.wav') as wav:
+        for tone,decay,event in cohort:
+            began=time.monotonic()
+            integers=np.asarray([v for i in range(8250) for v in runner.call(tone,decay,i==0)],dtype='int64')
+            integer_reference=reference.render(tone,decay)
+            if not np.array_equal(integers,integer_reference):raise AssertionError(('Integer output disagreement',tone,decay))
+            if bytes(runner.uc.mem_read(runner.STATES,WORDS*4))!=struct.pack('>352i',*reference.state):
+                raise AssertionError('End-state integer disagreement')
+            output=integers/2**31;expected=4*field808.render(model,tone,decay)
+            error=output-expected;maximum=float(abs(error).max());relative=float(np.linalg.norm(error)/np.linalg.norm(expected))
+            if output[0]!=0 or maximum>1e-5 or relative>.001:raise AssertionError(('Numerical port gate',tone,decay,maximum,relative))
+            if any(runner.call(tone,decay)):raise AssertionError('Terminal output is not silent')
+            counted=Runner(image)
+            for frame in range(50):counted.call(tone,decay,frame==0)
+            counted.check_tables();maximum_count=max(maximum_count,counted.maximum_instructions)
+            row=dict(tone_raw=tone,decay_raw=decay,port_max_dsp_fs=maximum,port_relative_l2=relative,
+                     integer_output_and_end_state_exact=True,peak_dsp_fs=float(abs(output).max()),
+                     maximum_counted_first_50_blocks_including_wrapper=counted.maximum_instructions,
+                     render_wall_seconds=time.monotonic()-began)
+            if event is not None:
+                pair=(event['tone_cc'],event['decay_cc']);source=fit808.read_slot(wav,event)
+                references[pair]=source;predictions[pair]=output/4
+                row.update(index=event['index'],partition=event['partition'],tone_cc=pair[0],decay_cc=pair[1],source=fit808.measure(output/4,source,config))
+            sf.write(folder/f't{tone}-d{decay}-asm.wav',output/4,48000,subtype='FLOAT')
+            rows.append(row);(folder/'progress.json').write_text(json.dumps(rows,indent=2)+'\n')
+            print(json.dumps(row),flush=True)
+    runner.check_tables()
+    import unicorn
+    native_library=Path(unicorn.__file__).parent/'lib'/('libunicorn.2.dylib' if sys.platform=='darwin' else 'libunicorn.so.2')
+    report=dict(native_library_sha256=hashlib.sha256(native_library.read_bytes()).hexdigest(),unicorn_version=unicorn.__version__,
+        status='passed',scope='Isolated assembled ColdFire 808; recorded-source development cohort; no OS/device boot',
+        build=receipt,records=rows,source_sha256=hashes['808-corpus.wav'],model_sha256=shared.MODEL_SHA,
+        source_asm_sha256=receipt['source_sha256'],image_sha256=receipt['image_sha256'],tables_sha256=receipt['tables_sha256'],
+        driver_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        integer_reference_sha256=hashlib.sha256((cpu.ROOT/'tools/x0x/coldfire_field808_ref.c').read_bytes()).hexdigest(),
+        protocol_sha256=fit808.digest(fit808.FIXTURES/'protocol.json'),
+        emulator_revision=cpu.revision(cpu.ROOT/'vendor/digiemu'),project_revision=cpu.revision(cpu.ROOT),
+        maximum_port_dsp_fs=max(r['port_max_dsp_fs'] for r in rows),maximum_counted_instructions_including_wrapper=maximum_count,
+        timing_note='Counts sample the first 50 blocks, covering onset/blend/body. They include the EMAC seed/snapshot test wrapper, are not complete-hit worst-case cycles and do not establish physical timing.',
+        unqualified=['physical ColdFire timing','full-OS wiring is reported separately','MODEL=909 silent in this development kernel','fresh independent source acceptance'])
+    manifest={k:v for k,v in report.items() if k.endswith('_sha256')};manifest.update(scope=report['scope'],
+        cohort_note='Same development cohort as SHARC; actual assembled ColdFire prediction audio, no new fitting or per-recording gain/alignment.')
+    report['listening_gain']=diagnose808.listening_report(folder,chosen,references,predictions,manifest)
+    shared.make_plots(folder,references,predictions,rows,backend='ColdFire')
+    page=folder/'index.html'
+    page.write_text(page.read_text().replace('Native integration and physical deadlines remain untested.',
+        'This report covers isolated instruction rendering. OS integration has a separate emulator smoke; physical timing is untested.'))
+    if SOURCE.read_bytes()!=(folder/'engine-source.s').read_bytes():raise ValueError('ASM source changed during qualification')
+    (folder/'report.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    return report
+
+
+if __name__=='__main__':
+    import argparse
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('command',choices=('qualify',))
+    p.parse_args();qualify()
