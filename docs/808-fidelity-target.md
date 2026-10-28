@@ -71,8 +71,12 @@ work; passing this milestone does not qualify either. Repeated playback for
 listening is not proof of retained-state retrigger behavior.
 
 Fixed output scaling was [qualified at 0f7ef30](808-output-calibration.md).
-The [minimum-Decay correction at e0adf4e](808-minimum-decay.md) retains that
-factor and qualifies minimum-setting duration on the training takes. Full level
-acceptance and other Decay settings remain open. Work sequentially on upper-middle
-Decay and the other metric protocols before held-out use. #9 stays complete;
+The [minimum-Decay correction at e0adf4e](808-minimum-decay.md) and
+[upper-middle correction at 7716145](808-upper-decay.md) retain that factor.
+The upper-middle increment brings all 162 affected duration checks per CPU
+inside the agreed margin, while retaining waveform, peak and broad-band
+regressions. Whole-surface duration passes are 432/486, with remaining Decay32
+t99 and default t90 failures; full level and tone acceptance remain open.
+Continue sequentially on remaining onset/body-shape/Tone differences and finish
+the measurement/listening protocols before held-out use. #9 stays complete;
 #2 owns reference acceptance and #79 owns engine refinement. HTML is unchanged.

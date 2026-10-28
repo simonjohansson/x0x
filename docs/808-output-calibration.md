@@ -1,7 +1,7 @@
 # 808 fixed output calibration
 
-Subsequent [minimum-Decay qualification at e0adf4e](808-minimum-decay.md)
-retains this factor. The calibration results below remain the historical
+Subsequent [minimum-Decay qualification at e0adf4e](808-minimum-decay.md) and
+[upper-middle correction at 7716145](808-upper-decay.md) retain this factor. The calibration results below remain the historical
 `0f7ef30` comparison; current level/duration results are in the linked correction.
 
 The human approved one fixed DSP scaling factor on 28 October 2026 after

@@ -1,5 +1,8 @@
 # 808 minimum-Decay correction
 
+Subsequent [upper-middle Decay work](808-upper-decay.md) preserves every
+minimum-setting output below. This document records the `e0adf4e` qualification.
+
 The approved next step is to shorten minimum Decay without disturbing the
 already closer default/maximum sounds. The previous qualified DSP is
 `0f7ef30`, including its fixed output factor 1.601664543. This increment fits

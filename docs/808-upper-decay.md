@@ -67,9 +67,83 @@ reconstructing Tone/coupling pointers before storing state. No new state/cache
 word, callee-register allowance or public ABI is introduced. Preserved-register
 checks caught an initial invalid use of I15; that attempt is not adopted.
 
-202 tracked host tests and the guarded ColdFire body suite pass. A focused actual
-SHARC Decay191 regression now agrees within 1.964e-6 FS. Final static/live guards
-and fresh frozen full-grid CPU/reference qualification are pending. This is a
-candidate checkpoint, not completed fidelity acceptance.
+## Qualified at `7716145`
+
+202 tracked host tests and the complete guarded ColdFire body/Tone/coupling
+suites pass. Focused SHARC static/live coverage runs 2,400 guarded calls plus
+300 at the previously failing exact raw24320; its maximum error is 5.611e-6 FS.
+Read-only pre-Tone witnesses cover 33,408 actual samples: all nine Decay positions'
+first 512 samples and the changed three positions' first 9,600 samples. All remain
+within .25 FS. Three independent 909 diagnostics retain byte-identical first
+1,024-sample outputs. These are the relevant SHARC checks, not a rerun of its
+entire older 16,392-call suite. Code is 7,176 bytes, state remains 1,664 bytes.
+
+Fresh frozen renders cover both actual CPUs, all 81 settings / 243 training takes /
+complete 12-second tails, plus seven declared-single-voice histories. All pass
+the unchanged 1e-5 FS numerical limit. Grid oracle maxima are 3.988e-6 (CF) and
+5.794e-6 (SHARC); peer maximum 5.834e-6. History oracle maxima are 3.237e-6 /
+5.611e-6, peer 5.667e-6. Maximum synth output stays .400704205 FS, below .5 FS.
+
+**All 54 unaffected settings and all seven histories per CPU remain byte-identical.**
+Six unaffected ColdFire body streams also remain identical. The verifier checks
+82 source files and 185 raw artifacts, 128 identical to `e0adf4e`, along with
+source/image/runtime bindings. Accepted receipts are under the ignored
+`out/808-upper-shape/qualified-grid/`; the failed initial run is separate.
+Final qualification SHA256:
+`7fc448553ea23661c0c4f0338411c3ba720faa38af6bbace0c61587a54afe2b9`.
+
+### Duration and level results
+
+At every affected setting and each separate take, both t90 and t99 improve and
+meet the approved 10% or 5 ms margin. Per CPU, affected checks rise **0→162 of
+162**. Mean absolute duration error falls **80.43→15.69 ms**, about 80.5%. Fresh
+actual output confirms the model table above (Decay223 t99 is 734.354 ms).
+Across the whole surface, duration checks rise 270→432 of 486 per CPU. The 54
+remaining failures are t99 at reference Decay32 and t90 at default Decay128;
+this does not qualify the entire Decay surface or held-out recordings.
+
+Per CPU, eligible +/-2 dB level checks rise 603→690 of 945; combined 1,206→1,380
+of 1,890. Settings passing every eligible level check rise 18→27 of 81.
+
+| Level metric | Previous passes | Current passes | Eligible |
+| --- | --- | --- | --- |
+| Peak | 171 | 150 | 243 |
+| Attack | 243 | 243 | 243 |
+| Body | 135 | 216 | 243 |
+| Tail/body | 54 | 81 | 216 |
+
+The **21 new peak failures per CPU** measure +2.003 to +2.019 dB against the
+unchanged 2 dB limit. They remain failures. Body/tail improvements do not cancel
+them or permit a different gain per setting. The 54 quieter combined level
+checks remain diagnostics; the fixed output gain remains unchanged.
+
+### Counterevidence and remaining fidelity
+
+All 81 affected takes improve the first-25-ms routing-corrected residual, but
+regress at 6 and 150 ms. At 500 ms and the full tail, 27 improve and 54 regress;
+the other 162 training takes are byte-identical. CF mean whole-tail residual
+increases .004406673→.004587884 FS (about **4.1%**); SHARC has the same direction.
+Uncorrected as-recorded errors regress at the changed settings in those windows.
+Both routing conventions and every late-window/DC result remain in comparison.json.
+This is duration/level progress with a waveform tradeoff, not an overall fidelity
+percentage. Waveform improvement was not substituted for the approved targets.
+
+Existing reliable-cycle diagnostics at the 81 affected takes stay within the
+pitch limits: maximum body discrepancy grows 16.47→25.87 cents, late sigh stays
+within 1.045 cents and settling within .233 cents. All 81 early-window estimates
+per CPU remain unresolved. Quiet-window results do not establish audibility or
+replace the still-unfrozen pitch measurement protocol.
+
+A separate existing body-window spectrum diagnostic also regresses: the
+150–1,000 Hz / 30–150 Hz power-ratio error rises on every affected take/CPU;
+mean absolute error 4.91→6.87 dB, maximum 7.37 dB. The largest ratio shift is
+2.353 dB. These broad bands are not the approved meaningful-harmonic protocol;
+its bands/floor are still unfrozen. No harmonic/tone pass or listening acceptance
+is claimed. Preserve this evidence for the next onset/body-shape and Tone work.
+
+No fresh full-OS runs: C/UI/plumbing, saved layout, state extent, calling convention,
+SDK and dependency pins are unchanged. Register/context and pointer-store guards
+cover the integration scratch changes; previous device evidence remains prior.
+Final native acceptance stays in #20, including its historical DN residue gate.
 #79/#2 retain remaining duration/pitch/tone/listening work; #9 remains complete.
 HTML, held-out recordings and unrelated working-tree edits are untouched.

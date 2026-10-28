@@ -15,7 +15,8 @@ The subsequent [effective feedback calibration](808-feedback-calibration.md)
 changes the two internal Q43 coefficients together; its CPU/native qualification
 and retained early/short-setting regressions are recorded separately.
 Current component/reference qualification is the
-[lower-interior Decay correction](808-decay-shape.md), `5963a34`. Prior full-device
+[upper-middle Decay correction](808-upper-decay.md), `7716145`, following the
+[minimum-Decay correction](808-minimum-decay.md) and fixed output calibration. Prior full-device
 evidence remains at `9e78ca9`; no new native pass is claimed. The human accepted
 #9 as the fixed-strength/reset-on-START baseline, retaining intrinsic accent,
 residual retrigger and circuit/fidelity refinements in #79/#2.
@@ -41,7 +42,8 @@ retain C41/C42 voltage. No per-hit normalization or alignment is introduced.
 
 The independent oracle solves the pre-switch shaped inputs analytically and
 integrates the post-switch nonlinear ODE with eight RK4 substeps per sample.
-The CPU ports instead use symmetric leakage/linear splitting; the oracle does
+The CPU ports instead use symmetric leakage/linear splitting, with a linear
+within-sample knee-crossing correction on the changed upper interior; the oracle does
 not copy that recurrence. The old fixed sum
 of 48 y kicks is historical; it is no longer the current main-input model.
 
@@ -61,23 +63,27 @@ remain downstream.
 For the exact delivered raw word `d` in 0..32512, preserve three anchors with
 a join at the approved default 16384:
 
-- `r_min = exp(-1/(48000*.0333))`;
+- `r_min = exp(-1/(48000*.01922924))`;
 - `r_default = exp(-1/(48000*.143))`;
 - `r_max = exp(-1/(48000*.366))`.
 
-Below the default, use `s=d/16384`, `q=s*s+1.5*s*s*(1-s)` and
-`tau=.0333+(.143-.0333)*q`, then convert that time constant to retention. Above it, retain the original interpolation
-between default and maximum using `(d-16384)/16128`. The raw-body amplitude
-time constant is `-1/(48000*log(r(d)))`.
-These anchors bring the short/default/long output fits near the fixed-Tone
-training recordings; the unloaded coupling stage changes the short fit.
-This changes feedback loss, not a separate output envelope. It is a reference
-calibration, not stock VR6 feedback/pot modeling or full-curve qualification.
-See the [initial calibration](808-decay.md) and the measured
-[original lower-half correction](808-decay-lower-half.md). The subsequent
-[lower-interior shape correction](808-decay-shape.md) preserves all three
-anchors at fixed gain; its component/reference qualification is recorded
-separately. Full-device evidence remains at the prior integration checkpoint.
+Below raw4096, the [minimum-Decay segment](808-minimum-decay.md) interpolates
+retention from the new minimum to the unchanged raw4096 anchor, matching its
+value and slope. From raw4096 to the default, use `s=d/16384`,
+`q=s*s+1.5*s*s*(1-s)` and `tau=.0333+(.143-.0333)*q`, then convert tau to retention.
+Above the default, use `p=(d-16384)/16128`, `q=p+.9499298*p*(1-p)` and interpolate
+retention between default and maximum with q. The raw-body amplitude time
+constant is `-1/(48000*log(r(d)))`. Default and maximum anchors stay unchanged;
+the minimum now has its separately qualified shorter response.
+
+These are reference-calibrated control curves, not identification of stock
+VR6 taper or full circuit fidelity. They change feedback loss, not a separate
+output envelope. The [upper-middle correction](808-upper-decay.md) records its
+training tradeoffs and numerical qualification; the earlier
+[lower-interior correction](808-decay-shape.md) is historical. The raw modal
+encoding stays fixed; one shared post-C47 factor 1.601664543 supplies the
+[approved output scaling](808-output-calibration.md). Normal native volume
+processing remains downstream.
 
 Coefficients update once per delivered 32-sample block without clearing body
 state. Native smoothing/fractions, parameter locks and LFO delivery therefore
@@ -87,7 +93,7 @@ so an above-UI native endpoint is safely bounded to 32512. DN2 reads callback
 parameter 1 directly in SHARC ASM. No saved layout or control was added.
 
 START currently clears the body and restarts the full 48-sample drive. Residual circuit-state excitation
-and same-voice retrigger behavior remain later #9 work. A MODEL change clears
+and same-voice retrigger behavior remain explicit #79/#2 refinements; #9 is complete. A MODEL change clears
 only that voice's old body. No additional saved values or public SDK API are used.
 
 ## Independent checks

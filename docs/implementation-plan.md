@@ -1,6 +1,21 @@
 # Implementation plan: one combined mod, silent first
 
-Current 808 DSP is `e0adf4e`: the [minimum-Decay correction](808-minimum-decay.md)
+Current 808 DSP is `7716145`: the [upper-middle Decay correction](808-upper-decay.md)
+brings all 162 affected duration checks per CPU within the agreed margin; mean
+absolute duration error falls 80.43→15.69 ms. Whole-surface duration checks rise
+270→432 of 486, leaving Decay32 t99 and default t90 failures. Level checks rise
+1,206→1,380 of 1,890; settings meeting all eligible levels rise 18→27 of 81.
+202 host tests, guarded components and both fresh full 81-setting/243-take/12-second
+grids plus seven histories pass numerical limits. All 54 unaffected settings and
+seven histories per CPU remain byte-identical. Gain stays 1.601664543; no public,
+saved, state-extent or dependency changes. Preserve the tradeoffs: whole-waveform
+error rises about 4.1%, 21 peak checks per CPU newly miss by +2.003 to +2.019 dB,
+and the existing broad-band ratio diagnostic worsens. This is a duration/level
+increment, not full fidelity. Next continue remaining onset/body-shape/Tone and
+measurement/listening work in #79/#2; held-out audio and HTML stay untouched.
+No fresh full-OS/physical evidence; #9 remains complete and #20 stays open.
+
+Previous 808 DSP is `e0adf4e`: the [minimum-Decay correction](808-minimum-decay.md)
 shortens the minimum effective tau to 19.22924 ms in a C1 segment below raw4096
 (reference 32/255, native 16/127). All 27 minimum takes improve duration and raw
 6/25/150/500 ms/full-tail error on both actual CPUs; t99 moves 70→40 ms against 38 ms.
