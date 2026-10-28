@@ -309,3 +309,16 @@ run = [
   'mise run test:808:tone-factor',
   'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --with matplotlib==3.11.2 --python "$(mise which python)" python -m x0x.tone_factor808',
 ]
+
+[tasks."test:808:field"]
+description = "Check the shared quantized 808 field and standalone renderer"
+env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
+run = 'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --with scipy==1.18.0 --python "$(mise which python)" python -m unittest discover -s tests/host -p test_field808.py'
+
+[tasks."research:808:field"]
+description = "Fit and evaluate the complete quantized 808 field, then build listening material"
+env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", MPLCONFIGDIR = "{{config_root}}/out/matplotlib" }
+run = [
+  'mise run test:808:field',
+  'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --with scipy==1.18.0 --with matplotlib==3.11.2 --python "$(mise which python)" python -m x0x.field808',
+]

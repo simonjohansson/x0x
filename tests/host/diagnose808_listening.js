@@ -12,7 +12,7 @@ let randomState=123456789, exported, starts=0, stops=0;
 Object.assign(element('player'),{paused:true,currentTime:0,
   pause(){if(!this.paused)stops++;this.paused=true},
   async play(){if(this.failNext){this.failNext=false;throw Error('blocked')}starts++;this.paused=false}});
-const data={gain:4,gain_applied:true,playback_encoding:'PCM_24',manifest:{source_sha256:'test'},stimuli:Array.from({length:16},(_,i)=>({tone:i,decay:i,recorded:'AA==',candidate:'AA==',recorded_download:`${i}-recorded.wav`,candidate_download:`${i}-candidate.wav`}))};
+const data={gain:4,gain_applied:true,playback_encoding:'PCM_24',manifest:{source_sha256:'test',scope:'Complete host candidate; development cohort'},stimuli:Array.from({length:16},(_,i)=>({tone:i,decay:i,recorded:'AA==',candidate:'AA==',recorded_download:`${i}-recorded.wav`,candidate_download:`${i}-candidate.wav`}))};
 const context=vm.createContext({document:{getElementById:element,querySelectorAll(){return []},createElement:element},
   crypto:{getRandomValues(array){randomState^=randomState<<13;randomState^=randomState>>>17;randomState^=randomState<<5;array[0]=randomState>>>0;return array}},
   atob,Blob:class {constructor(parts){if(typeof parts[0]==='string')exported=JSON.parse(parts[0])}},
@@ -38,6 +38,7 @@ assert.equal(vm.runInContext('session.correct',context),16);
 assert.equal(element('download').disabled,false);
 element('download').onclick();
 assert.equal(exported.manifest.source_sha256,'test');
+assert.equal(exported.scope,data.manifest.scope);
 assert.equal(exported.session.answers.length,16);
 assert.equal(exported.settings.length,16);
 assert.equal(JSON.stringify(exported).includes('AA=='),false);

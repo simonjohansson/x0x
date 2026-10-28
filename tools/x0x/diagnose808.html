@@ -39,7 +39,7 @@ button:disabled{opacity:.45;cursor:default}button.primary{background:#006d72;col
 <details><summary>Waveform measurements and corner plots</summary>
  <p>The original strict numerical targets remain diagnostics. A 5% waveform error is a 5% RMS residual relative to the recording; it is not an audibility score.</p>
  <p><a href="report.json">Full numerical report and optimizer diagnostics</a></p>
- <img src="corners.png" alt="Four corner settings: recorded and predicted waveform, residual, measured cycle frequency and peak magnitudes">
+ <img src="corners.png" alt="Four corner settings: recorded and predicted waveforms and residuals">
 </details>
 <script>
 const data=__LISTENING_DATA__;
@@ -97,7 +97,7 @@ function answer(choice){
 $('answer-a').onclick=()=>answer('a');$('answer-b').onclick=()=>answer('b');
 $('download').onclick=()=>{
  if(!session?.finished)return;
- const result={scope:'Fitting-set ABX; no generalization or universal-inaudibility claim',gain:data.gain,session,
+ const result={scope:data.manifest.scope||'Fitting-set ABX; no generalization or universal-inaudibility claim',gain:data.gain,session,
   settings:data.stimuli.map(s=>({tone:s.tone,decay:s.decay})),manifest:data.manifest};
  const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([JSON.stringify(result,null,2)],{type:'application/json'}));
  link.download='808-listening-results.json';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000);
