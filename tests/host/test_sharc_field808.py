@@ -82,6 +82,40 @@ class SharcFieldTests(unittest.TestCase):
         self.assertEqual(state,264000)
         runner.check_tables()
 
+    def test_mid_hit_edits_leave_latched_output_and_state_exact(self):
+        fixed=dsp.Runner(self.receipt,self.artifact)
+        edited=dsp.Runner(self.receipt,self.artifact)
+        tone,decay=12345,17001
+        self.assertEqual(fixed.call(tone,decay,True)[0],edited.call(tone,decay,True)[0])
+        for block in range(64):
+            with self.subTest(block=block):
+                controls=(0,32512,32512) if block%2 else (32512,0,0)
+                actual,_=edited.call(controls[0],controls[1],model=controls[2])
+                self.assertEqual(actual,fixed.call(tone,decay)[0])
+        base=self.receipt['state_base']
+        self.assertEqual([fixed.core.peek(base+i) for i in range(0,dsp.STATE_BYTES,4)],
+                         [edited.core.peek(base+i) for i in range(0,dsp.STATE_BYTES,4)])
+        fixed.check_tables();edited.check_tables()
+
+    def test_interleaved_slots_and_developed_hit_restarts_match_fresh_voices(self):
+        mixed=dsp.Runner(self.receipt,self.artifact)
+        other=dsp.Runner(self.receipt,self.artifact)
+        other.call(32512,0,True,slot=15)
+        mixed.call(32512,0,True,slot=15)
+        for tone,decay in ((0,32512),(1,0),(32512,32512)):
+            fresh=dsp.Runner(self.receipt,self.artifact)
+            for block in range(80):
+                with self.subTest(tone=tone,decay=decay,block=block):
+                    expected,_=fresh.call(tone,decay,start=block==0)
+                    actual,_=mixed.call(tone,decay,start=block==0)
+                    self.assertEqual(actual,expected)
+                    self.assertEqual(mixed.call(32512,0,slot=15)[0],
+                                     other.call(32512,0,slot=15)[0])
+        base=self.receipt['state_base']+15*dsp.STATE_BYTES
+        self.assertEqual([mixed.core.peek(base+i) for i in range(0,dsp.STATE_BYTES,4)],
+                         [other.core.peek(base+i) for i in range(0,dsp.STATE_BYTES,4)])
+        mixed.check_tables();other.check_tables()
+
     def test_bad_slot_flags_and_state_pointer_leave_voice_untouched(self):
         runner=dsp.Runner(self.receipt,self.artifact)
         runner.call(32512,32512,True)

@@ -4,9 +4,9 @@
 
 ## Current status
 
-28 October 2026: the hand-written SHARC candidate is installed as **X8D1** on a physical Digitone II, using the requested DigiHealth `codex/dn2-support` branch. Corner-setting frozen output witnesses match the model within **8.255e-7 DSP FS**. The user’s latest development listening session was **15/16 Can’t tell**, with one correct decided answer. One- and four-voice callback spacing stayed near the nominal interval in bounded checks. Sixteen-kick stress exposed a limit, but the user explicitly rejected that as an acceptance requirement. **Next: normal one-track kick patterns/retriggers and downstream audio**, not sixteen-voice optimization. ColdFire is deferred; #84 remains open. Historical host/source/body/quiet-tail limits remain documented below.
+28 October 2026: **#84’s compact-model and SHARC development mod-specific checks are complete**. Acceptance covers waveform fidelity, correct START/latched-control handling, independent slot state, bounded output/memory/ABI use, and measured per-voice cost. Ten focused SHARC tests plus three observer tests pass; a short installed-X8D1 callback smoke passes. Elekloader owns general MIDI/sequencer delivery, voice allocation/scheduling and stock processing; broad platform qualification is outside this mod milestone. ColdFire is deferred, the development 909 path is silent, and final combined release plus fresh source acceptance remain later work.
 
-The user clarified the acceptance priority during #84: **audible fidelity, rather than exact waveform reproduction**. The original source-error thresholds below remain measured diagnostics; exceeding them no longer automatically rejects a candidate if listening establishes an acceptable result. A 5% error does not itself establish inaudibility. Numerical realization, memory/context safety, gain/timing, independent control validation and native/physical qualification remain necessary.
+The user clarified the acceptance priority during #84: **audible fidelity, rather than exact waveform reproduction**. The original source-error thresholds below remain measured diagnostics; exceeding them no longer automatically rejects a candidate if listening establishes an acceptable result. A 5% error does not itself establish inaudibility. The mod’s numerical realization, memory/context safety, gain/timing and control handling remain mandatory. Broad SDK platform qualification is outside this milestone; final fresh source acceptance remains separate.
 
 The original capture and model files remain local under `research/reference/808-fit-model/`. Audio and model binaries are not committed. Tracked inputs are [protocol.json](../tests/fixtures/808-model/protocol.json) and [events.csv](../tests/fixtures/808-model/events.csv); the independent driver is [fit808.py](../tools/x0x/fit808.py).
 
@@ -188,7 +188,7 @@ Reproduce with `mise run research:808:field`. Nine focused tests cover independe
 
 Outputs are under `out/808-model/field/`: `model.npz`, `report.json`, waveform/error plots, 32 playback WAVs and a self-contained `index.html`. The page retains native audio playback and one common 4× gain. Its 16-trial ABX cohort contains four fitting corners and twelve stratified validation settings. Because validation guided complexity selection, this is development listening rather than fresh independent acceptance under #90. The exported result records the model, source, protocol and driver/template hashes and the actual cohort scope. The previous player/result remain separate under `out/808-model/diagnosis/` and the immutable local listening archive.
 
-#84 stays open pending the architecture/resource decision and subsequent qualification. The first human result is recorded below. No ASM, firmware, native-emulator or physical-device qualification has been performed for this candidate.
+At this historical host-only checkpoint the architecture/resource decision and target qualification were pending. Later ASM and physical checks, and the current #84 completion scope, are recorded below.
 
 ## Human result for the quantized field, 28 October 2026
 
@@ -198,7 +198,7 @@ All 16 trial indices, A/B/X fields, answer flags, settings, common 4× gain and 
 
 The user described this comparison as **much harder**, with occasional slight tonal/apparent-pitch differences that were very hard to hear, and felt many correct answers could have been luck. Preserve this as qualitative feedback, not a confirmed pitch-offset diagnosis. The previous 16/16 and current 9/16 sessions used different cohorts; this is not a paired statistical comparison of the models.
 
-Keep this candidate as the development listening baseline while checking SHARC/ColdFire resource and numerical feasibility. This is neither final perceptual acceptance nor closure of #84. The existing body/duration/quiet-tail diagnostics and 4,089-byte table budget are unchanged; fresh independent acceptance remains under #90. No additional source fitting, waveform changes or hardware tests were performed to record this result.
+This historical session established the development listening baseline before SHARC resource/numerical qualification. It did not by itself establish final perceptual acceptance or complete #84; the later mod-specific completion is recorded below. The existing body/duration/quiet-tail diagnostics and 4,089-byte table budget are unchanged; fresh independent acceptance remains under #90. No additional source fitting, waveform changes or hardware tests were performed to record this result.
 
 ## SHARC ASM candidate — historical isolated qualification
 
@@ -261,11 +261,11 @@ page is actual executed ASM output, using the same shared 4× playback gain.
 Firmware and generated coefficient tables remain local build outputs.
 
 The SDK packaging check verifies the ID20 entry and managed per-voice-state
-binding before producing the image. No physical device or full-device emulator
-has been booted. Instruction counts are not cycle counts or available stock-DSP
-headroom. Request a physical Digitone II for native integration, listening,
-polyphony and timing after local qualification; prefer it over a full-device
-emulator for those next checks. #84 stays open through that qualification.
+binding before producing the image. At this historical isolated checkpoint no
+physical device or full-device emulator had been booted. Instruction counts do
+not measure physical cycles or stock-DSP headroom. The later installed-callback
+smoke test completes the bounded mod integration check; broad SDK platform
+qualification is outside #84.
 
 Local candidate result: all **22 full-length ASM renders** pass the port gate.
 Maximum error against the frozen model is **2.6764e-6 DSP FS**; maximum relative
@@ -291,9 +291,8 @@ The ready test firmware SHA256 is
 `fe55ed39f8a77f70867d2ccf78097446fe10a68afd31088072068e18348f004a`.
 The callback/coefficient artifact SHA256 is
 `c0f979058674a634c0f89bdebbdf69a3aee8b4722ce0783bbf4afe341dc5eb0c`.
-No device has been flashed. The next required equipment is a physical Digitone II
-on OS 1.12 for native callback/routing, audible output, lifecycle and measured
-voice-count/deadline checks.
+These are historical pre-flash artifact hashes. The physical X8D1 installation
+and bounded mod smoke results below supersede that equipment request.
 
 The listening player now also offers **Can’t tell**. It exports that choice as
 `cant-tell` with `correct: null`, reports it separately and excludes it from the
@@ -381,12 +380,52 @@ readbacks remain under `out/808-model/sharc/device-physical/`, alongside
 `physical-summary.json` and `physical-report.json`. Only the reusable witness
 validator and its focused tests are retained in source.
 
-Next qualification should use normal one-track kick patterns, rapid retriggers,
-long-decay overlap, and downstream/device audio. Sequential raw witnesses do not
-establish any of those audio outcomes. The firmware remains an 808 development
-candidate with MODEL=909 silent, and Tone/Decay latched at START. No full-device
-emulator was used. Device test notes are off, MODEL is 808 and Tone/Decay were
-restored to 64; no project/preset was saved. #84 remains open for these realistic
-checks and final integration, with ColdFire deferred. Future remote navigation
-should batch a verified sequence and inspect the final state once; this run did
-not establish a successful automated X0X selection sequence.
+The later scope clarification assigns general MIDI/sequencer delivery, voice
+allocation/scheduling and stock envelope/filter/mixer behaviour to Elekloader.
+Those platform campaigns, including maximum-polyphony and full-pipeline headroom,
+are outside #84. The mod remains responsible for its waveform, correct use of
+START/controls, per-slot state/output ownership and its own memory/stack/CPU cost.
+A short installed-callback smoke test is sufficient here. Future remote
+navigation should batch a verified sequence and inspect the final state once;
+this run did not establish an automated X0X selection sequence.
+
+## Completed mod-specific qualification
+
+The remaining actual-instruction checks now pass: changing valid Tone, Decay and
+MODEL controls mid-hit leaves output and the complete voice state bit-identical
+to a fixed-control reference. Alternating callbacks between slots 0 and 15
+matches two independent runners, including full state for the unaffected slot.
+Three successive STARTs after developed body/filter state reproduce fresh
+voices exactly through 2,560 samples per hit, spanning onset, blend and body.
+These validate the mod's handling of delivered callbacks, rather than the SDK's
+sequencer or voice-allocation implementation.
+
+`mise run test:808:sharc-model` passes **10 tests**; the focused physical observer
+suite passes **3 tests**. The unchanged model, ASM source and freshly rebuilt
+callback/coefficient artifact hashes match the prior **22 full-length renders**
+(maximum port error **2.6764e-6 DSP FS**). The full-hit evidence is reused with
+verified identity; it was not rerun or refitted for this increment.
+
+A new one-note physical smoke on the verified installed **X8D1** used the same
+requested DigiHealth branch/client, with no menu/knob changes or reflash. It found
+one fresh 808 callback witness at Tone/Decay 64/64, with maximum error
+**8.2547e-7 DSP FS**, unchanged stack guard, and test-note cleanup. The measured
+inner-call span at that witness was **32,132 EMUCLK ticks**, with a **666,482-tick**
+callback interval. This is a bounded callback observation, not total DSP load.
+
+The mod cost remains 2,330 code bytes, 29,980 initialized-data bytes, 1,060 state
+bytes per slot and 46,944 bytes of aligned tables plus all states. The kernel
+writes no software stack beyond the adapter frame. Historical complete-hit and
+cold-witness maxima remain 21,100 and 21,608 instructions; physical timing is
+reported separately. The observer's larger debug state is not the shipping
+combined-engine reservation.
+
+The local completion receipt is
+`out/808-model/sharc/device-physical/mod-qualification.json`; its smoke driver,
+raw witness, readback receipt and test logs are beside it. **#84 is complete for
+the compact-model and SHARC development milestone.** This does not mark the
+whole product ready: ColdFire is deferred; the development 909 path is silent;
+final combined 808/909 integration remains under #87/#88, and fresh independent
+source acceptance remains #90. The existing source-error diagnostics and human
+listening evidence are unchanged. No broad SDK platform campaign, full-device
+emulator or repository-wide suite was run for this increment.
