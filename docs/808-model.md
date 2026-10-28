@@ -130,4 +130,37 @@ The user supplied `808-listening-results.json` after confirming the native playe
 
 Source, fitted-model driver, benchmark, original-model driver, protocol, cohort and baseline hashes match the current core candidate. The submitted player-template hash `6658d4b9…` was reconstructed exactly from the earlier native-player layout: only control placement/visibility changed afterward; stimuli, gain, A/B/X assignment and scoring were unchanged. The raw result and verified summary are retained locally under `research/reference/808-fit-model/listening/`; the input SHA256 is `bd4b5f356acd5b1c2bda9cbd192e44b7bac56509ef8271216411adb24d857328`.
 
-This is strong discrimination evidence for this listener and session, so the core candidate cannot be accepted on an inaudibility claim. It does not establish a preference, a physical-device result, or statistical significance for each individual setting (there was one trial per setting). The audible cue is being collected to guide the next bounded change. Quantitative source error remains a diagnostic; the human result supplies the missing perceptual evidence rather than replacing it with a percentage rule.
+This is strong discrimination evidence for this listener and session, so the core candidate cannot be accepted on an inaudibility claim. It does not establish a preference, a physical-device result, or statistical significance for each individual setting (there was one trial per setting). The user identified differences in all three cue groups: attack/click, tone/pitch and decay/body. An attack-only patch is therefore not selected as the solution. Quantitative source error remains a diagnostic; the human result supplies the missing perceptual evidence rather than replacing it with a percentage rule.
+
+## Conditional Tone factorization (#84)
+
+The next structural test asks whether Tone can be a filter around a shared Decay-controlled body, rather than another set of independent oscillator/envelope parameters. [tone_factor808.py](../tools/x0x/tone_factor808.py) fits one five-parameter law from 64 non-identity Tone-sweep settings at **Decay zero only**. The loss uses the first 0.25 seconds, which contains almost all energy at minimum Decay, with equal setting weight. No output normalization, fitted per-hit gain or alignment is used. All final measurements use complete 5.5-second slots.
+
+For the delivered source coordinate `T`, define:
+
+```text
+x = T ** q
+tau(T) = tau_min + a*(1-x) + b*(1-x)/(x+c)
+p(T) = (tau(T) - 1/(2*48000)) / (tau(T) + 1/(2*48000))
+```
+
+All five physical parameters are positive and `tau_min > 1/(2*48000)`, keeping poles inside `(0,1)`. The conditional prediction uses the **recorded Tone-127 waveform at the same Decay** as its input, through:
+
+```text
+H(T)/H(127) = ((1-p(T))/(1-p(127))) * (1-p(127)*z^-1)/(1-p(T)*z^-1)
+```
+
+This relative transfer has unity DC gain. A direct-form-I recurrence stores the previous input and output; an equivalent transposed recurrence needs only one state, as does a direct Tone filter around a future unfiltered generator. The formula is an effective model inferred from these recordings, not proof of unique physical component values.
+
+| Conditional component population | Settings | Median L2 | p95 L2 | Worst L2 |
+| --- | ---: | ---: | ---: | ---: |
+| All scored training pairs | 128 | 0.102589% | 0.206577% | 0.301860% |
+| Other-Decay pairs excluded from fitting this Tone law | 64 | 0.058054% | 0.151019% | 0.237221% |
+
+Nine Tone-127 identity cases are retained separately as sanity checks and excluded from those statistics. All inputs and targets remain inside the original fitting partition. The other-Decay component test is conditional on a measured input; it is **not full-generator generalization**, and no reserved validation/test waveform is used. The future canonical body still has to be synthesized.
+
+The five float32 parameters occupy 20 payload bytes. Their maximum measured output difference versus float64 parameters is `3.50e-10` capture FS. All 32,513 native control words, including fractional CC positions, have finite, stable, monotonic poles spanning approximately 0.21645–0.96035. Actual target coefficient encoding, linked footprint, instruction cost and full-model audibility remain unqualified.
+
+Reproduce with `mise run research:808:tone-factor`. Seven focused tests cover the transfer against independent direct-filter and single-state recurrences, stability, unity gain/identity, synthetic shared-fit recovery, float32 encoding and invalid inputs. The native-media/ABX regression checks also pass. Reports, a model NPZ, pole/error curves, waveform plots and an explicitly labelled **component-only** listening page are under `out/808-model/tone-factor/`. That page uses a fixed 4×4 cohort: Tone 0/17/68/119 and Decay 0/17/68/127, avoiding trivial Tone-127 identities.
+
+This evidence supports the factorization `output(Tone,Decay) = ToneFilter(Tone, canonical_body(Decay))` as the next architecture hypothesis. It naturally produces interactions between the knobs without fitting arbitrary per-setting waveform corrections. It does not close #84: the prior full body failed listening, and the canonical body representation and whole-model listening acceptance remain open.

@@ -296,3 +296,16 @@ run = [
   'mise run test:808:diagnose',
   'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --with scipy==1.18.0 --with matplotlib==3.11.2 --python "$(mise which python)" python -m x0x.diagnose808',
 ]
+
+[tasks."test:808:tone-factor"]
+description = "Check the conditional Tone filter and its shared control fit"
+env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
+run = 'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --python "$(mise which python)" python -m unittest discover -s tests/host -p test_tone_factor808.py'
+
+[tasks."research:808:tone-factor"]
+description = "Test whether one Tone law filters recorded inputs across Decay settings"
+env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", MPLCONFIGDIR = "{{config_root}}/out/matplotlib" }
+run = [
+  'mise run test:808:tone-factor',
+  'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --with matplotlib==3.11.2 --python "$(mise which python)" python -m x0x.tone_factor808',
+]

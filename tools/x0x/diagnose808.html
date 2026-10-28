@@ -13,12 +13,13 @@ button:disabled{opacity:.45;cursor:default}button.primary{background:#006d72;col
 <h1>How close does the compact 808 sound?</h1>
 <p>Compare the recorded kick with the compact candidate. Both keep their original timing and relative level. One shared playback gain applies to every sound.</p>
 <p class="small" id="gain"></p>
+<p class="small" id="scope"></p>
 <section id="preview">
  <h2>Listen first</h2>
  <label for="setting">Tone / Decay</label><br><select id="setting"></select>
  <div class="buttons"><button id="recorded">Play recording</button><button id="candidate">Play candidate</button><button class="stop">Stop</button></div>
  <p class="small">If playback is unavailable here: <a id="recorded-download" download>download the recording</a> or <a id="candidate-download" download>download the candidate</a>.</p>
- <p>These 16 recordings were used for fitting. This checks reproduction; testing new settings comes later.</p>
+ <p id="cohort">These 16 recordings were used for fitting. This checks reproduction; testing new settings comes later.</p>
 </section>
 <p id="playing" class="status" role="status" aria-live="polite"></p>
 <audio id="player" controls preload="metadata" aria-label="Listening comparison playback" hidden></audio>
@@ -46,6 +47,8 @@ const $=id=>document.getElementById(id);
 let playToken=0,session=null;
 const player=$('player'),urls=new Map();
 $('gain').textContent=`Shared playback gain: ${data.gain.toFixed(2)}×. No individual peak or RMS matching.`;
+$('scope').textContent=data.manifest.scope||'Full procedural candidate; fitting-set comparison.';
+$('cohort').textContent=data.manifest.cohort_note||'These 16 recordings were used for fitting. This checks reproduction; testing new settings comes later.';
 data.stimuli.forEach((s,i)=>{const option=document.createElement('option');option.value=i;option.textContent=`Tone ${s.tone} / Decay ${s.decay}`;$('setting').append(option)});
 function updateDownloads(){const s=data.stimuli[Number($('setting').value)];for(const key of ['recorded','candidate'])$(key+'-download').href=s[key+'_download']}
 $('setting').onchange=updateDownloads;updateDownloads();
