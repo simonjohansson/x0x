@@ -250,10 +250,11 @@ class Runner:
     INPUT, OUTPUT, PARAM = 0x200b0000, 0x200b1004, 0x200b2000
     FRAME, STOP = 0x2deffc, 0xbc7ff0
 
-    def __init__(self, receipt, artifact):
+    def __init__(self, receipt, artifact, state_bytes=STATE_BYTES):
         cpu.require_module('tools.sharc_dev.sharc_run', 'digikit')
         from tools.sharc_dev import sharcldr, sharc_run, sharc_transpile_run as native
         self.native, self.receipt = native, receipt
+        self.state_bytes = state_bytes
         payload, blocks = b'', []
         self.immutable = []
         for segment in artifact['segments'][1:]:
@@ -265,7 +266,7 @@ class Runner:
             payload += data
             if segment['kind'] == 'data':
                 self.immutable.append((address,data))
-        for address,size in [(receipt['state_base'],16*STATE_BYTES),(0,4),(0x200000,4),
+        for address,size in [(receipt['state_base'],16*state_bytes),(0,4),(0x200000,4),
                              (self.FRAME-128,132)]:
             blocks.append(dict(target_address=address,byte_count=size,fill=False,
                                payload_offset=len(payload),payload_len=size))
@@ -283,7 +284,7 @@ class Runner:
 
     def call(self, tone, decay, start=False, slot=0, model=0):
         from tools.sharc_dev import sharc_trace as trace
-        state = self.receipt['state_base']+slot*STATE_BYTES
+        state = self.receipt['state_base']+slot*self.state_bytes
         words = [self.OUTPUT,slot,60*256,int(start),self.PARAM,state]
         self.core.poke(self.INPUT,struct.pack('<6I',*words),4)
         self.core.poke(self.PARAM,struct.pack('<40I',tone,decay,16384,0,0,model,*([0]*34)),4)

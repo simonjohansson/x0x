@@ -303,3 +303,41 @@ forced-choice significance result. All-A/B sessions retain the original scoring.
 The response policy is versioned as `a-b-or-cant-tell-v1`, and the exported
 manifest records the exact player-template hash. Historical results/stimuli are
 unchanged. The controller checks include all-uncertain and mixed sessions.
+
+
+## ASM listening result and physical-test preparation
+
+The third human session used actual assembled SHARC audio from the frozen
+candidate. The user chose **Can’t tell on 15/16 trials**, and answered the one
+remaining trial correctly at **Tone 0 / Decay 0**. All trial/answer fields and
+source/model/artifact/player hashes were independently verified. Duration was
+120.183 seconds. The raw result and summary are retained locally as
+`listening/2026-10-28-sharc-abx{,-summary}.json` under the corpus directory; input
+SHA256 is `72e19d67a380047db8774b8f82bb5d5b62d78bc00e48e81918ebae8ea57bcd38`.
+This is encouraging descriptive evidence for retaining the candidate. With
+abstentions there is no forced-choice significance calculation, and one decided
+answer does not establish equivalence or reliable discrimination. This is local
+ASM listening, not physical-device audio acceptance. No sound was refitted.
+
+The connected DN2 was identified as RB08 with a responding DigiHealth 1.6.
+A clean worktree of the explicitly requested `codex/dn2-support` branch at
+`afc751d67b1b1575f7a5fc40f104c11451fc3ea5` supplied both its `build.py` and matching
+client. The primary DigiHealth checkout and its unrelated uncommitted work were
+preserved. The combined physical-test image is **X8D1** under
+`out/808-model/sharc/device-physical/`; SHA256 is
+`70ee8182db5decdab54554508792fa536949cf7b3bd5530c4daeb58034504ad6`.
+
+[physical808.py](../tools/x0x/physical808.py) builds that test image with a
+[device-only ASM observer](../targets/sharc/field808_device.s). It preserves the
+sample loop and records a frozen 32-sample block at age 1024, latched controls,
+and raw EMUCLK span/period. Its 1232-byte state fits sixteen slots in the private
+49 KiB data region (49,696 bytes including initialized tables/alignment). This
+debug layout is not the final combined 808/909 resource reservation. The declared
+64-byte software stack includes the nested call frame. Local actual-instruction
+checks verify bit-identical output with the uninstrumented kernel at three
+settings/slots, witness/reset behaviour, immutable tables and region capacity;
+the original eight SHARC tests also pass. EMUCLK spans include call/return and
+interrupts, and exclude observer work outside the interval. Device busy counters
+are not treated as measured voice headroom. Installation and subsequent physical
+results are recorded in the next increment; the earlier no-device statements
+above describe the historical isolated qualification.
