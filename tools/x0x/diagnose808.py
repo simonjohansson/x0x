@@ -187,10 +187,15 @@ def listening_report(output, events, references, predictions, manifest):
         data = dict(tone=pair[0], decay=pair[1])
         for name, samples in (('recorded', references[pair]), ('candidate', predictions[pair])):
             stream = io.BytesIO()
-            sf.write(stream, samples, fit808.RATE, format='WAV', subtype='FLOAT')
+            # Native media playback needs no Web Audio gain node or float-WAV decoder.
+            sf.write(stream, samples * gain, fit808.RATE, format='WAV', subtype='PCM_24')
             data[name] = base64.b64encode(stream.getvalue()).decode('ascii')
+            filename = f't{pair[0]:03}-d{pair[1]:03}-{name}-playback.wav'
+            (output / filename).write_bytes(stream.getvalue())
+            data[name + '_download'] = filename
         stimuli.append(data)
-    payload = json.dumps(dict(stimuli=stimuli, gain=gain, manifest=manifest), allow_nan=False).replace('<', '\\u003c')
+    payload = json.dumps(dict(stimuli=stimuli, gain=gain, gain_applied=True,
+                             playback_encoding='PCM_24', manifest=manifest), allow_nan=False).replace('<', '\\u003c')
     template = Path(__file__).with_suffix('.html').read_text()
     (output / 'index.html').write_text(template.replace('__LISTENING_DATA__', payload))
     return gain

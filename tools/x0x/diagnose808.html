@@ -17,8 +17,11 @@ button:disabled{opacity:.45;cursor:default}button.primary{background:#006d72;col
  <h2>Listen first</h2>
  <label for="setting">Tone / Decay</label><br><select id="setting"></select>
  <div class="buttons"><button id="recorded">Play recording</button><button id="candidate">Play candidate</button><button class="stop">Stop</button></div>
+ <p class="small">If playback is unavailable here: <a id="recorded-download" download>download the recording</a> or <a id="candidate-download" download>download the candidate</a>.</p>
  <p>These 16 recordings were used for fitting. This checks reproduction; testing new settings comes later.</p>
 </section>
+<p id="playing" class="status" role="status" aria-live="polite"></p>
+<audio id="player" controls preload="metadata" aria-label="Listening comparison playback" hidden></audio>
 <section>
  <h2>Blind comparison</h2>
  <p>Listen to A and B, then X. Choose whether X is A or B. The test has 16 trials, one per setting, in random order. A/B identities and X change independently each trial; answers are revealed only at the end.</p>
@@ -32,7 +35,6 @@ button:disabled{opacity:.45;cursor:default}button.primary{background:#006d72;col
  <button id="download" disabled>Download results</button>
  <p class="small">This tests whether you can tell the sounds apart, not which sounds better. A low score does not prove that all differences are inaudible. No listening result has been supplied with this report.</p>
 </section>
-<p id="playing" class="status" role="status" aria-live="polite"></p>
 <details><summary>Waveform measurements and corner plots</summary>
  <p>The original strict numerical targets remain diagnostics. A 5% waveform error is a 5% RMS residual relative to the recording; it is not an audibility score.</p>
  <p><a href="report.json">Full numerical report and optimizer diagnostics</a></p>
@@ -41,27 +43,27 @@ button:disabled{opacity:.45;cursor:default}button.primary{background:#006d72;col
 <script>
 const data=__LISTENING_DATA__;
 const $=id=>document.getElementById(id);
-let context,source,playToken=0,session=null;
-const buffers=new Map();
+let playToken=0,session=null;
+const player=$('player'),urls=new Map();
 $('gain').textContent=`Shared playback gain: ${data.gain.toFixed(2)}×. No individual peak or RMS matching.`;
 data.stimuli.forEach((s,i)=>{const option=document.createElement('option');option.value=i;option.textContent=`Tone ${s.tone} / Decay ${s.decay}`;$('setting').append(option)});
-function stop(){playToken++;if(source){source.stop();source=null}$('playing').textContent=''}
+function updateDownloads(){const s=data.stimuli[Number($('setting').value)];for(const key of ['recorded','candidate'])$(key+'-download').href=s[key+'_download']}
+$('setting').onchange=updateDownloads;updateDownloads();
+function stop(){playToken++;player.pause();player.currentTime=0;player.hidden=true;$('playing').textContent=''}
 async function play(index,key,label){
  stop();const token=playToken;
  try{
-  context??=new AudioContext();await context.resume();
   const cacheKey=index+':'+key;
-  if(!buffers.has(cacheKey)){
+  if(!urls.has(cacheKey)){
    const binary=atob(data.stimuli[index][key]);const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
-   buffers.set(cacheKey,await context.decodeAudioData(bytes.buffer));
+   urls.set(cacheKey,URL.createObjectURL(new Blob([bytes],{type:'audio/wav'})));
   }
-  if(token!==playToken)return;
-  const current=context.createBufferSource(),gain=context.createGain();gain.gain.value=data.gain;
-  current.buffer=buffers.get(cacheKey);current.connect(gain).connect(context.destination);source=current;
-  current.onended=()=>{if(source===current){source=null;$('playing').textContent=''}};
-  current.start();$('playing').textContent=`Playing ${label}`;
- }catch(error){$('playing').textContent='Could not play this WAV: '+error.message}
+  player.src=urls.get(cacheKey);player.hidden=false;await player.play();
+  if(token===playToken)$('playing').textContent=`Playing ${label}`;
+ }catch(error){if(token===playToken)$('playing').textContent='Could not play this WAV: '+error.message}
 }
+player.onended=()=>{$('playing').textContent=''};
+player.onerror=()=>{$('playing').textContent='The browser could not decode the WAV. Use the download links above.'};
 document.querySelectorAll('.stop').forEach(button=>button.onclick=stop);
 $('recorded').onclick=()=>play(Number($('setting').value),'recorded','recording');
 $('candidate').onclick=()=>play(Number($('setting').value),'candidate','candidate');

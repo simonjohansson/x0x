@@ -9,17 +9,13 @@ function element(id) {
   return elements.get(id);
 }
 let randomState=123456789, exported, starts=0, stops=0;
-class AudioContext {
-  destination = {};
-  async resume() {}
-  async decodeAudioData() { return {}; }
-  createBufferSource() { return {connect(){return this},start(){starts++},stop(){stops++}}; }
-  createGain() { return {gain:{},connect(){return this}}; }
-}
-const data={gain:4,manifest:{source_sha256:'test'},stimuli:Array.from({length:16},(_,i)=>({tone:i,decay:i,recorded:'AA==',candidate:'AA=='}))};
+Object.assign(element('player'),{paused:true,currentTime:0,
+  pause(){if(!this.paused)stops++;this.paused=true},
+  async play(){if(this.failNext){this.failNext=false;throw Error('blocked')}starts++;this.paused=false}});
+const data={gain:4,gain_applied:true,playback_encoding:'PCM_24',manifest:{source_sha256:'test'},stimuli:Array.from({length:16},(_,i)=>({tone:i,decay:i,recorded:'AA==',candidate:'AA==',recorded_download:`${i}-recorded.wav`,candidate_download:`${i}-candidate.wav`}))};
 const context=vm.createContext({document:{getElementById:element,querySelectorAll(){return []},createElement:element},
   crypto:{getRandomValues(array){randomState^=randomState<<13;randomState^=randomState>>>17;randomState^=randomState<<5;array[0]=randomState>>>0;return array}},
-  AudioContext,atob,Blob:class {constructor(parts){exported=JSON.parse(parts[0])}},
+  atob,Blob:class {constructor(parts){if(typeof parts[0]==='string')exported=JSON.parse(parts[0])}},
   URL:{createObjectURL(){return 'blob:test'},revokeObjectURL(){}},setTimeout(fn){fn()}});
 const script=html.match(/<script>([\s\S]*?)<\/script>/)[1].replace('__LISTENING_DATA__',JSON.stringify(data));
 vm.runInContext(script,context);
@@ -53,9 +49,12 @@ for(let i=0;i<16;i++){
 assert.equal(vm.runInContext('session.correct',context),0);
 assert.match(element('result').textContent,/does not prove equivalence/);
 Promise.all([element('recorded').onclick(),element('candidate').onclick()]).then(()=>{
-  assert.equal(starts,1); // Only the latest pending decode may begin playback.
-  element('recorded').onclick().then(()=>{
-    assert.equal(stops,1);
-    console.log('ABX controller checks passed; synthetic responses only.');
-  });
+  assert.equal(starts,2);assert.equal(stops,1);
+  assert.equal(element('playing').textContent,'Playing candidate');
+  assert.equal(element('recorded-download').href,'0-recorded.wav');
+  element('player').failNext=true;
+  return element('recorded').onclick();
+}).then(()=>{
+  assert.equal(stops,2);assert.match(element('playing').textContent,/Could not play.*blocked/);
+  console.log('ABX/native-media controller checks passed; synthetic responses only.');
 }).catch(error=>{console.error(error);process.exitCode=1});
