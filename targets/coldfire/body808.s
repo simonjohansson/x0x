@@ -321,12 +321,12 @@ x0x_808_body:
 .Lnode_decay:
     movea.l %d1, %a5
     move.l %a6, %d0
-    move.l #1576015139, %d1 /* C40 retention, tau=(R162||R163)*C40 */
+    move.l #1589336992, %d1 /* C40 retention, effective tau=69.21837318138271 us */
     mac.l %d0, %d1, %acc0
     movclr.l %acc0, %d1
     cmpi.l #240, %d7
     blt.s .Lmain_decay
-    addi.l #5985773, %d1 /* ON equilibrium contribution */
+    addi.l #5846235, %d1 /* ON equilibrium contribution */
     bra.s .Lmain_node_store
 .Lmain_decay:
     cmp.l %d0, %d1
@@ -413,25 +413,25 @@ x0x_808_body:
     rts
     .balign 4
 .Lmain_attack_low:
-    .long 394143749,1479326,-306522
-    .long -17938484,11010047,-26319
-    .long 671713,2402,-522
-    .long -28448,18770,-45
+    .long 395721862,1484983,-307748
+    .long -18005560,11054144,-26425
+    .long 655183,2343,-509
+    .long -27745,18308,-44
 .Lmain_attack_high:
-    .long 395623075,340884,-10492
-    .long -6928437,2043976,-1422
-    .long 674115,559,-18
-    .long -9678,3485,-2
+    .long 397206846,342200,-10534
+    .long -6951416,2052163,-1427
+    .long 657526,545,-17
+    .long -9437,3399,-2
 .Lmain_steady_low_data:
-    .long 55041695,1308213,-306535
-    .long -5703189,4202115,-78631
-    .long 93802,2212,-522
-    .long -9611,7163,-134
+    .long 55262072,1313413,-307761
+    .long -5725781,4218944,-78946
+    .long 91493,2158,-509
+    .long -9374,6987,-131
 .Lmain_steady_high_data:
-    .long 56349908,309230,-10492
-    .long -1501074,798188,-4123
-    .long 96014,524,-18
-    .long -2447,1361,-7
+    .long 56575485,310461,-10534
+    .long -1506836,801385,-4140
+    .long 93651,511,-17
+    .long -2387,1327,-7
 .Lleakage_low_data:
     .long 47485539,-36322559,508524
     .long 473421941,4502196,2763962

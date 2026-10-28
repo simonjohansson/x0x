@@ -7,7 +7,9 @@ from x0x import body808, pulse808 as pulse
 
 class MainPulse808Tests(unittest.TestCase):
     def test_fresh_pulse_has_the_passive_shelf_and_negative_charge_clamp(self):
-        self.assertAlmostEqual(pulse.TAU, 67.335243553e-6, places=14)
+        nominal = pulse.R162*pulse.R163/(pulse.R162+pulse.R163)*pulse.C40
+        self.assertAlmostEqual(nominal, 67.335243553e-6, places=14)
+        self.assertAlmostEqual(pulse.TAU, 69.21837318138271e-6, places=15)
         self.assertAlmostEqual(pulse.DC_GAIN, 4700/104700, places=14)
         self.assertEqual(pulse.shaped_voltage(0),14/60)
         self.assertEqual(pulse.shaped_voltage(48),-.71/60)

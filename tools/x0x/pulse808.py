@@ -10,7 +10,8 @@ from . import body808, retrigger808
 
 R162, R163, C40 = 4700., 100000., 15e-9
 DC_GAIN = R162/(R162+R163)
-TAU = R162*R163/(R162+R163)*C40
+# Effective excitation calibration; the nominal S01/S03 RC is 67.335 us.
+TAU = R162*R163/(R162+R163)*C40 * 1.0279664783107476
 TRIGGER_V = 14.0  # Upper end of S03 section3's published 4..14 V range; not a VST fit.
 VOLT_SCALE = retrigger808.VOLT_SCALE
 ON_EQUILIBRIUM = TRIGGER_V*VOLT_SCALE*DC_GAIN

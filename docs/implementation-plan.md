@@ -46,6 +46,12 @@ these remain explicit. The standalone initial-frequency and updated soft-knee
 trials are rejected for their early-window/full-waveform regressions. Continue
 existing excitation and declared-same-voice retention experiments using this
 qualified source; no native owner identity or gain calibration is inferred.
+The next [main-pulse timescale calibration](808-main-pulse-time.md) changes
+only C40's effective source evolution. Its bounded host screen improves all
+81 settings at 6/25/150/500 ms; nine late minimum-Decay regressions remain.
+Both actual raw-body preflights preserve the tight .25 FS bound. Full
+component, paired-tail/history and native qualification are in progress;
+the body-bound-limited fit is not a stationary optimum.
 
 The 909 [diode shaper](909-shaping.md), [C9/IC12 Tune path](909-tune.md) and
 [loaded ENV1/Q12 VCA](909-vca.md) run on both CPUs and all three emulators.
