@@ -70,8 +70,9 @@ accent and faithful residual-state retrigger remain separate, explicit #79/#2
 work; passing this milestone does not qualify either. Repeated playback for
 listening is not proof of retained-state retrigger behavior.
 
-Fixed output scaling is now [qualified at 0f7ef30](808-output-calibration.md)
-on both actual CPUs and the full training grid; full level acceptance still
-fails. Work sequentially on the remaining envelope balance and other metric
-protocols before held-out use. #9 stays complete as the supported baseline;
+Fixed output scaling was [qualified at 0f7ef30](808-output-calibration.md).
+The [minimum-Decay correction at e0adf4e](808-minimum-decay.md) retains that
+factor and qualifies minimum-setting duration on the training takes. Full level
+acceptance and other Decay settings remain open. Work sequentially on upper-middle
+Decay and the other metric protocols before held-out use. #9 stays complete;
 #2 owns reference acceptance and #79 owns engine refinement. HTML is unchanged.

@@ -4,7 +4,8 @@ The approved next step is to shorten minimum Decay without disturbing the
 already closer default/maximum sounds. The previous qualified DSP is
 `0f7ef30`, including its fixed output factor 1.601664543. This increment fits
 one minimum effective damping time, **19.22924 ms instead of 33.3 ms**, and
-limits the new control segment to native words below 4096 (displayed Decay32).
+limits the new control segment to native words below 4096 (reference Decay 32/255,
+native 16/127).
 No gain, pitch, saved controls, lifecycle or public boundary changes.
 
 ## Training-only choice
@@ -50,15 +51,75 @@ as q-1 within registers; no flag, SDK word or persisted state is added. ColdFire
 keeps its existing five state words; SHARC keeps 1,664 bytes. The new interior
 raw2048 and edge raw4095 receive guarded component coverage.
 
-## Qualification status
+## Qualified at `e0adf4e`
 
-199 tracked host tests and targeted CPU checks pass. Both ports agree with
-the independent model at the short segment and its boundary. Full guarded
-SHARC regression, fresh full training grids and seven histories are in progress.
-Do not claim the unchanged later settings or 909 outputs byte-identical until
-those comparisons finish. Raw-body .25 FS, rendered-chain .5 FS and numerical
-1e-5 FS limits stay unchanged. Full-device runs follow the agreed integration
-cadence; no fresh native or physical-device claim is made here.
+199 tracked host tests and both guarded actual CPU suites pass, including new
+short-segment interior raw2048 and edge raw4095. SHARC runs 16,392 guarded calls
+and 195,328 actual raw-body observations; its code is 6,878 bytes within the
+existing reservation, with unchanged 1,664-byte state. All twelve prior 909
+regression files are byte-identical. Working-tree component execution remains
+labelled as such and is bound by source/image identity to committed code;
+fresh full grids use the archived `e0adf4e` snapshot.
+
+Both CPUs freshly render all 81 settings / 243 takes / full 12-second tails and
+seven declared-single-voice histories. **All 72 later settings and all seven
+histories remain byte-identical on each CPU.** All eight nonminimum ColdFire
+body streams also remain identical. Maximum grid oracle errors are 7.109e-6 FS
+(CF) and 6.694e-6 (SHARC), history errors 3.237e-6 / 5.611e-6; peer errors are
+5.834e-6 / 5.667e-6. Limits remain 1e-5 FS, .25 FS raw body and .5 FS synth chain;
+maximum emitted peak remains .400704205 FS.
+
+Full-tail measurements confirm the screen at Tone128 / minimum Decay:
+
+| Cumulative-energy time | Reference | Previous | Current |
+| --- | --- | --- | --- |
+| t90 | 19.500 ms | 30.125 ms | 18.417 ms |
+| t99 | 37.750 ms | 70.021 ms | 40.021 ms |
+
+Every minimum-Decay take improves both descriptors on both actual CPUs and
+meets the agreed 10% or 5 ms duration margin. This qualifies this training
+subset's duration checks, not the entire Decay surface or held-out fidelity.
+The measurement helper first checks known pulse timings, gain invariance and
+rejection of silence; there is no fitted onset shift.
+
+All 27 minimum takes improve routing-corrected raw waveform residuals at
+6/25/150/500 ms and the whole 12 seconds; all other 216 takes are unchanged.
+Mean changed-subset first-500-ms CF RMS falls .012965236→.006611355 FS (about 49%).
+Across all 81 settings, mean whole-clip CF RMS falls .004550782→.004406673 FS
+(about 3.17%). Those are error reductions, not fidelity percentages. Both routing
+conventions and every take remain available. As-recorded residuals also improve
+at the changed settings in those windows.
+
+Retain the counterevidence: the SHARC minimum takes have tiny late-window
+regressions at 500–1000 ms, 1–2 s and 2–12 s; the largest all-grid mean increase
+is about 1.46e-10 FS at 500–1000 ms. ColdFire's corresponding late residuals stay
+identical. Quiet tails are not gain/DC-fitted or cut to erase those differences.
+
+Level checks also improve without changing the fixed output factor. Per CPU:
+
+| Eligible +/-2 dB checks | Previous passes | Current passes |
+| --- | --- | --- |
+| Peak (243) | 165 | 171 |
+| Attack (243) | 240 | 243 |
+| Body (243) | 108 | 135 |
+| Tail/body (216) | 54 | 54 |
+
+All nine minimum settings now meet every eligible level check; the whole-grid
+count rises 9→18 of 81 settings. Combined passing checks rise 1,134→1,206 of 1,890.
+The 54 quieter combined checks remain diagnostics. Other settings still fail;
+this is not full level or whole-engine acceptance.
+
+The ignored `out/808-min-decay/` contains the pre-fit protocol, scalar screen,
+coefficient derivation, source snapshots, full grids, every raw regression and
+`final-qualification.json`. Its verifier checks 82 source files and 185 raw CPU
+artifacts; 166 artifacts are byte-identical to the parent. The immutable native
+runtime and all image/source bindings are reverified. Receipt SHA256:
+`ca799e973f0ed7bc20a69e93c77bec823b105d0972504d80ef81f3f1ab6aaf09`.
+
+No C/UI/plumbing, saved-layout, DSP state extent, calling convention, dependency
+or package boundary changes. Prior C/UI and full-device results remain prior;
+no fresh native OS or physical-device claim is made. The agreed DSP-only
+component/reference cadence applies; final native acceptance remains #20.
 
 Remaining upper-middle Decay, onset/pitch/tone and full fidelity stay in #79/#2.
 #9 remains complete as the supported baseline. HTML and held-out recordings

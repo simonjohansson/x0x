@@ -1,5 +1,9 @@
 # 808 fixed output calibration
 
+Subsequent [minimum-Decay qualification at e0adf4e](808-minimum-decay.md)
+retains this factor. The calibration results below remain the historical
+`0f7ef30` comparison; current level/duration results are in the linked correction.
+
 The human approved one fixed DSP scaling factor on 28 October 2026 after
 clarifying that native AMP/track LEVEL remains the user volume control. This
 increment applies **1.6016645431518555 (+4.091431 dB)** after C47 on both CPUs.

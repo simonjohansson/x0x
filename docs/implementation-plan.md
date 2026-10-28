@@ -1,6 +1,18 @@
 # Implementation plan: one combined mod, silent first
 
-Current 808 DSP is `0f7ef30`: [fixed output scaling](808-output-calibration.md)
+Current 808 DSP is `e0adf4e`: the [minimum-Decay correction](808-minimum-decay.md)
+shortens the minimum effective tau to 19.22924 ms in a C1 segment below raw4096
+(reference 32/255, native 16/127). All 27 minimum takes improve duration and raw
+6/25/150/500 ms/full-tail error on both actual CPUs; t99 moves 70→40 ms against 38 ms.
+All 72 later settings and seven histories per CPU remain byte-identical. 199 host
+tests, both guarded CPU suites and the full 81 settings / 243 takes comparison pass
+unchanged numerical/headroom limits. Gain stays 1.601664543. Eligible level checks
+rise 1,134→1,206 of 1,890; all-setting level passes rise 9→18 of 81. Tiny SHARC quiet
+late regressions remain recorded. Next address upper-middle Decay sequentially
+in #79/#2. Held-out audio, HTML, public/saved boundaries and #9's accepted scope
+stay unchanged; no fresh native OS or physical-device proof is claimed.
+
+Previous 808 output calibration at `0f7ef30`: [fixed output scaling](808-output-calibration.md)
 uses one 1.601664543 (+4.091431 dB) factor across settings/CPUs, with native LEVEL
 unchanged. The level windows/floor/objective are frozen. 198 host tests, six C/UI
 checks, both actual CPU suites, full 81-setting / 243-take tails and seven
