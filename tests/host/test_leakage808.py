@@ -49,6 +49,20 @@ class Leakage808Tests(unittest.TestCase):
             resistance = volts*6800*53800/(volts*53800-47000*(volts-6800*ic))
             self.assertAlmostEqual(1/resistance,1/53800+47000/53800*ic/volts,places=14)
 
+    def test_knee_crossing_integrates_only_the_negative_linear_ramp(self):
+        for before, after in ((-2., 1.), (2., -1.), (-1., -2.), (1., 2.), (0., -1.)):
+            trapezoid = .5*(min(before, 0)+min(after, 0))
+            corrected = trapezoid + .5*leakage._crossing_correction(before, after)
+            expected = -.5*min(before,after)**2/(abs(before)+abs(after)) if before*after<0 else trapezoid
+            self.assertAlmostEqual(corrected, expected, places=14)
+        self.assertEqual(leakage._crossing_correction(0., 0.), 0.)
+
+    def test_upper_split_crossing_stays_close_to_independent_ode(self):
+        for raw in (20224, 24320, 28416):
+            exact = leakage.reference(9600, raw)
+            split = leakage.reference(9600, raw, split=True)
+            self.assertLess(max(abs(a-b) for a,b in zip(exact,split)), 1.3e-6)
+
     def test_strang_candidate_matches_independent_continuous_ode_with_live_controls(self):
         for raw in (0,1,8192,16383,16384,24576,32511,32512):
             changes = {256:32512,288:raw,320:raw,8000:0,16000:32512}

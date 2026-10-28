@@ -46,9 +46,30 @@ same curve back into the existing coefficient coordinate. Both reuse the
 current coefficient banks. An explicit maximum bypass preserves that anchor;
 no new tables, state, public contract or saved parameter is introduced.
 
-Initial checks: 200 tracked host tests and the guarded ColdFire body suite pass,
-including raw20480/24576/28672 and existing fractional/end-point cases. Fresh
-SHARC static/live guards and frozen full-grid CPU/reference qualification are
-pending. This is a candidate checkpoint, not completed fidelity acceptance.
+The first frozen grid at `7c6cdf6` exposes a numerical failure at reference
+Decay191 on both CPUs: maximum chain error is about 1.20e-5 FS against the
+unchanged 1e-5 limit. The ordinary split model itself differs from the refined
+ODE by 6.60e-6 raw FS near a Q43 threshold crossing, amplified by the fixed output
+factor. This is an integration error, not evidence to retune gain or relax limits.
+Those failed grids remain in `out/808-upper-shape/full-grid/`.
+
+For the changed upper interior only, subtract the trapezoid's excess area at a
+within-sample knee crossing. If a and b are the common-node distances from the
+knee before/after free flow, add -a*b/(abs(a)+abs(b)) to the final clipped distance
+when a*b<0. Otherwise retain the previous half-kick. This integrates a linear
+crossing exactly and leaves the fine-step independent ODE unchanged. At Decay191,
+the split-model error drops 6.60e-6→.79e-6 raw FS. The analytical ramp test covers
+both crossing directions, same-sign and zero endpoints.
+
+ColdFire uses its saved scratch accumulator and a bounded 31-bit fractional
+divide only on a crossing. SHARC borrows existing caller-scratch index registers,
+reconstructing Tone/coupling pointers before storing state. No new state/cache
+word, callee-register allowance or public ABI is introduced. Preserved-register
+checks caught an initial invalid use of I15; that attempt is not adopted.
+
+202 tracked host tests and the guarded ColdFire body suite pass. A focused actual
+SHARC Decay191 regression now agrees within 1.964e-6 FS. Final static/live guards
+and fresh frozen full-grid CPU/reference qualification are pending. This is a
+candidate checkpoint, not completed fidelity acceptance.
 #79/#2 retain remaining duration/pitch/tone/listening work; #9 remains complete.
 HTML, held-out recordings and unrelated working-tree edits are untouched.

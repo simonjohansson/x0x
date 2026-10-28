@@ -11,7 +11,7 @@ FREQUENCY = 47.65
 TAU = 0.143
 LOWER_SHAPE = 1.5
 UPPER_SHAPE = .9499298  # Training duration fit, bounded below one for a monotonic upper curve.
-MIN_TAU = .01922924  # Minimum-Decay duration fit; controls >=4096 keep the prior law.
+MIN_TAU = .01922924  # Minimum-Decay duration fit, confined to the short segment.
 SHORT_END = 4096
 GAIN = 0.25
 PULSE_SAMPLES = 48  # Nominal 1 ms trigger in S01/S03, at 48 kHz.

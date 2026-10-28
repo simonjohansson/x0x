@@ -35,6 +35,11 @@ def half_kick(state, main, decay_raw):
     return state+complex(delta,-n*delta)
 
 
+def _crossing_correction(before, after):
+    # Remove the trapezoid area outside a within-sample hard-knee crossing.
+    return -before*after/(abs(before)+abs(after)) if before*after < 0 else 0.
+
+
 def _settled_stepper(decay_raw, subdivisions):
     cw,cy,_,n = coefficients(decay_raw)
     omega = 2*math.pi*body808.FREQUENCY
@@ -126,11 +131,14 @@ def reference(frames, decay_raw=body808.DEFAULT_DECAY, changes=None, *, split=Fa
         new_companion = companion*companion_retention
         if sample < body808.ATTACK_SAMPLES or split:
             if sample >= body808.ATTACK_SAMPLES:
-                delta = half*min(main+cw*state.real+cy*state.imag-KNEE,0.)
+                before = main+cw*state.real+cy*state.imag-KNEE
+                delta = half*min(before,0.)
                 state += complex(delta,-n*delta)
             state = q*state+main_gain*main+companion_gain*companion+(bias if sample < body808.PULSE_SAMPLES else 0j)
             if sample >= body808.ATTACK_SAMPLES:
-                delta = half*min(new_main+cw*state.real+cy*state.imag-KNEE,0.)
+                after = new_main+cw*state.real+cy*state.imag-KNEE
+                correction = _crossing_correction(before, after) if body808.DEFAULT_DECAY < decay_raw < body808.RAW_MAX else 0.
+                delta = half*(min(after,0.)+correction)
                 state += complex(delta,-n*delta)
         else:
             state,new_main,new_companion = advance(state,main,companion)

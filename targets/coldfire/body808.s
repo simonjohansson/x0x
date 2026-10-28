@@ -6,9 +6,9 @@
  * effective reference-calibrated Q43 hard knee; full feedback/loading and residual retrigger follow in #9/#79.
  */
     /* Exact held-source Q43 flow: capacitor q1 stays fixed during this kick. */
-    .macro leakage_half
+    .macro leakage_half after=0
     cmpa.l #0, %a4
-    bne.s 9f
+    bne 9f
     move.l %a6, %d0
     addi.l #38680434, %d0 /* Effective negative common-node knee magnitude .018011980654 FS. */
     move.l %d0, %acc2
@@ -17,8 +17,65 @@
     move.l 88(%sp), %d1
     mac.l %d5, %d1, %acc2
     movclr.l %acc2, %d0
+    .if \after
+    move.l 112(%sp), %d1
+    cmpi.l #16384, %d1
+    bls .Lleakage_clamp_\@
+    cmpi.l #32512, %d1
+    bcc .Lleakage_clamp_\@
+    move.l %acc3, %d1
+    move.l %d0, %acc3
     tst.l %d0
-    bpl.s 9f
+    bmi .Lnegative_end_\@
+    tst.l %d1
+    bpl .Lno_crossing_\@
+    neg.l %d1
+    bra .Lcrossing_\@
+.Lnegative_end_\@:
+    tst.l %d1
+    ble .Lno_crossing_\@
+    neg.l %d0
+.Lcrossing_\@:
+    /* Integrate a linear threshold crossing instead of its full-sample trapezoid. */
+    move.l %d1, %acc0
+    move.l %d0, %acc1
+    add.l %d0, %d1
+    move.l %acc0, %d0
+    moveq #0, %d7
+    movea.l #31, %a4
+.Lcrossing_divide_\@:
+    add.l %d7, %d7
+    add.l %d0, %d0
+    bcs .Lcrossing_subtract_\@
+    cmp.l %d1, %d0
+    bcs .Lcrossing_next_\@
+.Lcrossing_subtract_\@:
+    sub.l %d1, %d0
+    addq.l #1, %d7
+.Lcrossing_next_\@:
+    subq.l #1, %a4
+    cmpa.l #0, %a4
+    bne .Lcrossing_divide_\@
+    move.l %acc1, %d0
+    mac.l %d0, %d7, %acc2
+    movclr.l %acc2, %d0
+    moveq #0, %d7
+    move.l %acc3, %d1
+    tst.l %d1
+    bmi .Lcrossing_add_\@
+    moveq #0, %d1
+.Lcrossing_add_\@:
+    add.l %d1, %d0
+    bra .Lleakage_gain_\@
+.Lno_crossing_\@:
+    move.l %acc3, %d0
+    .else
+    move.l %d0, %acc3
+    .endif
+.Lleakage_clamp_\@:
+    tst.l %d0
+    bpl 9f
+.Lleakage_gain_\@:
     move.l #65614840, %d1 /* Effective lambda/(2*fs), lambda=2933.211912981/s. */
     mac.l %d0, %d1, %acc2
     movclr.l %acc2, %d0
@@ -70,7 +127,7 @@ x0x_808_body:
 .Lcontinue:
     move.l #0xb0, %d0 /* fractional, saturated, nearest-even */
     move.l %d0, %macsr
-    /* Empirical lower-half cubic tau; upper retention/anchors stay unchanged. */
+    /* Empirical lower tau and upper retention curves preserve the existing anchors. */
     move.l 112(%sp), %d6
     cmpi.l #4096, %d6
     bcs .Ldecay_short
@@ -429,7 +486,7 @@ x0x_808_body:
     moveq #0, %d1 /* Only clear an OFF rounding fixed point. */
 .Lmain_node_store:
     movea.l %d1, %a6
-    leakage_half
+    leakage_half 1
     move.l %a6, %d0
     add.l %d4, %d0 /* Main source direct feedthrough, not part of modal state. */
     move.l %d0, (%a1)+

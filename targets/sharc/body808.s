@@ -162,6 +162,7 @@ selected:
     R0=R15+R0;
     I4=R0;
     R11=DM(I4,M5);
+    I2=R11; // Current Decay gates the private upper-segment integration correction.
     F11=FLOAT R11;
     R12=0x38010204;
     F11=F11*F12;
@@ -202,7 +203,7 @@ continue_body:
     I4=R15;
     R1=DM(I4,M5);
 render_body:
-    // shortcut: empirical lower-half cubic tau, not the stock feedback/pot curve.
+    // shortcut: empirical control curves, not the stock feedback/pot curve.
     // Use c-1 to avoid float32 radius bias when c is close to one.
     // S03 equation7/section8.1: nominal 131.006 Hz for 6 ms, then 47.65 Hz.
     R2=0x3e010204;
@@ -973,7 +974,6 @@ tone_reciprocal:
     F11=F4*F6;
     I4=R13;
     R12=DM(I4,M5);
-    I2=R13;
     // Unloaded C47=.47uF into fixed wide-open VR4=100k; full output loading remains open.
     R7=DM(I3,M5);
     R10=DM(I5,M5);
@@ -1044,6 +1044,7 @@ no_main_edge:
     F4=F4+F5;
     R5=0x3c938ddc; // Effective encoded knee; the published physical source value is separate.
     F4=F4+F5;
+    I3=R4; // Common-node distance before the free flow.
     R5=0;
     COMP(F4,F5);
     IF GE JUMP leakage_before_done;
@@ -1164,9 +1165,65 @@ main_node_bias_done:
     F4=F4+F5;
     R5=0x3c938ddc; // Effective encoded knee; the published physical source value is separate.
     F4=F4+F5;
+    R6=I2;
+    R5=16384;
+    COMP(R6,R5);
+    IF LE JUMP leakage_after_clamp;
+    R5=32512;
+    COMP(R6,R5);
+    IF GE JUMP leakage_after_clamp;
+    I12=R4;
+    R5=I3;
+    F6=F4*F5;
+    R13=0;
+    COMP(F6,F13);
+    IF GE JUMP leakage_after_no_crossing;
+    // Remove the trapezoid's excess area when the knee is crossed within a sample.
+    F6=F4-F5;
+    COMP(F6,F13);
+    IF GE JUMP leakage_crossing_positive;
+    F6=F13-F6;
+leakage_crossing_positive:
+    I3=R6;
+    F4=F4*F5;
+    R5=0x7f000000;
+    R5=R5-R6;
+    F13=F6*F5;
+    R6=0x40000000;
+    F13=F6-F13;
+    F5=F5*F13;
+    R6=I3;
+    F13=F6*F5;
+    R6=0x40000000;
+    F13=F6-F13;
+    F5=F5*F13;
+    R6=I3;
+    F13=F6*F5;
+    R6=0x40000000;
+    F13=F6-F13;
+    F5=F5*F13;
+    R6=I3;
+    F13=F6*F5;
+    R6=0x40000000;
+    F13=F6-F13;
+    F5=F5*F13;
+    F4=F4*F5;
+    R5=I12;
+    R13=0;
+    COMP(F5,F13);
+    IF LT JUMP leakage_crossing_add;
+    R5=0;
+leakage_crossing_add:
+    F4=F5-F4;
+    R13=4;
+    JUMP leakage_after_gain;
+leakage_after_no_crossing:
+    R13=4;
+leakage_after_clamp:
     R5=0;
     COMP(F4,F5);
     IF GE JUMP leakage_after_done;
+leakage_after_gain:
     R5=0x3cfa4cfe; // Effective lambda/(2*48000).
     F4=F4*F5;
     F0=F0+F4;
@@ -1246,7 +1303,19 @@ store_body:
     R4=R4+R13;
     I4=R4;
     DM(I4,M5)=R1;
+    // Reconstruct the two pointers borrowed as callback-local integration scratch.
+    R4=I0;
+    R5=192;
+    R4=R4-R5;
+    I2=R4;
     DM(I2,M5)=R12;
+    R4=I0;
+    R5=0x200929c0;
+    R4=R4-R5;
+    R4=LSHIFT R4 BY 1;
+    R5=0x20092940;
+    R4=R4+R5;
+    I3=R4;
     DM(I3,M5)=R7;
     R4=I3;
     R4=R4+R13;

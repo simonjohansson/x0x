@@ -86,7 +86,7 @@ def component(folder=None) -> tuple[dict, bytes]:
     rendered = {}
     decay_cases = []
     for raw in (0, 16384, 32512, 1, 16383, 16385, 32511,
-                2048, 4095, 4096, 8191, 8192, 8193, 12288, 20480, 24576, 28672):
+                2048, 4095, 4096, 8191, 8192, 8193, 12288, 20480, 24320, 24576, 28672):
         frames = FRAMES if raw in (0, 16384, 32512) else 6144
         machine, result, error = render(raw, frames)
         measured = analysis.analyze(result, body808.SAMPLE_RATE)
