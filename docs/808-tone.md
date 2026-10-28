@@ -121,16 +121,65 @@ tails and the unchanged 1e-5 FS gate (maximum error 3.62620e-6 FS). Unchanged
 body execution is reused only after complete source/kernel/cache identity
 checks; it is not relabelled a fresh body run. All eighteen endpoint outputs
 remain byte-identical and seven fresh declared-voice histories are rendered.
-Paired SHARC/full-reference analysis is still pending.
+Fresh committed SHARC execution also passes all 81 full tails and seven
+histories (maximum oracle error 3.98754e-6 FS). Grid peer error is at most
+5.22566e-6 FS; history peer error is at most 5.15674e-6 FS. Every original
+1e-5 FS numeric gate remains unchanged. Only nine dark endpoints are bit-identical
+on SHARC; its bright endpoints retain the documented rounding differences.
+
+The paired comparison covers all 243 training recordings, full 12-second tails
+and seven separate declared-voice histories. ColdFire mean error against the
+documented reference ×4 changes as follows:
+
+| Window | Before, FS | C15, FS | Interior settings improved / regressed |
+| --- | --- | --- | --- |
+| First 150 ms | .06569488 | .06475756 | 56 / 7 |
+| First 500 ms | .04602430 | .04590268 | 44 / 19 |
+| Whole 12 s | .00967961 | .00966089 | 36 / 27 |
+
+This is a 1.4268% mean first-150-ms reduction and .1935% whole-tail reduction,
+not a timbre-acceptance score. All seven early regressions are retained:
+Tone191 at Decay0/32 and Tone223 at Decay0/32/64/96/128. The **27 whole-tail
+regressions** are:
+
+| Tone display | Decay displays |
+| --- | --- |
+| 32 | 255 |
+| 64 | 255 |
+| 96 | 223, 255 |
+| 128 | 223, 255 |
+| 159 | 128, 159, 191, 223, 255 |
+| 191 | 0, 32, 128, 159, 191, 223, 255 |
+| 223 | 0, 32, 64, 96, 128, 159, 191, 223, 255 |
+
+Five histories improve. Both 500 ms-gap pairs regress: default Decay
+.01130335→.01130618 FS (+.0251%), maximum .03083395→.03087979 (+.1487%).
+These retain 32-sample delivered timing, including the musical sequence's
+16-sample scheduling difference; they do not qualify native allocator ownership
+or retained-charge retrigger. As-recorded residuals, every repetition and tiny
+SHARC endpoint differences remain in the measurements. An independent direct
+recomputation of eighteen takes/six settings at five windows and both gain
+scales agrees within 1.052e-15 FS.
 
 Installed DT and DN scenarios complete with the new interior Tone response.
 DT retains only #78 resets. DN passes its current run; its silence checker exits
 after the first exact-zero 100 ms window, so this is not sixty-window stability
-or a fix for historical #20. DN2 qualification is running. The model screen
-above is not a full-tail or native-emulator result. Source images,
+or a fix for historical #20. DN2 passes its full native scenario: 40,217 audio /
+40,218 DSP frames, unchanged normal daemon, no halt/missing blocks/controller
+errors, and both new interior responses. Its 16,000-sample continuation errors
+are 4.310e-10 / 3.063e-8 FS; this snapshot proof is separate from fresh
+full-wave component execution. All existing stock, mixed-model, 909, lock, LFO,
+reload and endpoint checks remain. No observer, wait or tolerance was changed.
+The initial model screen above remains separate from these native results. Source images,
 RC identification and screen receipts are under `out/808-tone-taper/` and
 `out/808-tone-identification/`; new CPU results are under `out/808-tone-c15/`.
 No held-out audio, fitted gain/alignment, physical device or website is used.
+
+Final receipts: `out/808-tone-c15/full-grid/measurements.json`,
+`full-grid/history/measurements.json`, `sharc/paired-summary.json`,
+`full-grid/independent-selected-comparison.json` and `native/qualification.json`.
+The accepted implementation is `3c3db81`; broader #9/#79/#2 fidelity gates and
+the continuing pitch error remain open.
 
 The numerical/native results below are from the completed Tone increment,
 before 909 sound and coupling were added. [808-coupling.md](808-coupling.md)

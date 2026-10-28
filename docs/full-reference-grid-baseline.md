@@ -13,8 +13,13 @@ Decay32 settings regress, and 54 remain byte identical. The correction record
 distinguishes the source/image-bound ColdFire execution from the fresh committed
 SHARC run, the fresh host/C/UI/ColdFire test rerun, and installed-emulator
 evidence. DT reset #78 and DN residue #20 remain failed; the DN2 run passes.
-Those current results do not replace the historical numbers below or close
-fidelity acceptance.
+Those correction results do not replace the historical numbers below or close
+fidelity acceptance. The subsequent [nominal 808 C-taper correction](808-tone.md)
+is qualified at `3c3db81` on both CPUs and all three emulators. It improves
+isolated Tone transfer and mean full-grid error, while retaining seven
+first-150-ms and 27 whole-tail interior regressions. Its current DN run passes,
+but historical #20 remains unresolved. Use that record for current 808 results;
+the tables below preserve the original `65aeaf7` baseline.
 
 | Engine | Training coverage | Actual CPU output per setting | Main measured gaps |
 | --- | --- | --- | --- |

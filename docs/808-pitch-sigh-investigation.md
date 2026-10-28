@@ -1,7 +1,7 @@
 # 808 continuing pitch: measured cause and rejected corrections
 
-The fully qualified audio baseline is `853bb77`; the separate
-[Tone correction](808-tone.md) at `3c3db81` is in qualification. This #9/#79
+The qualified audio checkpoint is the separate
+[Tone correction](808-tone.md) at `3c3db81`; the body is unchanged from `853bb77`. This #9/#79
 investigation changes no production body model or ASM. Its purpose is to distinguish the continuing pitch
 error from output-filter measurements before selecting another correction.
 The website is cancelled and remains unpublished.
@@ -64,7 +64,7 @@ Neither approximate timing text uniquely calibrates this software reference.
 The long pitch error remains open. These tests rule out several isolated
 corrections; they do not justify another trigger constant, a fitted pitch
 envelope or a relaxed acceptance limit. The separate nominal Tone correction
-is now in qualification; the mutually loaded output candidate also worsened
+is qualified; the mutually loaded output candidate also worsened
 the measured raw windows and remains unported. Existing #9 retained-state
 experiments must distinguish a declared component voice from unproved native
 ownership before changing START behavior.

@@ -116,10 +116,11 @@ and delivered-to-audible timing; waveform alignment cannot erase either delay.
 For DN2, the inspected callback has a silent trigger-edge block followed by a
 block carrying `START`. It does not provide a separate accent field or track
 identity. These are adapter constraints, not definitions of the analog trigger
-pulse. The development dependency is pinned to Elekloader PR #200 at
-`2ab5f424c4721e4277d2112a5ae755d9938f50d6`, including its matching voice header
-and adapter. The DN2 foundation must exercise this exact boundary; a merge or
-matching textual ABI name alone is not evidence of compatibility.
+pulse. The development dependency is now the validated upstream Elekloader
+revision `b893c9317936633d7a32829b618c2867ee99277c`, recorded in
+`firmware/manifest.json` and the submodule gitlink. This supersedes the earlier
+PR200-only pin. Keep its matching voice header/adapter and exercise the exact
+boundary; a matching textual ABI name alone is not compatibility evidence.
 
 ### Worked fixture
 
@@ -150,8 +151,8 @@ Digitone's replacement path runs on the main ColdFire, overwriting stock FM
 audio. Its machine companion reapplies AMP/velocity unless `DNM_OWN_ENV` is
 selected. DN2 applies stock AMP/filter processing downstream. Raw kernel tests
 exclude those stages; device tests record their settings and behavior. See the
-[pinned Digitone adapter explanation](https://github.com/irpina/elekloader/blob/c150ac583a4b7e6d64680d5592f4a40f409193f7/docs/ADAPTING.md#L1747-L1839)
-and [inspected DN2 callback](https://github.com/irpina/elekloader/blob/2ab5f424c4721e4277d2112a5ae755d9938f50d6/docs/MACHINES-DN2-VOICE.md#L71-L98).
+[pinned Digitone adapter explanation](https://github.com/irpina/elekloader/blob/b893c9317936633d7a32829b618c2867ee99277c/docs/ADAPTING.md)
+and [inspected DN2 callback](https://github.com/irpina/elekloader/blob/b893c9317936633d7a32829b618c2867ee99277c/docs/MACHINES-DN2-VOICE.md#L81-L90).
 
 The user explicitly approved all three combined saved layouts on 26 October
 2026. Each uses one native identity for both engines and the shared START-latched
@@ -187,6 +188,8 @@ review.
   Physical qualification alone establishes measured deadline margin on the
   exact device/firmware workload.
 
-VST captures and calibrated timbre tolerances remain deferred reference work.
-This contract allows diagnostic and analytic tests to proceed without claiming
-an implemented kick, measured polyphony or original-hardware fidelity.
+Training recordings are available and both engines have a
+[full-grid diagnostic baseline](full-reference-grid-baseline.md); subsequent
+808 qualification is recorded with [the Tone correction](808-tone.md).
+Calibrated timbre acceptance and held-out validation remain open. Diagnostic
+agreement does not establish measured polyphony or original-hardware fidelity.
