@@ -23,13 +23,21 @@ class Decay808Tests(unittest.TestCase):
     def test_lower_curve_and_upper_anchors_preserve_their_durations(self):
         import math
         from x0x.body808 import decay_tau, retention, RETENTION_DEFAULT, RETENTION_MAX, MIN_TAU
-        for raw, tau in ((0, MIN_TAU), (4096, .04786953125),
-                         (8192, .08129375), (12288, .11814609375), (16384, .143)):
+        for raw, tau in ((0, MIN_TAU), (4096, .046995359375),
+                         (8192, .078962625), (12288, .115523578125), (16384, .143)):
             self.assertAlmostEqual(decay_tau(raw), tau, delta=1e-12)
         self.assertEqual(retention(16384), RETENTION_DEFAULT)
         self.assertEqual(retention(32512), RETENTION_MAX)
         for raw in (0, 16384, 32512):
             self.assertTrue(math.isfinite(retention(raw)))
+
+    def test_lower_refinement_preserves_minimum_and_every_upper_word(self):
+        from x0x import body808 as body
+        self.assertEqual(body.retention(0), body.RETENTION_MIN)
+        for raw in range(16384, 32513):
+            p = (raw-16384)/16128
+            expected = body.RETENTION_DEFAULT + (body.RETENTION_MAX-body.RETENTION_DEFAULT)*(p+.9499298*p*(1-p))
+            self.assertEqual(body.retention(raw), expected)
 
     def test_upper_curve_extends_interiors_without_moving_anchors(self):
         from x0x.body808 import retention, UPPER_SHAPE, RETENTION_DEFAULT, RETENTION_MAX
@@ -42,12 +50,12 @@ class Decay808Tests(unittest.TestCase):
             self.assertGreater(retention(raw), previous)
             self.assertAlmostEqual(retention(raw), expected, delta=2e-16)
 
-    def test_short_segment_preserves_every_later_word_and_joins_smoothly(self):
+    def test_short_segment_matches_lower_curve_and_joins_smoothly(self):
         import math
         from x0x import body808 as body
         for raw in range(body.SHORT_END, body.DEFAULT_DECAY):
             x = raw / body.DEFAULT_DECAY
-            tau = .0333 + (.143-.0333) * (x*x + 1.5*x*x*(1-x))
+            tau = .0333 + (.143-.0333) * (x*x + 1.33*x*x*(1-x))
             self.assertEqual(body.retention(raw), math.exp(-1/(48000*tau)))
         at = body.SHORT_END
         self.assertAlmostEqual(body.retention(at)-body.retention(at-1),

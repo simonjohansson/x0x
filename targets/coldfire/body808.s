@@ -141,12 +141,12 @@ x0x_808_body:
     move.l %d0, %acc0
     mac.l %d6, %d6, %acc0
     movclr.l %acc0, %d6 /* x*x */
-    /* Empirical q=x*x+1.5*x*x*(1-x), preserving both endpoints. */
+    /* Empirical q=x*x+1.33*x*x*(1-x), preserving both endpoints. */
     move.l #2147483647, %d0
     sub.l %d1, %d0
     mac.l %d6, %d0, %acc0
     movclr.l %acc0, %d0 /* x*x*(1-x) */
-    move.l #805306368, %d1 /* k/4 in Q31: bounded training calibration k=1.5. */
+    move.l #714038313, %d1 /* k/4 in Q31: bounded training calibration k=1.33. */
     mac.l %d0, %d1, %acc0
     movclr.l %acc0, %d0
     lsl.l #2, %d0
@@ -217,7 +217,7 @@ x0x_808_body:
     sub.l %d1, %d0
     mac.l %d6, %d0, %acc0
     movclr.l %acc0, %d0 /* x*x*(1-x) */
-    move.l #873619983, %d1 /* k/4 in Q31: C1 short-segment retention shape. */
+    move.l #875011060, %d1 /* k/4 in Q31: C1 short-segment retention shape. */
     mac.l %d0, %d1, %acc0
     movclr.l %acc0, %d0
     lsl.l #2, %d0
@@ -226,22 +226,22 @@ x0x_808_body:
     beq .Lsteady_short
     move.l #2144842869, %d2
     move.l #36784832, %d3
-    move.l #1390757, %d0
-    movea.l #23852, %a2
+    move.l #1373382, %d0
+    movea.l #23554, %a2
     movea.l #-2978300, %a3
-    movea.l #-1931, %a4
+    movea.l #-1907, %a4
     movea.l #213815, %a5
-    movea.l #-112603, %a6
+    movea.l #-111196, %a6
     bra .Ldecay_coefficients
 .Lsteady_short:
     move.l #2145116554, %d2
     move.l #13380060, %d3
-    move.l #1390934, %d0
-    movea.l #8676, %a2
+    move.l #1373557, %d0
+    movea.l #8567, %a2
     movea.l #-2978427, %a3
-    movea.l #-1931, %a4
+    movea.l #-1907, %a4
     movea.l #526921, %a5
-    movea.l #-309625, %a6
+    movea.l #-305756, %a6
     bra .Ldecay_coefficients
 .Ldecay_high:
     subi.l #16384, %d6
@@ -594,17 +594,17 @@ x0x_808_body:
     .long 477924137,220915,96699,81
     .long 50159252,-30561512,-1356,0
 .Lmain_attack_short_data:
-    .long 394879193,1358097,-560927
-    .long -28518806,14892220,-11539
-    .long 653898,2093,-928
-    .long -45158,24665,-19
+    .long 394879193,1334210,-546999
+    .long -28518806,14705902,-10865
+    .long 653898,2055,-905
+    .long -45158,24356,-18
 .Lmain_steady_short_data:
-    .long 54583005,1126432,-560951
-    .long -9665186,5594715,-43198
-    .long 90384,1843,-928
-    .long -15898,9265,-71
+    .long 54583005,1105439,-547022
+    .long -9665186,5523937,-41060
+    .long 90384,1809,-905
+    .long -15898,9148,-68
 .Lleakage_short_data:
-    .long 80627205,-47423645,1772721,-461012
-    .long 464180079,11688025,4714554,238553
-    .long 373013863,-223173810,-72332,31
+    .long 80627205,-46812169,1737297,-443258
+    .long 464180079,11601471,4593397,230814
+    .long 373013863,-220386599,-70536,30
     .size x0x_808_body, .-x0x_808_body

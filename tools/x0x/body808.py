@@ -9,7 +9,7 @@ SAMPLE_RATE = 48000
 # Rounded settled-body pitch from #2's five-setting training diagnostic, not circuit alignment.
 FREQUENCY = 47.65
 TAU = 0.143
-LOWER_SHAPE = 1.5
+LOWER_SHAPE = 1.33
 UPPER_SHAPE = .9499298  # Training duration fit, bounded below one for a monotonic upper curve.
 MIN_TAU = .01922924  # Minimum-Decay duration fit, confined to the short segment.
 SHORT_END = 4096
