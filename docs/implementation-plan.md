@@ -32,6 +32,11 @@ histories pass numeric gates. All three native scenarios complete: DT retains
 #78, DN passes this run without resolving historical #20, and DN2 passes.
 Continue reference-informed Q43 feedback calibration and the omitted output
 stages; exact C-taper/whole-engine/held-out fidelity remains open.
+The active [effective feedback calibration](808-feedback-calibration.md) changes
+only the two Q43 coefficients. Its 81-setting model screen improves the late
+pitch and longer mean errors while retaining short-setting/onset regressions.
+Host/C UI and CF component gates pass; full SHARC, paired tails and native
+qualification remain in progress before accepting this next increment.
 
 The 909 [diode shaper](909-shaping.md), [C9/IC12 Tune path](909-tune.md) and
 [loaded ENV1/Q12 VCA](909-vca.md) run on both CPUs and all three emulators.

@@ -1,5 +1,10 @@
 # 808 Q43 leakage and pitch sigh
 
+This document preserves the original source-prior leakage increment. The
+subsequent [effective coefficient calibration](808-feedback-calibration.md)
+updates the two parameters against training recordings and increases oracle
+precision; use that record for current parameters and qualification gates.
+
 This #9/#79 increment adds amplitude-dependent Q43 leakage to both CPU
 renderers. It preserves the calibrated 47.65 Hz quiet-body pole, existing Decay
 anchors, shaped main/C39 inputs, voltage encoding and approved saved controls.

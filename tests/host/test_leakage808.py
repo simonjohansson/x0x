@@ -5,8 +5,9 @@ from x0x import body808, leakage808 as leakage, pulse808, retrigger808
 
 
 class Leakage808Tests(unittest.TestCase):
-    def test_hard_knee_sign_and_half_kick_match_nonsingular_physical_kcl(self):
-        self.assertEqual(leakage.KNEE,-.556/60)
+    def test_hard_knee_sign_and_half_kick_match_configured_capacitor_kcl(self):
+        self.assertEqual(leakage.KNEE,-.018011980654046803)
+        self.assertEqual(leakage.LEAK_RATE,2933.2119129807006)
         self.assertEqual(leakage.half_kick(0j,0.,16384),0j)
         for raw in (0,16384,32512):
             cw,cy,gain,n = leakage.coefficients(raw)
@@ -15,7 +16,7 @@ class Leakage808Tests(unittest.TestCase):
             common = main-q1
             after = leakage.half_kick(state,main,raw)
             self.assertAlmostEqual(-cw*after.real-cy*after.imag,q1,places=14)
-            ic = leakage.SLOPE*min(common*60+.556,0.)
+            ic = leakage.SLOPE*min(common*60-leakage.KNEE_V,0.)
             delta_q2 = -(leakage.R165/(leakage.R165+leakage.R166)/15e-9)*ic/60/(2*48000)
             self.assertAlmostEqual(after.real-state.real,-delta_q2,places=14)
             self.assertAlmostEqual(after.imag-state.imag,n*delta_q2,places=14)
@@ -48,7 +49,7 @@ class Leakage808Tests(unittest.TestCase):
             self.assertLess(max(abs(samples[i+2]-2*rho*math.cos(theta)*samples[i+1]
                                     +rho*rho*samples[i]) for i in range(at,at+1000)),1e-10)
 
-    def test_coefficient_range_has_fixed_source_parameters_and_refinement_converges(self):
+    def test_coefficient_range_has_fixed_effective_parameters_and_refinement_converges(self):
         gain = leakage.LEAK_RATE/(2*48000)
         for raw in range(32513):
             cw,cy,g,n = leakage.coefficients(raw)
@@ -56,9 +57,9 @@ class Leakage808Tests(unittest.TestCase):
             self.assertLess(max(cw,cy,g,n),1.)
             self.assertEqual(g,gain)
             self.assertAlmostEqual(cw,cy*n,places=14)
-        for raw in (0,16384,32512):
+        for raw in (0,4096,8192,12288,16384,20224,24320,28416,32512):
             coarse = leakage.reference(24000,raw)
-            fine = leakage.reference(24000,raw,subdivisions=8)
+            fine = leakage.reference(24000,raw,subdivisions=16)
             self.assertLess(max(abs(a-b) for a,b in zip(coarse,fine)),1e-7)
 
     def test_native_snapshot_continuation_matches_fresh_reference_and_chunking(self):

@@ -1,6 +1,6 @@
-"""S03 Eq8/9 Q43 leakage on the current calibrated 808 modal core.
+"""Reference-calibrated effective Q43 feedback on the 808 modal core.
 
-shortcut: the fitted softplus is replaced by its exact hard-knee asymptote;
+shortcut: retain S03's hard-knee form with effective calibrated coefficients;
 complete feedback, finite transistor behavior and residual retrigger remain open.
 """
 import cmath
@@ -8,12 +8,14 @@ import math
 
 from . import body808, pulse808, retrigger808
 
-KNEE_V = -.5560  # Original S03 p6; OCR loses this minus sign.
-SLOPE = 1.4765e-5
 R165, R166 = 47000.,6800.
 RATE = body808.SAMPLE_RATE
-KNEE = KNEE_V*retrigger808.VOLT_SCALE
-LEAK_RATE = R165/(R165+R166)/retrigger808.C42*SLOPE
+# Effective FS/rate calibration; S03's prior was -.556 V / 1.4765e-5 A/V.
+KNEE = -.018011980654046803
+LEAK_RATE = 2933.2119129807006
+# Equivalent encoded KCL parameters, not measured reference transistor values.
+KNEE_V = KNEE/retrigger808.VOLT_SCALE
+SLOPE = LEAK_RATE*retrigger808.C42*(R165+R166)/R165
 
 
 def coefficients(decay_raw):
@@ -75,7 +77,7 @@ def continue_reference(state, main, companion, decay_raw, frames):
         raise ValueError("frame count must be a nonnegative integer")
     if not all(math.isfinite(v) for v in (state.real,state.imag,main,companion)):
         raise ValueError("continuation state must be finite")
-    advance = _settled_stepper(decay_raw,4)
+    advance = _settled_stepper(decay_raw,8)
     samples = []
     for _ in range(frames):
         state,main,companion = advance(state,main,companion)
@@ -83,7 +85,7 @@ def continue_reference(state, main, companion, decay_raw, frames):
     return samples,(state,main,companion)
 
 
-def reference(frames, decay_raw=body808.DEFAULT_DECAY, changes=None, *, split=False, subdivisions=4):
+def reference(frames, decay_raw=body808.DEFAULT_DECAY, changes=None, *, split=False, subdivisions=8):
     """Independent fine-step RK4 ODE, or CPU candidate Strang split for comparison.
 
     Source nodes are advanced analytically. Before Q43 releases at 6 ms, the

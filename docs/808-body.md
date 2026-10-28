@@ -11,6 +11,9 @@ stays unchanged. DECAY changes feedback retention on every block, and TNTUN now
 drives the [passive Tone RC stage](808-tone.md). ATTK is ignored in 808 mode.
 The [continuing-pitch investigation](808-pitch-sigh-investigation.md) identifies
 Q43 as the late-error source and records the corrections rejected before porting.
+The subsequent [effective feedback calibration](808-feedback-calibration.md)
+changes the two internal Q43 coefficients together; its CPU/native qualification
+and retained early/short-setting regressions are recorded separately.
 The [first 909 body](909-body.md) follows separately. The [reference-informed Decay increment](808-decay.md) shortens the
 previously excessive tails. The raw-body equations below
 describe the 808 oscillator before Tone and the [C47 coupling filter](808-coupling.md).
@@ -32,7 +35,7 @@ approximations. At 6 ms, both CPUs and the oracle convert the modal state to
 retain C41/C42 voltage. No per-hit normalization or alignment is introduced.
 
 The independent oracle solves the pre-switch shaped inputs analytically and
-integrates the post-switch nonlinear ODE with four RK4 substeps per sample.
+integrates the post-switch nonlinear ODE with eight RK4 substeps per sample.
 The CPU ports instead use symmetric leakage/linear splitting; the oracle does
 not copy that recurrence. The old fixed sum
 of 48 y kicks is historical; it is no longer the current main-input model.

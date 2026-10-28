@@ -727,7 +727,7 @@ no_main_edge:
     R4=DM(I4,M5);
     R4=PASS R4;
     IF NE JUMP leakage_before_done;
-    // S03 Eq8 hard knee; the leakage half-flow keeps C41 charge fixed.
+    // Effective calibrated hard-knee flow; the half-flow keeps C41 charge fixed.
     R4=I1;
     R5=8;
     R4=R4+R5;
@@ -743,12 +743,12 @@ no_main_edge:
     F4=F4+F5;
     R5=I5;
     F4=F4+F5;
-    R5=0x3c17d338; // .556 V in the existing 1/60 voltage encoding.
+    R5=0x3c938ddc; // Effective encoded knee; the published physical source value is separate.
     F4=F4+F5;
     R5=0;
     COMP(F4,F5);
     IF GE JUMP leakage_before_done;
-    R5=0x3c12c274;
+    R5=0x3cfa4cfe; // Effective lambda/(2*48000).
     F4=F4*F5;
     F0=F0+F4;
     R5=I1;
@@ -846,7 +846,7 @@ main_node_bias_done:
     R4=DM(I4,M5);
     R4=PASS R4;
     IF NE JUMP leakage_after_done;
-    // S03 Eq8 hard knee; the leakage half-flow keeps C41 charge fixed.
+    // Effective calibrated hard-knee flow; the half-flow keeps C41 charge fixed.
     R4=I1;
     R5=8;
     R4=R4+R5;
@@ -862,12 +862,12 @@ main_node_bias_done:
     F4=F4+F5;
     R5=I5;
     F4=F4+F5;
-    R5=0x3c17d338; // .556 V in the existing 1/60 voltage encoding.
+    R5=0x3c938ddc; // Effective encoded knee; the published physical source value is separate.
     F4=F4+F5;
     R5=0;
     COMP(F4,F5);
     IF GE JUMP leakage_after_done;
-    R5=0x3c12c274;
+    R5=0x3cfa4cfe; // Effective lambda/(2*48000).
     F4=F4*F5;
     F0=F0+F4;
     R5=I1;
