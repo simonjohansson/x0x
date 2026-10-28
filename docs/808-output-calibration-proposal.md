@@ -1,12 +1,16 @@
-# Proposal: fixed internal 808 output calibration
+# 808 output-gain decision
 
-Decision pending. No output coefficient has been fitted or applied.
+**Decision, 28 October 2026: keep the current internal gain.** The human
+declined reference-trained output-volume calibration. No gain coefficient was
+fitted or applied; the existing volts-to-digital encoding and downstream native
+track-level path stay unchanged. Continue feedback/control/excitation work at
+that fixed scale, retaining amplitude mismatches in the raw comparisons.
 
 The [render contract](render-contract.md) and #9 include fixed internal output
 calibration, with native track level handling volume. The continuation loop
-also says no fitted gain. Clarify whether that restriction bans fitting an
-engine coefficient, or bans gain correction during the reference comparison.
-The existing raw comparison remains the evidence baseline either way.
+also says no fitted gain. The human resolved that ambiguity by retaining the
+current internal gain. The earlier proposal below is preserved as declined
+history, not a pending task or permission to fit gain.
 
 ## Current evidence
 
@@ -26,7 +30,7 @@ and envelope errors remain. No result promises that a gain constant solves them.
 Raw source/render hashes and diagnostics are in
 `out/808-output-calibration-proposal/measurements.json`.
 
-## Proposed bounded step
+## Declined proposal (historical)
 
 Fit **one positive 808 engine constant**, shared by both CPUs and every setting,
 from the existing training corpus with a declared raw first-500-ms objective.
@@ -48,5 +52,5 @@ result to pass, or treat a trained constant as a fidelity acceptance result.
 Qualify any adopted constant on both actual CPU components and DT/DN/DN2
 installed emulators, with existing native #78/#20 distinctions retained.
 
-The alternative is to keep the current unit conversion and continue circuit
-modeling. No extra LEVEL knob or native gain multiplication is proposed.
+The selected path is to keep the current unit conversion and continue circuit
+modeling. No extra LEVEL knob or native gain multiplication is introduced.

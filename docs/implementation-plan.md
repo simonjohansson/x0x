@@ -64,9 +64,12 @@ regressions. All 135 upper-Decay quiet-pole windows fail frozen inference
 criteria; this neither changes nor confirms the current upper law. Preserve
 these findings rather than refitting rejected windows. See the
 [remaining source/model work](808-pitch-sigh-investigation.md).
-The planned [fixed internal output calibration](808-output-calibration-proposal.md)
-awaits clarification of the loop's no-fitted-gain restriction. No gain is fitted
-or applied; existing raw reference comparison remains unchanged.
+The human [declined output-gain fitting](808-output-calibration-proposal.md):
+keep current internal gain and the raw reference comparison unchanged. Resume
+existing lower-interior Decay work at that fixed scale; screen one bounded
+control-shape correction preserving all three anchors and the upper law before
+any CPU adoption. Prior rejected upper bends and unqualified quiet-pole
+estimates are not new calibration targets.
 
 The 909 [diode shaper](909-shaping.md), [C9/IC12 Tune path](909-tune.md) and
 [loaded ENV1/Q12 VCA](909-vca.md) run on both CPUs and all three emulators.
