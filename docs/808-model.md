@@ -294,3 +294,12 @@ The callback/coefficient artifact SHA256 is
 No device has been flashed. The next required equipment is a physical Digitone II
 on OS 1.12 for native callback/routing, audible output, lifecycle and measured
 voice-count/deadline checks.
+
+The listening player now also offers **Can’t tell**. It exports that choice as
+`cant-tell` with `correct: null`, reports it separately and excludes it from the
+right/wrong denominator. If any trial is an abstention, the session's chance-tail
+probability is `null`; a selectively answered subset is not presented as a
+forced-choice significance result. All-A/B sessions retain the original scoring.
+The response policy is versioned as `a-b-or-cant-tell-v1`, and the exported
+manifest records the exact player-template hash. Historical results/stimuli are
+unchanged. The controller checks include all-uncertain and mixed sessions.

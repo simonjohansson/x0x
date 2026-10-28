@@ -194,6 +194,9 @@ def listening_report(output, events, references, predictions, manifest):
             (output / filename).write_bytes(stream.getvalue())
             data[name + '_download'] = filename
         stimuli.append(data)
+    template_path = Path(__file__).with_suffix('.html')
+    manifest = dict(manifest, listening_template_sha256=fit808.digest(template_path),
+                    response_policy='a-b-or-cant-tell-v1')
     payload = json.dumps(dict(stimuli=stimuli, gain=gain, gain_applied=True,
                              playback_encoding='PCM_24', manifest=manifest), allow_nan=False).replace('<', '\\u003c')
     template = Path(__file__).with_suffix('.html').read_text()

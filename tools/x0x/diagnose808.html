@@ -25,12 +25,12 @@ button:disabled{opacity:.45;cursor:default}button.primary{background:#006d72;col
 <audio id="player" controls preload="metadata" aria-label="Listening comparison playback" hidden></audio>
 <section>
  <h2>Blind comparison</h2>
- <p>Listen to A and B, then X. Choose whether X is A or B. The test has 16 trials, one per setting, in random order. A/B identities and X change independently each trial; answers are revealed only at the end.</p>
+ <p>Listen to A and B, then X. Choose whether X is A or B, or choose “Can’t tell” when you cannot distinguish them. The test has 16 trials, one per setting, in random order. A/B identities and X change independently each trial; answers are revealed only at the end.</p>
  <button id="start" class="primary">Start 16-trial test</button>
  <div id="trial" hidden>
   <p id="progress" class="status"></p>
   <div class="buttons"><button id="a">Play A</button><button id="b">Play B</button><button id="x">Play X</button><button class="stop">Stop</button></div>
-  <div class="buttons"><button id="answer-a">X matches A</button><button id="answer-b">X matches B</button></div>
+  <div class="buttons"><button id="answer-a">X matches A</button><button id="answer-b">X matches B</button><button id="answer-uncertain">Can’t tell</button></div>
  </div>
  <p id="result" role="status" aria-live="polite"></p>
  <button id="download" disabled>Download results</button>
@@ -82,19 +82,20 @@ $('start').onclick=()=>{
  for(let i=order.length-1;i>0;i--){const j=randomInt(i+1);[order[i],order[j]]=[order[j],order[i]]}
  session={started:new Date().toISOString(),trials:order.map(index=>{
   const swap=randomInt(2);return {index,a:swap?'candidate':'recorded',b:swap?'recorded':'candidate',x:randomInt(2)?'a':'b'};
- }),answers:[]};
+ }),answers:[],response_policy:'a-b-or-cant-tell-v1'};
  $('result').textContent='';$('download').disabled=true;$('preview').hidden=true;$('trial').hidden=false;$('start').hidden=true;showTrial();
 };
 function answer(choice){
  if(!session||session.answers.length===session.trials.length)return;
- stop();const trial=session.trials[session.answers.length];session.answers.push({choice,correct:choice===trial.x});
+ stop();const trial=session.trials[session.answers.length];session.answers.push({choice,correct:choice==='cant-tell'?null:choice===trial.x});
  if(session.answers.length<session.trials.length){showTrial();return}
- const correct=session.answers.filter(a=>a.correct).length,p=binomialTail(correct,session.trials.length);
- session.finished=new Date().toISOString();session.correct=correct;session.chance_tail_probability=p;
+ const correct=session.answers.filter(a=>a.correct===true).length,uncertain=session.answers.filter(a=>a.choice==='cant-tell').length;
+ const decided=session.trials.length-uncertain,p=uncertain?null:binomialTail(correct,decided);
+ session.finished=new Date().toISOString();session.correct=correct;session.decided=decided;session.cant_tell=uncertain;session.chance_tail_probability=p;
  $('trial').hidden=true;$('preview').hidden=false;$('start').hidden=false;$('start').textContent='Start another session';$('download').disabled=false;
- $('result').textContent=`${correct} / ${session.trials.length} correct.\nChance tail probability: ${p.toFixed(4)}.\n`+(p<.05?'This session provides evidence that you could distinguish the sounds.':'This session did not establish that you could distinguish the sounds. It does not prove equivalence.');
+ $('result').textContent=uncertain?`${correct} / ${decided} decided answers correct; ${uncertain} / ${session.trials.length} can’t tell.\nCan’t-tell responses are not wrong answers. No chance probability is calculated for a session with abstentions; this descriptive result does not prove equivalence.`:`${correct} / ${decided} correct.\nChance tail probability: ${p.toFixed(4)}.\n`+(p<.05?'This session provides evidence that you could distinguish the sounds.':'This session did not establish that you could distinguish the sounds. It does not prove equivalence.');
 }
-$('answer-a').onclick=()=>answer('a');$('answer-b').onclick=()=>answer('b');
+$('answer-a').onclick=()=>answer('a');$('answer-b').onclick=()=>answer('b');$('answer-uncertain').onclick=()=>answer('cant-tell');
 $('download').onclick=()=>{
  if(!session?.finished)return;
  const result={scope:data.manifest.scope||'Fitting-set ABX; no generalization or universal-inaudibility claim',gain:data.gain,session,

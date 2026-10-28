@@ -49,6 +49,29 @@ for(let i=0;i<16;i++){
 }
 assert.equal(vm.runInContext('session.correct',context),0);
 assert.match(element('result').textContent,/does not prove equivalence/);
+element('start').onclick();
+for(let i=0;i<16;i++)element('answer-uncertain').onclick();
+assert.equal(vm.runInContext('session.correct',context),0);
+assert.equal(vm.runInContext('session.decided',context),0);
+assert.equal(vm.runInContext('session.cant_tell',context),16);
+assert.equal(vm.runInContext('session.chance_tail_probability',context),null);
+assert.equal(vm.runInContext('session.answers.every(a=>a.correct===null)',context),true);
+assert.match(element('result').textContent,/16 \/ 16 can’t tell/);
+element('download').onclick();
+assert.equal(exported.session.response_policy,'a-b-or-cant-tell-v1');
+assert.equal(exported.session.cant_tell,16);
+element('start').onclick();
+for(let i=0;i<16;i++){
+  const expected=vm.runInContext('session.trials[session.answers.length].x',context);
+  element(i<4?'answer-uncertain':'answer-'+expected).onclick();
+}
+assert.equal(vm.runInContext('session.correct',context),12);
+assert.equal(vm.runInContext('session.decided',context),12);
+assert.equal(vm.runInContext('session.cant_tell',context),4);
+assert.equal(vm.runInContext('session.chance_tail_probability',context),null);
+assert.match(element('result').textContent,/12 \/ 12 decided answers correct/);
+element('answer-uncertain').onclick();
+assert.equal(vm.runInContext('session.answers.length',context),16);
 Promise.all([element('recorded').onclick(),element('candidate').onclick()]).then(()=>{
   assert.equal(starts,2);assert.equal(stops,1);
   assert.equal(element('playing').textContent,'Playing candidate');
