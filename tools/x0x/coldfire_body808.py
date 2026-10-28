@@ -115,7 +115,7 @@ def run(folder=None):
     image, _ = cpu.build_coldfire(folder, combined)
     cases, default_words, worst = [], [], 0
     frames = body808.SAMPLE_RATE // 2
-    for raw in (0, 1, 4096, 8191, 8192, 8193, 12288,
+    for raw in (0, 1, 2048, 4095, 4096, 8191, 8192, 8193, 12288,
                 16383, 16384, 16385, 32511, 32512):
         runner = Runner(image, state_words=5)
         assert runner.render(decay_raw=raw) == [0] * 32, "untriggered zero state is not silent"

@@ -22,8 +22,8 @@ class Body808Tests(unittest.TestCase):
 class Decay808Tests(unittest.TestCase):
     def test_lower_curve_corrects_interiors_and_preserves_all_upper_words(self):
         import math
-        from x0x.body808 import decay_tau, retention, RETENTION_DEFAULT, RETENTION_MAX
-        for raw, tau in ((0, .0333), (4096, .04786953125),
+        from x0x.body808 import decay_tau, retention, RETENTION_DEFAULT, RETENTION_MAX, MIN_TAU
+        for raw, tau in ((0, MIN_TAU), (4096, .04786953125),
                          (8192, .08129375), (12288, .11814609375), (16384, .143)):
             self.assertAlmostEqual(decay_tau(raw), tau, delta=1e-12)
         for raw in range(16384, 32513):
@@ -32,10 +32,21 @@ class Decay808Tests(unittest.TestCase):
         for raw in (0, 16384, 32512):
             self.assertTrue(math.isfinite(retention(raw)))
 
+    def test_short_segment_preserves_every_later_word_and_joins_smoothly(self):
+        import math
+        from x0x import body808 as body
+        for raw in range(body.SHORT_END, body.DEFAULT_DECAY):
+            x = raw / body.DEFAULT_DECAY
+            tau = .0333 + (.143-.0333) * (x*x + 1.5*x*x*(1-x))
+            self.assertEqual(body.retention(raw), math.exp(-1/(48000*tau)))
+        at = body.SHORT_END
+        self.assertAlmostEqual(body.retention(at)-body.retention(at-1),
+                               body.retention(at+1)-body.retention(at), delta=1e-10)
+
     def test_feedback_positions_give_monotonic_decay_without_changing_pitch(self):
-        from x0x.body808 import decay_tau
+        from x0x.body808 import decay_tau, MIN_TAU
         lengths = []
-        for raw, target in ((0, .0333), (16384, .143), (32512, .366)):
+        for raw, target in ((0, MIN_TAU), (16384, .143), (32512, .366)):
             measured = analyze(reference(SAMPLE_RATE // 2, raw), SAMPLE_RATE)
             tau = measured['decay_positive']['time_constant_s']
             self.assertAlmostEqual(tau, decay_tau(raw), delta=1e-5)

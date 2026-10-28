@@ -72,6 +72,8 @@ x0x_808_body:
     move.l %d0, %macsr
     /* Empirical lower-half cubic tau; upper retention/anchors stay unchanged. */
     move.l 112(%sp), %d6
+    cmpi.l #4096, %d6
+    bcs .Ldecay_short
     cmpi.l #16384, %d6
     bge .Ldecay_high
     move.l #131072, %d0 /* low branch excludes 16384, keeping the product signed-positive */
@@ -145,6 +147,45 @@ x0x_808_body:
     movea.l #308271, %a5
     movea.l #-229334, %a6
     bra .Ldecay_coefficients
+.Ldecay_short:
+    move.l #524288, %d0 /* short branch excludes 4096, keeping the product signed-positive */
+    mulu.l %d0, %d6
+    move.l %d6, %d1 /* Preserve x until the short-coordinate correction. */
+    moveq #0, %d0
+    move.l %d0, %acc0
+    mac.l %d6, %d6, %acc0
+    movclr.l %acc0, %d6 /* x*x */
+    /* Match retention and its slope at raw4096; q is the new segment coordinate. */
+    move.l #2147483647, %d0
+    sub.l %d1, %d0
+    mac.l %d6, %d0, %acc0
+    movclr.l %acc0, %d0 /* x*x*(1-x) */
+    move.l #873619983, %d1 /* k/4 in Q31: C1 short-segment retention shape. */
+    mac.l %d0, %d1, %acc0
+    movclr.l %acc0, %d0
+    lsl.l #2, %d0
+    add.l %d0, %d6 /* q replaces only the existing squared coordinate. */
+    tst.l %d7
+    beq .Lsteady_short
+    move.l #2144842869, %d2
+    move.l #36784832, %d3
+    move.l #1390757, %d0
+    movea.l #23852, %a2
+    movea.l #-2978300, %a3
+    movea.l #-1931, %a4
+    movea.l #213815, %a5
+    movea.l #-112603, %a6
+    bra .Ldecay_coefficients
+.Lsteady_short:
+    move.l #2145116554, %d2
+    move.l #13380060, %d3
+    move.l #1390934, %d0
+    movea.l #8676, %a2
+    movea.l #-2978427, %a3
+    movea.l #-1931, %a4
+    movea.l #526921, %a5
+    movea.l #-309625, %a6
+    bra .Ldecay_coefficients
 .Ldecay_high:
     subi.l #16384, %d6
     move.l #133152, %d0 /* floor(2^31 / 16128) */
@@ -192,6 +233,8 @@ x0x_808_body:
     movea.l %d0, %a2 /* companion Gy */
     /* Main exponential-input and ON-bias gains, quadratic over each Decay segment. */
     move.l 112(%sp), %d0
+    cmpi.l #4096, %d0
+    bcs .Lmain_short
     cmpi.l #16384, %d0
     bge .Lmain_high
     tst.l %d7
@@ -208,6 +251,15 @@ x0x_808_body:
     bra.s .Lmain_interpolate
 .Lmain_steady_high:
     lea .Lmain_steady_high_data(%pc), %a6
+    bra .Lmain_interpolate
+.Lmain_short:
+    tst.l %d7
+    beq .Lmain_steady_short
+    lea .Lmain_attack_short_data(%pc), %a6
+    bra .Lmain_interpolate
+.Lmain_steady_short:
+    lea .Lmain_steady_short_data(%pc), %a6
+    bra .Lmain_interpolate
 .Lmain_interpolate:
     move.l #2147483647, %d0
     sub.l %d6, %d0
@@ -248,12 +300,17 @@ x0x_808_body:
     tst.l %d7
     bne .Lleakage_ready
     move.l 112(%sp), %d0
+    cmpi.l #4096, %d0
+    bcs .Lleakage_short
     cmpi.l #16384, %d0
     bge.s .Lleakage_high
     lea .Lleakage_low_data(%pc), %a6
     bra.s .Lleakage_coefficients
 .Lleakage_high:
     lea .Lleakage_high_data(%pc), %a6
+    bra .Lleakage_coefficients
+.Lleakage_short:
+    lea .Lleakage_short_data(%pc), %a6
 .Lleakage_coefficients:
     /* Cubic remainder reduces coefficient error before output calibration. */
     move.l %d6, %d0
@@ -464,4 +521,18 @@ x0x_808_body:
     .long 11162980,-6799472,4412,-1375
     .long 477924137,220915,96699,81
     .long 50159252,-30561512,-1356,0
+.Lmain_attack_short_data:
+    .long 394879193,1358097,-560927
+    .long -28518806,14892220,-11539
+    .long 653898,2093,-928
+    .long -45158,24665,-19
+.Lmain_steady_short_data:
+    .long 54583005,1126432,-560951
+    .long -9665186,5594715,-43198
+    .long 90384,1843,-928
+    .long -15898,9265,-71
+.Lleakage_short_data:
+    .long 80627205,-47423645,1772721,-461012
+    .long 464180079,11688025,4714554,238553
+    .long 373013863,-223173810,-72332,31
     .size x0x_808_body, .-x0x_808_body

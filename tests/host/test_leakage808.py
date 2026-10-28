@@ -9,13 +9,14 @@ from x0x import body808, leakage808 as leakage, pulse808, retrigger808
 class Leakage808Tests(unittest.TestCase):
     def test_cubic_coefficient_remainder_improves_existing_model_precision(self):
         source = (Path(__file__).resolve().parents[2] / 'targets/coldfire/body808.s').read_text()
-        for label, lo, hi in (('low', 0, 16384), ('high', 16384, 32512)):
+        for label, lo, hi in (('short', 0, 4096), ('low', 4096, 16384), ('high', 16384, 32512)):
             block = source.split(f'.Lleakage_{label}_data:\n')[1].split('\n.')[0]
             table = [[int(word) / 2**31 for word in line.split(',')]
                      for line in re.findall(r'\.long ([^\n]+)', block)]
             self.assertEqual([len(row) for row in table], [4, 4, 4])
             old_error = new_error = 0.
-            left, right = body808.retention(lo), body808.retention(hi)
+            left = body808.LEGACY_RETENTION_MIN if label == 'low' else body808.retention(lo)
+            right = body808.retention(hi)
             for raw in range(lo, hi + 1, 17):
                 t = (body808.retention(raw) - left) / (right - left)
                 exact = leakage.coefficients(raw)
