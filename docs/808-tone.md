@@ -23,7 +23,7 @@ The selected network is
 S01 p.16 identifies the original part as EVH-LWAD25C14, Roland 13219313,
 10 kΩ(C). The p.9 wiring uses R23: increasing brightness reduces resistance
 from 10 kΩ toward zero. A modern Panasonic C-taper specification places R23
-at about 15% halfway through travel; it does not establish the exact vintage
+at about 15% halfway through travel ([S49, pp.1–2](../research/manifest-components.json)); it does not establish the exact vintage
 track. Use a bounded rational approximation to that nominal midpoint:
 
 `t=tone_raw/32512`, `l=(1-t)/(1+(14/3)*t)`.
@@ -109,9 +109,25 @@ are unchanged; this does not fix the continuing Q43 pitch error.
 191 tracked host tests and seven compiled C/UI checks pass. Guarded ColdFire
 Tone and composed Tone/C47 suites pass, with maximum composed error 3.6234e-6 FS
 under the unchanged 1e-5 limit; both endpoint outputs remain byte-identical.
-SHARC component, committed-source full-tail/reference and installed-emulator
-qualification are tracked separately and must finish before claiming those
-gates. The screen is not a full-tail or native-emulator result. Source images,
+The full guarded SHARC suite also passes: 16,008 callbacks, maximum error
+3.62084e-6 FS, 5,804 code bytes and unchanged 1,664 private-state bytes. All
+twelve stored 909/reference outputs remain byte-identical. Dark Tone is
+byte-identical; bright changes at most 4.47035e-8 FS from coefficient rounding.
+The original precommit component runs are hash-bound to `3c3db81`, with their
+original execution provenance retained.
+
+Fresh actual ColdFire Tone/C47 renders at all 81 settings retain full 12-second
+tails and the unchanged 1e-5 FS gate (maximum error 3.62620e-6 FS). Unchanged
+body execution is reused only after complete source/kernel/cache identity
+checks; it is not relabelled a fresh body run. All eighteen endpoint outputs
+remain byte-identical and seven fresh declared-voice histories are rendered.
+Paired SHARC/full-reference analysis is still pending.
+
+Installed DT and DN scenarios complete with the new interior Tone response.
+DT retains only #78 resets. DN passes its current run; its silence checker exits
+after the first exact-zero 100 ms window, so this is not sixty-window stability
+or a fix for historical #20. DN2 qualification is running. The model screen
+above is not a full-tail or native-emulator result. Source images,
 RC identification and screen receipts are under `out/808-tone-taper/` and
 `out/808-tone-identification/`; new CPU results are under `out/808-tone-c15/`.
 No held-out audio, fitted gain/alignment, physical device or website is used.

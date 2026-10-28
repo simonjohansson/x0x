@@ -24,9 +24,10 @@ rejected before porting; the accepted audio remains `853bb77`. Continue existing
 808 Tone-taper/output-loading work while retaining the open pitch error.
 The [nominal C-taper correction](808-tone.md) now replaces the provisional
 linear Tone law on both CPUs. Its isolated reference-transfer check improves
-all interior settings; absolute raw regressions remain recorded. Host/C UI and
-ColdFire component checks pass; SHARC, full-tail and native qualification are
-the current remaining gates for this increment.
+all interior settings; absolute raw regressions remain recorded. Host/C UI,
+both guarded CPU suites and the full ColdFire grid pass. DT/DN native runs
+complete; paired SHARC/reference analysis and DN2 qualification are the current
+remaining gates for this increment.
 
 The 909 [diode shaper](909-shaping.md), [C9/IC12 Tune path](909-tune.md) and
 [loaded ENV1/Q12 VCA](909-vca.md) run on both CPUs and all three emulators.
@@ -42,9 +43,10 @@ next source work; its first isolated pulse-only comparison worsens all measured
 windows, so no production pulse or fidelity claim follows from numeric agreement. Independent workers prepare those
 bounded pieces with serial shared-source integration; no new ticket tree.
 
-DT retains only deferred reset #78. DN's [one-count baseline investigation](dn-silence-residue.md)
+DT retains only deferred reset #78. DN's [historical one-count investigation](dn-silence-residue.md)
 proves exact-zero x0x inputs into stock filters with nonzero native downstream
-output; #20 remains failed without a justified mod correction or tolerance change.
+output. The current C15 native run passes, but observes only its original first
+zero 100 ms windows; this does not fix or close the historical #20 failure.
 [DN2 MIDI delivery](dn2-late-model.md) is fixed in public Digikit draft PR200,
 now pinned here. The unchanged-production candidate passes full and original
 late-MODEL scenarios; the normal pinned daemon passes the new full Tune run.

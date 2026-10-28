@@ -1,7 +1,8 @@
 # 808 continuing pitch: measured cause and rejected corrections
 
-The accepted audio remains `853bb77`. This #9/#79 investigation changes no
-production model or ASM. Its purpose is to distinguish the continuing pitch
+The fully qualified audio baseline is `853bb77`; the separate
+[Tone correction](808-tone.md) at `3c3db81` is in qualification. This #9/#79
+investigation changes no production body model or ASM. Its purpose is to distinguish the continuing pitch
 error from output-filter measurements before selecting another correction.
 The website is cancelled and remains unpublished.
 
@@ -41,6 +42,7 @@ a full-tail comparison or an emulator qualification.
 | Fixed 4 V main trigger, all other quantities unchanged | All 81 settings / 243 takes / first 500 ms; source and refinement checks | Long late pitch becomes 47.649 Hz, but every take worsens in every reported raw window. Mean 500 ms error .0460243→.0627967 FS. Not ported or compensated by fitted gain. |
 | Finite C39/R161 mutual loading with the physical D52 clamp | All 81 settings / 243 takes / first 500 ms; three independent KCL/refinement tests | Mean 500 ms error improves .0460243→.0445667 FS and long late pitch becomes 49.1784 Hz, but extra loss changes the already calibrated decay. All first-25-ms settings worsen. Not ported. |
 | The same C39 loading with analytically de-embedded quiet poles | Separate complete bounded screen; four characteristic/KCL/switch/refinement tests | The full quiet pole and loss remain unchanged without new fitted parameters, but mean 500 ms error worsens to .0463642 FS and long late pitch to 49.7814 Hz. Not ported. |
+| Fixed 4 ms switch/C39 event, after the separate C15 Tone correction | All 81 settings / 243 takes / first 500 ms; refinement and source/event review | Every take worsens at 25/150/500 ms. Mean 500 ms error .0459027→.0719778 FS and long late pitch 49.72→51.26 Hz. Not ported. |
 
 The manufacturer specifies about 4 V for an unaccented hardware trigger and
 4–14 V with accent. The recordings have Total Accent zero, verified in all
@@ -53,21 +55,28 @@ Independent schematic-image checks also confirm that C43 is **33 µF**, not
 33 nF. Its 1.551–18.051 s feedback-shelf time constant and measured omitted
 forcing do not explain the roughly 2 Hz late error. No unchanged nominal
 feedback candidate was rerun, and no quiet-pitch retuning was adopted.
+S01's approximately 4 ms and S03's approximately 6 ms describe the same Q42/Q43
+release/C39 event; the former is not an additional 4 ms after the main trigger.
+Neither approximate timing text uniquely calibrates this software reference.
 
 ## Next work and evidence limits
 
 The long pitch error remains open. These tests rule out several isolated
 corrections; they do not justify another trigger constant, a fitted pitch
-envelope or a relaxed acceptance limit. Continue the existing #9/#79 output
-and Tone work: the control taper is explicitly provisional and the current
-Tone/C47 cascade omits their mutual loading. Compare those bounded corrections
-against the recordings before any CPU port.
+envelope or a relaxed acceptance limit. The separate nominal Tone correction
+is now in qualification; the mutually loaded output candidate also worsened
+the measured raw windows and remains unported. Existing #9 retained-state
+experiments must distinguish a declared component voice from unproved native
+ownership before changing START behavior.
 
 Local reproducible evidence is preserved under `out/808-pitch-sigh-audit/`,
 `out/808-soft-leakage/`, `out/808-saturation/`, `out/808-trigger-baseline/`,
-`out/808-feedback-audit/` and `out/808-c39-loading/`. Their source snapshots,
+`out/808-feedback-audit/` and `out/808-c39-loading/`.
+The later timing screen and cache/source binding are under
+`out/808-attack-window-4ms/`. All source snapshots,
 receipts, failures and rejected outputs remain distinct from accepted audio.
 The source/equation checks and model screens are not new native-emulator or
-physical-device evidence. Current accepted CPU/native qualification remains in
-[the lower-half Decay checkpoint](808-decay-lower-half.md); #78 and #20 remain
-failed, and broad #9/#79/#2 fidelity gates remain open.
+physical-device evidence. The fully qualified baseline remains in
+[the lower-half Decay checkpoint](808-decay-lower-half.md); current Tone gates
+are recorded [separately](808-tone.md). #78 and historical #20 remain unresolved,
+and broad #9/#79/#2 fidelity gates remain open.
