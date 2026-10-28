@@ -322,3 +322,18 @@ run = [
   'mise run test:808:field',
   'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --with scipy==1.18.0 --with matplotlib==3.11.2 --python "$(mise which python)" python -m x0x.field808',
 ]
+
+[tasks."test:808:sharc-model"]
+description = "Check the frozen-field SHARC ASM encoding and isolated instruction execution"
+env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
+run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" uv run --offline --frozen --project vendor/digikit --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --python "$(mise which python)" python -m unittest discover -s tests/host -p test_sharc_field808.py'
+
+[tasks."research:808:sharc-model"]
+description = "Compare actual SHARC ASM waveforms against the frozen 808 model and capture cohort"
+env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", MPLCONFIGDIR = "{{config_root}}/out/matplotlib" }
+run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" uv run --offline --frozen --project vendor/digikit --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --with matplotlib==3.11.2 --python "$(mise which python)" python -m x0x.sharc_field808 qualify'
+
+[tasks."firmware:dn2:808-model"]
+description = "Package the isolated-hit SHARC ASM 808 candidate for a physical DN2 test"
+env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
+run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" uv run --offline --frozen --project vendor/digikit --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --python "$(mise which python)" python -m x0x.sharc_field808 package'

@@ -199,3 +199,70 @@ All 16 trial indices, A/B/X fields, answer flags, settings, common 4× gain and 
 The user described this comparison as **much harder**, with occasional slight tonal/apparent-pitch differences that were very hard to hear, and felt many correct answers could have been luck. Preserve this as qualitative feedback, not a confirmed pitch-offset diagnosis. The previous 16/16 and current 9/16 sessions used different cohorts; this is not a paired statistical comparison of the models.
 
 Keep this candidate as the development listening baseline while checking SHARC/ColdFire resource and numerical feasibility. This is neither final perceptual acceptance nor closure of #84. The existing body/duration/quiet-tail diagnostics and 4,089-byte table budget are unchanged; fresh independent acceptance remains under #90. No additional source fitting, waveform changes or hardware tests were performed to record this result.
+
+## SHARC ASM candidate — 28 October 2026
+
+The user chose SHARC first; **ColdFire is deferred**. The new renderer is
+[hand-written assembly](../targets/sharc/field808.s), with the coefficient
+exporter and local instruction harness in
+[sharc_field808.py](../tools/x0x/sharc_field808.py). No C compiler supplies the
+sample loop. The original frozen model and listening stimuli are unchanged.
+
+This first isolated-hit candidate latches Tone and Decay at START. Continued
+blocks retain age, carrier and Tone state; another START resets only that slot.
+The native MODEL threshold still latches on START, but the 909 branch deliberately
+outputs silence in this development artifact. Final combined 808/909 delivery
+and live modulation behaviour remain separate work.
+
+The exporter decodes the frozen quantized field into float32 basis coefficients,
+exports normalized cubic B-spline basis polynomials, and caches the dense onset
+per voice. Four pairs/scalar tail envelopes are updated only at segment changes.
+The carrier uses a 64-bit block phase accumulator, a folded degree-11 sine and
+32-sample recurrence. The transposed relative Tone filter uses cubic pole
+interpolation with dyadic refinement below CC 1. A first low-control test exposed
+an integer/float register-alias bug; it was corrected and covered by fractional
+control regression cases. An earlier smaller polynomial encoding was rejected
+for excessive extra waveform error; neither failure changes the frozen sound.
+
+The private split is **12 KiB code / 49 KiB data** inside PR #211's 64 KiB voice
+owner. Actual code is **2,330 bytes**, initialized tables **29,980 bytes**,
+per-voice state **1,060 bytes**. With alignment and all sixteen slots, data usage
+is **46,944 bytes**, leaving **3,232 bytes**. The provisional 909 table/common/
+headroom reservations of 1,280/256/512 bytes still fit; 909 code reservations
+also fit. The kernel uses zero software-stack bytes beyond the adapter's own
+frame; helper calls use the hardware PC stack. This is a measured isolated
+layout, not a physical full-polyphony performance result.
+
+```sh
+mise run test:808:sharc-model
+mise run research:808:sharc-model
+mise run firmware:dn2:808-model
+```
+
+Six focused tests cover exported tables versus the independent frozen model,
+ELF/region refusal, explicit future 909 reservations, actual ASM fractional
+output, slot/reset/MODEL/silence behaviour, immutable tables and independent
+Python/native instruction traces with every DSP write bounded to its own voice
+and output. No reciprocal approximation is used. The firmware-free native
+runner's source identity is checked against the pinned Digikit core; this does
+not boot an emulated device.
+
+The local qualification generates full 5.5-second outputs for the same sixteen
+listening settings plus six fractional/boundary settings, compares each directly
+with the frozen model, and compares the sixteen recorded cases with their
+original capture slots. Port errors and source-model errors stay separate.
+The numerical limit is maximum absolute port error ≤1e-5 DSP FS. The original
+source body/quiet-tail failures remain diagnostics, not repaired by the port.
+
+Outputs are under `out/808-model/sharc/`: `report.json`, `waveforms.png`, the native
+media/ABX `index.html`, float output WAVs, build/source receipts and
+`device-test/x0x-sharc808.syx` (firmware version **X8A1**). Audio in that listening
+page is actual executed ASM output, using the same shared 4× playback gain.
+Firmware and generated coefficient tables remain local build outputs.
+
+The SDK packaging check verifies the ID20 entry and managed per-voice-state
+binding before producing the image. No physical device or full-device emulator
+has been booted. Instruction counts are not cycle counts or available stock-DSP
+headroom. Request a physical Digitone II for native integration, listening,
+polyphony and timing after local qualification; prefer it over a full-device
+emulator for those next checks. #84 stays open through that qualification.

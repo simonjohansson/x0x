@@ -498,6 +498,21 @@ and proper bridge input on both CPUs, then compare again. Do not add another
 research-only checkpoint or fit away the missing input physics. HTML and
 held-out audio remain untouched; full fidelity and combined acceptance stay open.
 
+## Active replacement work — SHARC first
+
+The current #84 increment implements the frozen 808 field in hand-written SHARC
+ASM. ColdFire is deferred until the SHARC sound/equations are established. Test
+actual instructions in isolation locally, compare waveforms to the frozen model
+and captures, and deliver a listening page and packaged device-test candidate.
+Prefer a physical DN2 for native integration and timing; ask for the device when
+needed. A firmware-free instruction runner is used for repeatable arithmetic,
+write-ownership and lifecycle checks; no full-device emulator boot is planned.
+
+The first candidate latches Tone/Decay at START and keeps the 909 selection
+silent as an explicit development limitation. Final 808/909 coexistence remains
+required. Live controls, physical deadlines and audible/native acceptance remain
+separate gates. See [current model evidence](808-model.md).
+
 ## Current SDK dependency — 28 October 2026
 
 The submodule and firmware manifest pin Elekloader PR #211 head
