@@ -280,3 +280,19 @@ run = [
   'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --with scipy==1.18.0 --python "$(mise which python)" python -m x0x.capacity808',
   'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --with scipy==1.18.0 --python "$(mise which python)" python -m x0x.capacity808 --candidate harmonic',
 ]
+
+[tasks."test:808:diagnose"]
+description = "Check full-rate fitting diagnostics, causal output and the blind listening controller"
+env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
+run = [
+  'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --with scipy==1.18.0 --python "$(mise which python)" python -m unittest discover -s tests/host -p test_diagnose808.py',
+  'node tests/host/diagnose808_listening.js',
+]
+
+[tasks."research:808:diagnose"]
+description = "Diagnose the fixed 808 fitting cohort and build the offline listening report"
+env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", MPLCONFIGDIR = "{{config_root}}/out/matplotlib" }
+run = [
+  'mise run test:808:diagnose',
+  'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --with scipy==1.18.0 --with matplotlib==3.11.2 --python "$(mise which python)" python -m x0x.diagnose808',
+]

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>808 candidate listening comparison</title>
+<style>
+body{font:17px/1.5 system-ui,sans-serif;background:#f5f4ee;color:#172a30;max-width:1000px;margin:0 auto;padding:30px 22px}
+h1{font-size:2rem;line-height:1.2}h2{font-size:1.25rem;margin-top:0}section{background:white;padding:24px;border:1px solid #d4dcda;border-radius:12px;margin:20px 0}
+button,select{font:inherit;padding:10px 16px;margin:5px 8px 5px 0;border:1px solid #8aaba9;border-radius:7px;background:#eff8f7;color:#172a30;cursor:pointer}
+button:disabled{opacity:.45;cursor:default}button.primary{background:#006d72;color:white}button:focus-visible,select:focus-visible{outline:3px solid #cf8429;outline-offset:3px}
+.small{font-size:.9rem;color:#50656a}.status{min-height:1.5em;font-weight:600}.buttons{margin:12px 0}img{width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:.9rem}td,th{text-align:left;padding:9px;border-bottom:1px solid #ddd}#result{white-space:pre-line}a{color:#006d72}[hidden]{display:none!important}
+</style>
+<h1>How close does the compact 808 sound?</h1>
+<p>Compare the recorded kick with the compact candidate. Both keep their original timing and relative level. One shared playback gain applies to every sound.</p>
+<p class="small" id="gain"></p>
+<section id="preview">
+ <h2>Listen first</h2>
+ <label for="setting">Tone / Decay</label><br><select id="setting"></select>
+ <div class="buttons"><button id="recorded">Play recording</button><button id="candidate">Play candidate</button><button class="stop">Stop</button></div>
+ <p>These 16 recordings were used for fitting. This checks reproduction; testing new settings comes later.</p>
+</section>
+<section>
+ <h2>Blind comparison</h2>
+ <p>Listen to A and B, then X. Choose whether X is A or B. The test has 16 trials, one per setting, in random order. A/B identities and X change independently each trial; answers are revealed only at the end.</p>
+ <button id="start" class="primary">Start 16-trial test</button>
+ <div id="trial" hidden>
+  <p id="progress" class="status"></p>
+  <div class="buttons"><button id="a">Play A</button><button id="b">Play B</button><button id="x">Play X</button><button class="stop">Stop</button></div>
+  <div class="buttons"><button id="answer-a">X matches A</button><button id="answer-b">X matches B</button></div>
+ </div>
+ <p id="result" role="status" aria-live="polite"></p>
+ <button id="download" disabled>Download results</button>
+ <p class="small">This tests whether you can tell the sounds apart, not which sounds better. A low score does not prove that all differences are inaudible. No listening result has been supplied with this report.</p>
+</section>
+<p id="playing" class="status" role="status" aria-live="polite"></p>
+<details><summary>Waveform measurements and corner plots</summary>
+ <p>The original strict numerical targets remain diagnostics. A 5% waveform error is a 5% RMS residual relative to the recording; it is not an audibility score.</p>
+ <p><a href="report.json">Full numerical report and optimizer diagnostics</a></p>
+ <img src="corners.png" alt="Four corner settings: recorded and predicted waveform, residual, measured cycle frequency and peak magnitudes">
+</details>
+<script>
+const data=__LISTENING_DATA__;
+const $=id=>document.getElementById(id);
+let context,source,playToken=0,session=null;
+const buffers=new Map();
+$('gain').textContent=`Shared playback gain: ${data.gain.toFixed(2)}×. No individual peak or RMS matching.`;
+data.stimuli.forEach((s,i)=>{const option=document.createElement('option');option.value=i;option.textContent=`Tone ${s.tone} / Decay ${s.decay}`;$('setting').append(option)});
+function stop(){playToken++;if(source){source.stop();source=null}$('playing').textContent=''}
+async function play(index,key,label){
+ stop();const token=playToken;
+ try{
+  context??=new AudioContext();await context.resume();
+  const cacheKey=index+':'+key;
+  if(!buffers.has(cacheKey)){
+   const binary=atob(data.stimuli[index][key]);const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
+   buffers.set(cacheKey,await context.decodeAudioData(bytes.buffer));
+  }
+  if(token!==playToken)return;
+  const current=context.createBufferSource(),gain=context.createGain();gain.gain.value=data.gain;
+  current.buffer=buffers.get(cacheKey);current.connect(gain).connect(context.destination);source=current;
+  current.onended=()=>{if(source===current){source=null;$('playing').textContent=''}};
+  current.start();$('playing').textContent=`Playing ${label}`;
+ }catch(error){$('playing').textContent='Could not play this WAV: '+error.message}
+}
+document.querySelectorAll('.stop').forEach(button=>button.onclick=stop);
+$('recorded').onclick=()=>play(Number($('setting').value),'recorded','recording');
+$('candidate').onclick=()=>play(Number($('setting').value),'candidate','candidate');
+function randomInt(n){return crypto.getRandomValues(new Uint32Array(1))[0]%n}
+function binomialTail(correct,total){let coefficient=1,sum=0;for(let i=0;i<=total;i++){if(i>=correct)sum+=coefficient;coefficient*= (total-i)/(i+1)}return sum/2**total}
+function showTrial(){
+ const trial=session.trials[session.answers.length],s=data.stimuli[trial.index];
+ $('progress').textContent=`Trial ${session.answers.length+1} of ${session.trials.length} — Tone ${s.tone} / Decay ${s.decay}`;
+ for(const label of ['a','b','x'])$(label).onclick=()=>play(trial.index,label==='x'?trial[trial.x]:trial[label],label.toUpperCase());
+}
+$('start').onclick=()=>{
+ stop();const order=data.stimuli.map((_,i)=>i);
+ for(let i=order.length-1;i>0;i--){const j=randomInt(i+1);[order[i],order[j]]=[order[j],order[i]]}
+ session={started:new Date().toISOString(),trials:order.map(index=>{
+  const swap=randomInt(2);return {index,a:swap?'candidate':'recorded',b:swap?'recorded':'candidate',x:randomInt(2)?'a':'b'};
+ }),answers:[]};
+ $('result').textContent='';$('download').disabled=true;$('preview').hidden=true;$('trial').hidden=false;$('start').hidden=true;showTrial();
+};
+function answer(choice){
+ if(!session||session.answers.length===session.trials.length)return;
+ stop();const trial=session.trials[session.answers.length];session.answers.push({choice,correct:choice===trial.x});
+ if(session.answers.length<session.trials.length){showTrial();return}
+ const correct=session.answers.filter(a=>a.correct).length,p=binomialTail(correct,session.trials.length);
+ session.finished=new Date().toISOString();session.correct=correct;session.chance_tail_probability=p;
+ $('trial').hidden=true;$('preview').hidden=false;$('start').hidden=false;$('start').textContent='Start another session';$('download').disabled=false;
+ $('result').textContent=`${correct} / ${session.trials.length} correct.\nChance tail probability: ${p.toFixed(4)}.\n`+(p<.05?'This session provides evidence that you could distinguish the sounds.':'This session did not establish that you could distinguish the sounds. It does not prove equivalence.');
+}
+$('answer-a').onclick=()=>answer('a');$('answer-b').onclick=()=>answer('b');
+$('download').onclick=()=>{
+ if(!session?.finished)return;
+ const result={scope:'Fitting-set ABX; no generalization or universal-inaudibility claim',gain:data.gain,session,
+  settings:data.stimuli.map(s=>({tone:s.tone,decay:s.decay})),manifest:data.manifest};
+ const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([JSON.stringify(result,null,2)],{type:'application/json'}));
+ link.download='808-listening-results.json';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000);
+};
+</script>
+</html>

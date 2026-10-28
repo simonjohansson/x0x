@@ -4,7 +4,9 @@
 
 ## Current status
 
-28 October 2026: [#83](https://github.com/simonjohansson/x0x/issues/83) is complete in commit `972d30c`. The first two compact-generator capacity experiments under [#84](https://github.com/simonjohansson/x0x/issues/84) are implemented and fail the frozen accuracy gates. That issue remains open; global fitting and assembly wait for a viable candidate. Production DSP has not changed. Evidence here is host evidence only.
+28 October 2026: [#83](https://github.com/simonjohansson/x0x/issues/83) is complete in commit `972d30c`. [#84](https://github.com/simonjohansson/x0x/issues/84) now includes controlled optimizer diagnosis, a zero-start candidate with two real output decays, and a blind listening report for the fixed 16-setting fitting subset. Human listening acceptance remains pending. Production DSP has not changed. Evidence here is host evidence only.
+
+The user clarified the acceptance priority during #84: **audible fidelity, rather than exact waveform reproduction**. The original source-error thresholds below remain measured diagnostics; exceeding them no longer automatically rejects a candidate if listening establishes an acceptable result. A 5% error does not itself establish inaudibility. Numerical realization, memory/context safety, gain/timing, independent control validation and native/physical qualification remain necessary.
 
 The original capture and model files remain local under `research/reference/808-fit-model/`. Audio and model binaries are not committed. Tracked inputs are [protocol.json](../tests/fixtures/808-model/protocol.json) and [events.csv](../tests/fixtures/808-model/events.csv); the independent driver is [fit808.py](../tools/x0x/fit808.py).
 
@@ -17,7 +19,7 @@ The original capture and model files remain local under `research/reference/808-
 - Native integer anchors `CC*256` map to `floor(CC*255/127 + 0.5)/255`. Fractional native values interpolate continuously between adjacent anchors, including the three-step jump between CC 63 and 64.
 - Measurements use the raw capture gain. Every setting has equal weight; duplicate-take metrics are averaged within a setting. Absolute level/duration errors are averaged as absolute values to avoid cancellation. All per-take metrics remain in the receipts. Quiet-window residual limits apply to every take.
 
-The compact generator and each final CPU must meet these frozen gates, separately for all settings and interactions:
+The original source-error targets, retained as diagnostics after that clarification, are reported separately for all settings and interactions:
 
 | Metric | Gate |
 | --- | --- |
@@ -78,7 +80,7 @@ The objective approximates full-slot relative squared error plus 0.25 times each
 
 Both candidates fail waveform/window gates, including the 50–500 ms body; the problem is not confined to the onset. Fundamental residual analysis at long Decay found 76.6–82.2% of Hann-windowed 50–500 ms residual spectral energy in 75–125 Hz at the two Tone extremes, supporting the added harmonic trial. Short-Decay residuals also contain a slow/nonoscillatory component. The best fundamental runs at `(17,0)` and `(68,0)`, and the best harmonic run at `(0,0)`, exhausted the evaluation bound. Other fits converge, but convergence does not imply acceptance or a global optimum.
 
-Decision: **keep #84 open and do not start #85 or ASM**. Investigate constrained bounds/initialization and an effective output/envelope process before selecting another compact topology. The errors extend into the body, so a tiny onset-only residual is not yet justified. This bounded experiment rejects these fitted candidates; it does not prove that every small procedural model is inadequate. Gates and resource reservations remain unchanged.
+Historical decision after the first capacity trial: keep #84 open and investigate constrained bounds/initialization and an effective output/envelope process before selecting another compact topology. This bounded experiment failed the original numeric targets; it did not prove that every small procedural model is inadequate. The subsequent audible-fidelity priority and current candidate are described below. Resource reservations remain unchanged.
 
 Provisional parameter-plus-state storage is 96/112 bytes per voice, counting all float32 parameters, 7/8 recurrence states and 16 common bytes. This is an estimate, not a linked footprint. The closed-form host evaluators perform 5/6 exp/expm1 and 2/4 sin/cos evaluations per sample; those are not proposed target sample loops. Global coefficient-table size, recursive approximations, fixed-point feasibility and actual ASM cost are still unproved. Those resource/accuracy checks remain part of #84–#86.
 
@@ -89,3 +91,35 @@ mise run research:808:capacity
 ```
 
 Reports, fitted parameters, all multistart diagnostics, full-length prediction WAVs and residual WAVs are written under `out/808-model/capacity/{fundamental,harmonic}/`. Reports include source, driver, subset and protocol hashes. SciPy 1.18.0 must be available in the uv cache; the research tasks run offline after initial dependency installation.
+
+## Controlled diagnosis and listening candidate (#84)
+
+Use [diagnose808.py](../tools/x0x/diagnose808.py) with the same immutable corpus and 16-setting subset:
+
+```sh
+mise run research:808:diagnose
+```
+
+This requires the matching `research:808:capacity` baseline. It verifies the original 121 artifacts and retains source, protocol, subset, baseline and both driver hashes. Outputs are local under `out/808-model/diagnosis/`: `report.json`, four-corner plots, full-length prediction/residual WAVs, and a self-contained audio comparison in `index.html`. The chart and JSON remain adjacent files; WAV stimuli are embedded in the HTML, so playback needs no server. The controller's JavaScript checks use Node through mise.
+
+The controlled restart preserves the original equations. It uses the previous best solution plus three starts initialized from measured same-polarity peak periods, increases the evaluation budget to 800, and extends the output-decay ceiling from 30 ms to one second because the old ceiling was active at a long-Decay corner. These are changes to fitting bounds and initialization, not to reference samples or metric thresholds. Converged, conditioned solutions with actual amplitudes ≤0.25 capture FS are preferred; every start and its bounds are retained.
+
+All four corners then receive a full-rate, 264,000-sample objective polish, limited to 60 evaluations. The quadrature objective differs from its exact full-rate value by only 0.089–0.370% for the control. Full-rate polishing reduces that exact objective by only 0.0008–0.0045%. Thus the sampled objective is not the main explanation for the remaining error. All 16 selected fits converge and meet the prototype's numerical checks.
+
+The new candidate adds one slower real decay `tau2 = tau1 + exp(gap)` to address the slow/nonoscillatory residual. It also constrains the output to start at zero by eliminating one linear amplitude: the sum of the cosine and real-mode amplitudes at time zero is zero. This initial condition adds no state or latency and avoids the unconstrained model's instantaneous trigger jump. It is part of the generator, not a post-render alignment or gain correction. Every final candidate is scored at all 264,000 original sample positions; the four corners also receive full-rate polishing.
+
+| Candidate / fitting population | Median L2 | p95 L2 | Worst L2 |
+| --- | ---: | ---: | ---: |
+| Original harmonic / all 16, historical | 5.3342% | 9.3878% | 11.1348% |
+| Controlled restart / all 16 | 5.3028% | 7.8707% | 9.1760% |
+| Two output decays + zero start / all 16 | 5.6088% | 9.9444% | 10.3067% |
+| Controlled restart / 8 interactions | 5.2645% | 7.1825% | 7.4356% |
+| Two output decays + zero start / 8 interactions | 5.2388% | 8.2614% | 8.4307% |
+
+For the two short-Decay corners, the new candidate reduces 50–500 ms error from 13.79/13.86% to 3.11/4.33%. The zero-start requirement trades some whole-waveform score for a consistent trigger condition. No audible improvement is claimed before listening. All 16 selected new fits are converged and numerically viable under the prototype checks, every output starts at zero, and the quiet-window residual checks pass. The original strict source-error targets still fail and remain visible in the JSON.
+
+The candidate has 10 nonlinear and 7 independent linear parameters, expanding to 8 amplitudes. A conservative cache of all 18 expanded parameters, 9 float states and 16 common bytes is 124 bytes/voice. The extra real mode adds one state multiplication and output addition per sample. A prospective 17-function control map using 6–16 float32 coefficients per function would occupy 408–1,088 bytes before metadata; its required complexity is untested until #85. At the upper estimate, the 64 bytes saved versus the proposed 128-byte × 16-slot state reservation offset the extra 64 table bytes versus 1 KiB. This is an arithmetic resource estimate, not a linked layout or a qualified target implementation. Code size, numerical formats and actual instruction/deadline costs remain open under #85–#89.
+
+The listening page provides named previews plus a 16-trial ABX session, one trial per fitting setting in random order. A/B identities and X are randomized independently. All clips retain their full 5.5 seconds and use one common 4× playback gain, with no individual level matching. Answers and the exact binomial chance-tail score appear only after the full session; downloaded results include the stimulus/profile hashes. The test measures discrimination, not preference. A low score is not proof of universal inaudibility, and these fitted settings do not establish new-control generalization. No human listening result has been collected; #84 remains open pending that evidence and the architecture choice.
+
+Validation: seven new Python tests cover the objective, cycle initialization, zero-start amplitude expansion, independent synthetic recovery, acyclic polish receipts and gain/timing-preserving embedded WAVs. Node checks exercise ABX randomization, completed-session scoring/export, no premature result, and playback-request ordering using synthetic responses only. These checks are software/UI evidence, not a listening result.
