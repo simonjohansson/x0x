@@ -9,10 +9,12 @@ there is no additional x0x LEVEL knob or saved gain parameter.
 
 The human also approved the [808 starting fidelity targets](808-fidelity-target.md).
 The [calibration implementation and level protocol](808-output-calibration.md)
-now apply one fixed factor on both CPUs. Full-grid qualification is in progress;
-`5963a34` remains the previous qualified DSP baseline for before/after evidence.
+are qualified at `0f7ef30` on both actual CPUs, all training settings and seven
+histories. `5963a34` is the previous baseline. The fixed scale improves level
+matching but does not pass every +/-2 dB window; see the remaining envelope gaps
+in the results. Native volume handling is unchanged.
 
-## Current evidence
+## Before-calibration evidence (9e78ca9)
 
 On qualified main-pulse implementation `9e78ca9`, the first 500 ms retain these
 raw measurements, using only the documented reference ×4 routing correction:

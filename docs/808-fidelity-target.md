@@ -70,8 +70,8 @@ accent and faithful residual-state retrigger remain separate, explicit #79/#2
 work; passing this milestone does not qualify either. Repeated playback for
 listening is not proof of retained-state retrigger behavior.
 
-Next freeze the measurement protocol, assess the current engine against these
-targets, and implement/qualify fixed output scaling and remaining sound
-corrections sequentially. No scaling change or acceptance run is delivered by
-this document. #9 stays complete as the supported baseline; #2 owns reference
-acceptance and #79 owns remaining engine refinement. Leave the HTML unchanged.
+Fixed output scaling is now [qualified at 0f7ef30](808-output-calibration.md)
+on both actual CPUs and the full training grid; full level acceptance still
+fails. Work sequentially on the remaining envelope balance and other metric
+protocols before held-out use. #9 stays complete as the supported baseline;
+#2 owns reference acceptance and #79 owns engine refinement. HTML is unchanged.

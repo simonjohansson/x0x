@@ -1,20 +1,23 @@
 # Implementation plan: one combined mod, silent first
 
-The human approved [starting 808 fidelity targets](808-fidelity-target.md) on
-28 October and explicitly authorized fixed DSP output scaling after clarifying
-that native track LEVEL remains the user volume control. This supersedes the
-earlier gain freeze. Work sequentially: freeze the measurement protocol, assess
-the current engine against these targets, then implement/qualify shared fixed
-scaling and remaining single-hit corrections in #79/#2. Targets are approved;
-measurement-rule freeze, scaling implementation and fidelity acceptance are
-not complete. Held-out audio and HTML remain untouched. Accent and faithful
-residual-state retrigger remain separate refinements; #9 stays complete.
+Current 808 DSP is `0f7ef30`: [fixed output scaling](808-output-calibration.md)
+uses one 1.601664543 (+4.091431 dB) factor across settings/CPUs, with native LEVEL
+unchanged. The level windows/floor/objective are frozen. 198 host tests, six C/UI
+checks, both actual CPU suites, full 81-setting / 243-take tails and seven
+histories pass their numerical gates. Raw error improves at 72 settings and
+regresses at all nine minimum-Decay settings. 1,134 of 1,890 eligible level checks
+pass, but only nine settings meet every level check: full fidelity stays open.
+Next address envelope balance sequentially in #79/#2 and finish other metric
+protocols before held-out use. The earlier gain freeze is superseded by explicit
+human approval; [starting targets](808-fidelity-target.md) remain unchanged.
+Held-out audio and HTML are untouched. Accent and faithful residual-state
+retrigger remain separate refinements; #9 stays complete.
 
 The historical [full training-grid baseline](full-reference-grid-baseline.md) compares
 243 808 and 2,187 909 recordings against accepted commit `65aeaf7` on both
 actual CPUs, plus seven declared-voice histories per engine. This is component
 diagnostic evidence; held-out/native fidelity gates remain open and the HTML
-report is unchanged. Current DSP-only 808 qualification is `5963a34`, the
+report is unchanged. Previous DSP-only 808 qualification is `5963a34`, the
 [lower-interior Decay correction](808-decay-shape.md), after the
 [main-pulse](808-main-pulse-time.md), [Tone](808-tone-shape.md) and
 [feedback](808-feedback-calibration.md) corrections. Both actual CPU suites,
