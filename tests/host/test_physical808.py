@@ -49,6 +49,17 @@ class PhysicalObserverTests(unittest.TestCase):
             observed.call(tone,decay,True,slot)
             self.assertEqual(observed.core.peek(address+1080),0)
 
+    def test_909_cannot_publish_a_stale_808_age_as_a_waveform_witness(self):
+        observed=dsp.Runner(self.base,self.artifact)
+        for block in range(32):observed.call(16384,16384,block==0)
+        address=self.base['state_base']
+        self.assertEqual(observed.core.peek(address+232),1024)
+        observed.call(16384,16384,True,model=32512)
+        observed.call(16384,16384,model=32512)
+        self.assertEqual(observed.core.peek(address+244),2)
+        self.assertEqual(observed.core.peek(address+1080),0)
+        observed.check_tables()
+
     def test_observer_regions_fit_the_expanded_owner(self):
         aligned=(self.base['data_bytes']+7)//8*8
         self.assertLessEqual(aligned+16*probe.STATE_BYTES,self.base['layout']['data_bytes'])

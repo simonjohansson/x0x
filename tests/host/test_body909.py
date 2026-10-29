@@ -2,24 +2,23 @@ import math
 import unittest
 
 from x0x import body909 as body, vca909, trigger909
-from x0x.analysis import analyze
 
 
 class Body909Tests(unittest.TestCase):
     def test_body_combines_tune_and_finite_loaded_vca_without_changing_reset(self):
         samples = body.reference(48000)
-        report = analyze(samples,body.SAMPLE_RATE)
-        self.assertIsNotNone(report["frequency"]["median_hz"])
+        crossings=[i for i in range(1,len(samples)) if samples[i-1]<0<=samples[i]]
+        self.assertGreater(len(crossings),10)
+        peak=max(map(abs,samples))
         short = body.reference(1001,0)
         long = body.reference(1001,32512)
         short_gain=vca909.gain(vca909.envelope(1001,0)[-1])
         long_gain=vca909.gain(vca909.envelope(1001,32512)[-1])
         self.assertAlmostEqual(short[1000]/long[1000],short_gain/long_gain,places=12)
         peak_gain=max(map(vca909.gain,vca909.envelope(48000)))
-        self.assertGreater(report["peak_fs"],0)
-        self.assertLessEqual(report["peak_fs"],body.GAIN*peak_gain*body.diode_shape(1))
+        self.assertGreater(peak,0)
+        self.assertLessEqual(peak,body.GAIN*peak_gain*body.diode_shape(1))
         self.assertEqual(body.reference(32),samples[:32])
-        self.assertEqual(report["onset_sample"],0)
         self.assertLess(samples[0],0)
 
     def test_body_continuation_preserves_independent_tune_and_envelope_history(self):

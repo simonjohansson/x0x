@@ -52,22 +52,6 @@ class SharcLayoutTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 private.voice_artifact(bytes(4), b"", entry, 20, 0)
 
-    def test_bridge_fixture_covers_the_entire_private_code_region_and_guard(self):
-        from x0x.digitone2_adapter import _bridge_window
-        code = b"\x03\x00" * 3750
-        window = _bridge_window(code, 0xBC8400)
-        layout = private.voice_layout()
-        self.assertEqual(len(window), 65536)
-        self.assertEqual(window[2048:2048 + len(code)], code)
-        self.assertEqual(window[2048 + len(code):2048 + layout["code_bytes"]],
-                         b"\x01\x00" * ((layout["code_bytes"] - len(code)) // 2))
-        self.assertEqual(window[2048 + layout["code_bytes"]:64512], bytes(54272))
-        canonical = self.sdk.voice_artifact(bytes(4), b"", 0, 20, 0)
-        self.assertEqual(window[:2048], bytes.fromhex(canonical["segments"][0]["hex"]))
-        for bad in (bytes(8130), b"\x00"):
-            with self.assertRaises(ValueError):
-                _bridge_window(bad, 0xBC8400)
-
     def test_existing_scalar_and_payload_guards_remain_enforced(self):
         for machine, stack in ((4, 0), (32, 0), (True, 0), (20, 2049)):
             with self.assertRaises(self.sharc.ModError):

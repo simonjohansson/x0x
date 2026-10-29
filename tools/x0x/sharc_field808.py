@@ -6,7 +6,7 @@ import struct
 
 from . import cpu, field808, fit808, tone_factor808
 
-MODEL = fit808.CORPUS / 'listening/field-2026-10-28/model.npz'
+MODEL = cpu.ROOT / 'models/808.npz'
 MODEL_SHA = 'fb4519537afc1142f3c108bc9e94fe40b752f2b967a97ab6e185e5e47a04d112'
 OUT = cpu.ROOT / 'out/808-model/sharc'
 SOURCE = cpu.ROOT / 'targets/sharc/field808.s'
@@ -213,7 +213,7 @@ def build(folder=OUT):
     if cpu.revision(selache) != cpu.SELACHE_PIN:
         raise ValueError('Selache revision mismatch')
     programs = selache/'target/release'
-    for source, name in ((SOURCE,'engine'), (folder/'tables.s','tables')):
+    for source, name in ((SOURCE,'engine'), (cpu.ROOT/'targets/sharc/body909.s','909'), (folder/'tables.s','tables')):
         cpu.command([programs/'selas','-proc','ADSP-21569','-o',folder/(name+'.doj'), source])
     ldf = f'''ARCHITECTURE(ADSP-21569)
 $OBJECTS = $COMMAND_LINE_OBJECTS;
@@ -230,7 +230,7 @@ PROCESSOR p0 {{ OUTPUT($COMMAND_LINE_OUTPUT_FILE) SECTIONS {{
     executable = folder/'field808.dxe'
     cpu.command([programs/'seld','-proc','ADSP-21569','-T',folder/'layout.ldf',
                  '-entry','sharc_voice_render.','-Map',folder/'field808.map','-o',executable,
-                 folder/'engine.doj',folder/'tables.doj'])
+                 folder/'engine.doj',folder/'909.doj',folder/'tables.doj'])
     raw = executable.read_bytes()
     code, data, entry = read_executable(raw, layout)
     assert len(data) == data_bytes, (len(data), data_bytes)
@@ -238,6 +238,7 @@ PROCESSOR p0 {{ OUTPUT($COMMAND_LINE_OUTPUT_FILE) SECTIONS {{
     assert 0x20090000+doc['voice_state']['offset_bytes']==state_base
     (folder/'voice.sharc.json').write_text(json.dumps(doc,indent=2)+'\n')
     receipt = dict(model_sha256=MODEL_SHA, source_sha256=fit808.digest(SOURCE),
+        legacy_909_sha256=fit808.digest(cpu.ROOT/'targets/sharc/body909.s'),
         data_bytes=len(data), code_bytes=len(code), state_bytes=STATE_BYTES,
         state_base=state_base, layout=layout, initialized_plus_states=(len(data)+7)//8*8+16*STATE_BYTES,
         entry=struct.unpack_from('<I',raw,24)[0], artifact_sha256=fit808.digest(folder/'voice.sharc.json'))
@@ -425,8 +426,8 @@ def qualify(folder=OUT):
         maximum_port_dsp_fs=max(r['port_max_dsp_fs'] for r in rows),
         maximum_instructions=runner.maximum_instructions,
         timing_note='Instruction counts are not cycle counts or physical deadline/headroom proof.',
-        unqualified=['physical device and native integration','full-polyphony deadline margin','dynamic modulation fidelity',
-                     '909 rendering in this candidate','ColdFire backend','fresh independent source acceptance'])
+        unqualified=['this isolated report does not qualify the native package or physical timing',
+                     'analog retrigger behaviour','fresh independent source acceptance'])
     manifest={k:v for k,v in report.items() if k.endswith('_sha256')}
     manifest.update(scope=report['scope'],cohort_note='Same development listening cohort as the frozen model; four fitting corners and twelve validation settings. Prediction audio is actual assembled SHARC output.')
     if SOURCE.read_bytes() != (folder/'engine-source.s').read_bytes():
@@ -462,53 +463,15 @@ def make_plots(folder,references,predictions,rows,backend='SHARC'):
 def decorate_html(page,rows):
     text=page.read_text().replace('src="corners.png"','src="waveforms.png"')
     text=text.replace('Full numerical report and optimizer diagnostics','Full numerical report and ASM qualification')
-    summary=f"<section><h2>Executed ASM qualification</h2><p>Maximum port error: {max(r['port_max_dsp_fs'] for r in rows):.4g} DSP FS. Native integration and physical deadlines remain untested. Tone/Decay latch on START; 909 is silent in this development candidate.</p><img src='waveforms.png' style='width:100%;max-width:1200px' alt='Four-corner recorded and assembled waveforms and residuals'><p><a href='report.json'>Full numerical receipt</a></p></section>"
+    summary=f"<section><h2>Executed ASM qualification</h2><p>Maximum port error: {max(r['port_max_dsp_fs'] for r in rows):.4g} DSP FS. Native-package and physical checks are reported separately. Tone/Decay latch on START. The normal mod also retains the provisional 909; this report evaluates the 808 only.</p><img src='waveforms.png' style='width:100%;max-width:1200px' alt='Four-corner recorded and assembled waveforms and residuals'><p><a href='report.json'>Full numerical receipt</a></p></section>"
     page.write_text(text.replace('</html>',summary+'</html>'))
 
-
-def package(folder=OUT):
-    """Build a local DN2 test image from the actual ASM, without booting or flashing."""
-    from elekloader import elemod,formats,link,patch,sharc
-    from elekloader.sdk import build as sdk
-    from . import firmware
-    folder=Path(folder)/'device-test';folder.mkdir(parents=True,exist_ok=True)
-    receipt,artifact=build(folder)
-    entries,revision=firmware.baseline()
-    stock_report=firmware.verify_entry(entries['digitone-mk2'],cpu.ROOT/'firmware',revision)
-    source=cpu.ROOT/'machines/digitone2'
-    manifest=json.loads((source/'mod.json').read_text())
-    manifest['sources']=[str(source/p) for p in manifest['sources']]
-    manifest['description']='808 field in SHARC ASM; development candidate, 909 silent'
-    (folder/'mod.json').write_text(json.dumps(manifest,indent=2)+'\n')
-    artifacts=[sdk.build(str(p),stock_report['image'],str(folder/'deps'))[0] for p in
-               (cpu.ROOT/'vendor/elekloader/mods/core-dn2',cpu.ROOT/'vendor/elekloader/mods/machines-dn2',folder)]
-    mods=[elemod.load_any(p) for p in artifacts]
-    stock,device,release=formats.load(stock_report['image'])
-    image=formats.main_image(stock,device)
-    errors=link.check(mods,image)
-    if errors:
-        raise ValueError('Candidate link failed: '+'; '.join(errors))
-    linked=link.link(mods,image,sharc_stream=stock.section(7))
-    address=release.sharc['voice_range'][0]+release.sharc['voice_binding_offset']
-    binding=next(r for r in sharc.parse(linked.sharc_stream,release.sharc) if r.target==address)
-    if binding.raw[16:24]!=struct.pack('<II',receipt['entry'],20):
-        raise ValueError('Candidate binding mismatch')
-    state_binding=next(r for r in sharc.parse(linked.sharc_stream,release.sharc) if r.target==address+0x20)
-    if state_binding.raw[16:24]!=struct.pack('<II',receipt['state_base'],STATE_BYTES):
-        raise ValueError('Candidate per-voice state binding mismatch')
-    outputs,_=patch.build(stock_report['image'],artifacts,'X8A1',log=lambda *_:None)
-    output=folder/'x0x-sharc808.syx';output.write_bytes(outputs['syx'])
-    report=dict(status='passed',scope='SDK-verified packaging only; no device boot or flash',
-        build=receipt,firmware=str(output),firmware_sha256=fit808.digest(output),version='X8A1',
-        model=MODEL_SHA,elekloader_revision=revision,binding_address=address)
-    (folder/'package.json').write_text(json.dumps(report,indent=2)+'\n')
-    return report
 
 
 if __name__ == '__main__':
     import argparse
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command',choices=('build','qualify','package'))
+    parser.add_argument('command',choices=('build','qualify'))
     args=parser.parse_args()
-    result=qualify() if args.command=='qualify' else package() if args.command=='package' else build()[0]
+    result=qualify() if args.command=='qualify' else build()[0]
     print(json.dumps(result if args.command!='qualify' else dict(status=result['status'],report=str(OUT/'index.html'),maximum_port_dsp_fs=result['maximum_port_dsp_fs'])))

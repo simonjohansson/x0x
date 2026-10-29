@@ -135,15 +135,24 @@ class Reference:
         return np.asarray([x for block in range((frames+31)//32) for x in self.call(tone,decay,block==0)][:frames],dtype='int64')
 
 
-def build(folder=OUT):
+def build(folder=OUT,combined=False):
     folder=Path(folder);receipt=write_tables(folder)
-    seed=(cpu.ROOT/'targets/coldfire/selector.s').read_text().split('    .globl x0x_selector\n')[0]
-    begin=seed.index('    lea -12(%sp), %sp');end=seed.index('    move.l %d0, 32(%a0)')
-    call=['    lea -24(%sp),%sp']
-    for k in range(6):call += [f'    move.l {28+4*k}(%sp),%d0',f'    move.l %d0,{4*k}(%sp)']
-    call+=['    bsr x0x_field808','    lea 24(%sp),%sp','    movea.l 28(%sp),%a0']
-    probe=folder/'probe.s';probe.write_text(seed[:begin]+'\n'.join(call)+'\n'+seed[end:]+'\n'+SOURCE.read_text()+'\n'+(folder/'tables.s').read_text())
-    image,_=cpu.build_coldfire(folder,probe)
+    seed=(cpu.ROOT/'tests/asm/coldfire_probe.s').read_text()
+    objects=[]
+    extra=''
+    if combined:
+        seed=seed.replace('bsr x0x_field808','bsr x0x_render')
+        obj=folder/'dispatch.o'
+        cpu.command(['m68k-elf-gcc','-mcpu=54455','-msoft-float','-O2','-ffreestanding',
+                     '-fno-builtin','-c',cpu.ROOT/'targets/coldfire/engine.c','-o',obj])
+        objects.append(obj)
+        for name in ('body909','silence'):
+            obj=folder/(name+'.o')
+            cpu.command(['m68k-elf-as','-mcpu=54455',cpu.ROOT/'targets/coldfire'/(name+'.s'),'-o',obj])
+            objects.append(obj)
+    probe=folder/'probe.s'
+    probe.write_text(seed+'\n'+SOURCE.read_text()+'\n'+extra+'\n'+(folder/'tables.s').read_text())
+    image,_=cpu.build_coldfire(folder,probe,objects)
     symbol=next(line.split() for line in cpu.command(['m68k-elf-nm','-S',folder/'diagnostic.elf']).splitlines() if line.split()[-1:] == ['x0x_field808'])
     receipt.update(kernel_bytes=int(symbol[1],16),diagnostic_wrapper_bytes=int(symbol[0],16)-0x40000400,image_sha256=hashlib.sha256(image).hexdigest(),source_sha256=hashlib.sha256(SOURCE.read_bytes()).hexdigest(),image_bytes=len(image))
     (folder/'build.json').write_text(json.dumps(receipt,indent=2)+'\n')
@@ -153,14 +162,14 @@ def build(folder=OUT):
 class Runner:
     BASE,OUTPUT,STATES=0x40000400,0x40010004,0x40011004
     SNAPSHOT,STACK,STOP=0x40018004,0x40020000,0x40030000
-    def __init__(self,image,guarded=True):
+    def __init__(self,image,guarded=True,words=WORDS,stack_bytes=168):
         harness=cpu.require_module('emu.harness','digiemu')
         from unicorn import UC_HOOK_CODE,UC_HOOK_MEM_WRITE,m68k_const
         self.machine=harness.Machine();self.machine.ensure(0x40000000)
-        self.uc=self.machine.uc;self.regs=m68k_const;self.extent=8*WORDS*4+8
+        self.uc=self.machine.uc;self.regs=m68k_const;self.words=words;self.stack_bytes=stack_bytes;self.extent=8*words*4+8
         self.uc.mem_write(self.BASE,image);self.image=image
         self.uc.mem_write(self.STATES-4,b'\xa5'*self.extent)
-        for voice in range(8):self.uc.mem_write(self.STATES+voice*WORDS*4,bytes(WORDS*4))
+        for voice in range(8):self.uc.mem_write(self.STATES+voice*self.words*4,bytes(self.words*4))
         self.steps=0;self.invalid=[];self.allowed=[];self.maximum_instructions=0
         if guarded:
             self.uc.hook_add(UC_HOOK_CODE,self._step)
@@ -171,30 +180,30 @@ class Runner:
     def check_tables(self):
         assert bytes(self.uc.mem_read(self.BASE,len(self.image)))==self.image,'Code/table changed'
     def call(self,tone,decay,start=False,slot=0,model=0):
-        from .coldfire_arithmetic import EMAC_SEED
+        from .cpu import EMAC_SEED
         assert 0<=slot<8
         b=self;u=self.uc;r=lambda n:getattr(self.regs,'UC_M68K_REG_'+n)
-        state=self.STATES+slot*WORDS*4
+        state=self.STATES+slot*self.words*4
         before=bytes(u.mem_read(self.STATES-4,b.extent))
         u.mem_write(self.OUTPUT-4,b'\xa5'*136);u.mem_write(self.SNAPSHOT-4,b'\xa5'*44)
-        u.mem_write(self.STACK-184,b'\xa5'*248)
+        u.mem_write(self.STACK-self.stack_bytes-16,b'\xa5'*(self.stack_bytes+80))
         args=struct.pack('>8I',self.STOP,state,self.OUTPUT,int(start),tone,decay,model,self.SNAPSHOT)
         u.mem_write(self.STACK,args);u.reg_write(r('SR'),0x2700)
         saved={r(n):0x10203040+i for i,n in enumerate([*(f'D{i}' for i in range(2,8)),*(f'A{i}' for i in range(2,7))])}
         for reg,v in saved.items():u.reg_write(reg,v)
         u.reg_write(r('A7'),self.STACK);b.steps=0;b.invalid=[]
-        b.allowed=[(state,state+WORDS*4),(self.OUTPUT,self.OUTPUT+128),(self.SNAPSHOT,self.SNAPSHOT+36),(self.STACK-168,self.STACK)]
+        b.allowed=[(state,state+self.words*4),(self.OUTPUT,self.OUTPUT+128),(self.SNAPSHOT,self.SNAPSHOT+36),(self.STACK-self.stack_bytes,self.STACK)]
         u.emu_start(self.BASE,self.STOP,timeout=10000000)
         assert u.reg_read(r('PC'))==self.STOP and not b.invalid,(hex(u.reg_read(r('PC'))),b.invalid[:4])
         assert u.reg_read(r('A7'))==self.STACK+4
         assert all(u.reg_read(k)==v for k,v in saved.items()),'Callee register changed'
         assert bytes(u.mem_read(self.STACK,len(args)))==args
-        assert bytes(u.mem_read(self.STACK-184,16))==b'\xa5'*16
+        assert bytes(u.mem_read(self.STACK-self.stack_bytes-16,16))==b'\xa5'*16
         assert bytes(u.mem_read(self.STACK+len(args),8))==b'\xa5'*8
         snapshot=bytes(u.mem_read(self.SNAPSHOT-4,44));assert snapshot[:4]==snapshot[-4:]==b'\xa5'*4
         assert struct.unpack('>8I',snapshot[4:36])==EMAC_SEED,'EMAC context changed'
         after=bytes(u.mem_read(self.STATES-4,b.extent));at=state-self.STATES+4
-        assert before[:at]==after[:at] and before[at+WORDS*4:]==after[at+WORDS*4:],'Other slot/guard changed'
+        assert before[:at]==after[:at] and before[at+self.words*4:]==after[at+self.words*4:],'Other slot/guard changed'
         out=bytes(u.mem_read(self.OUTPUT-4,136));assert out[:4]==out[-4:]==b'\xa5'*4
         self.maximum_instructions=max(self.maximum_instructions,self.steps)
         return list(struct.unpack('>32i',out[4:-4]))
@@ -253,7 +262,7 @@ def qualify(folder=OUT):
         emulator_revision=cpu.revision(cpu.ROOT/'vendor/digiemu'),project_revision=cpu.revision(cpu.ROOT),
         maximum_port_dsp_fs=max(r['port_max_dsp_fs'] for r in rows),maximum_counted_instructions_including_wrapper=maximum_count,
         timing_note='Counts sample the first 50 blocks, covering onset/blend/body. They include the EMAC seed/snapshot test wrapper, are not complete-hit worst-case cycles and do not establish physical timing.',
-        unqualified=['physical ColdFire timing','full-OS wiring is reported separately','MODEL=909 silent in this development kernel','fresh independent source acceptance'])
+        unqualified=['physical ColdFire timing','full-OS wiring is reported separately','this standalone 808 kernel is dispatched alongside 909 by the normal mod','fresh independent source acceptance'])
     manifest={k:v for k,v in report.items() if k.endswith('_sha256')};manifest.update(scope=report['scope'],
         cohort_note='Same development cohort as SHARC; actual assembled ColdFire prediction audio, no new fitting or per-recording gain/alignment.')
     report['listening_gain']=diagnose808.listening_report(folder,chosen,references,predictions,manifest)

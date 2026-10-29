@@ -1,9 +1,10 @@
 // Frozen spline/carrier 808, 48 kHz / 32 mono floats. SDK input in R4.
-// Tone/Decay latch on START. MODEL=909 is silent in this 808-only candidate.
+// Tone/Decay latch on START; MODEL selects the new 808 or provisional 909.
 // State: weights[8], segment[5], cubic[32], scratch, filter/age/phase/tag,
 // then 201 decoded onset coefficients. SDK owns sixteen independent states.
 .SECTION/SW seg_swco;
 .GLOBAL sharc_voice_render.;
+.EXTERN sharc_909_render.;
 .EXTERN field_groups.;
 .EXTERN field_body.;
 .EXTERN field_control.;
@@ -110,7 +111,7 @@ sharc_voice_render.:
     IF LT JUMP start808;
     R1=2;
     DM(I4,M5)=R1;
-    JUMP silent;
+    JUMP sharc_909_render.;
 start808:
     R1=1;
     DM(I4,M5)=R1;
@@ -180,6 +181,9 @@ continued:
     R0=R15+R0;
     I4=R0;
     R0=DM(I4,M5);
+    R1=2;
+    COMP(R0,R1);
+    IF EQ JUMP sharc_909_render.;
     R1=1;
     COMP(R0,R1);
     IF NE JUMP silent;

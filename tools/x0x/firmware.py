@@ -1,4 +1,4 @@
-"""Verify the latest-only stock inputs and build their pinned SDK dependencies."""
+"""Verify the pinned latest-only stock firmware inputs."""
 import argparse
 import hashlib
 import json
@@ -6,7 +6,12 @@ from pathlib import Path
 import subprocess
 import sys
 
-from .fixtures import ROOT, load_json, write_json
+from .cpu import ROOT
+
+def load_json(path):
+    def reject_constant(value):
+        raise ValueError(f"non-finite JSON constant: {value}")
+    return json.loads(Path(path).read_text(),parse_constant=reject_constant)
 
 DEVICES = {"dt": ("digitakt-mk1", ("core", "machine-pages")),
            "dn": ("digitone-mk1", ("core-dn1", "machines-dn1")),
@@ -47,10 +52,6 @@ def main(argv=None):
     commands = parser.add_subparsers(dest="command", required=True)
     verify = commands.add_parser("verify")
     verify.add_argument("device", choices=tuple(DEVICES), nargs="?")
-    build = commands.add_parser("build-deps")
-    build.add_argument("device", choices=tuple(DEVICES))
-    package = commands.add_parser("baseline")
-    package.add_argument("device", choices=tuple(DEVICES))
     args = parser.parse_args(argv)
     try:
         entries, revision = baseline()
@@ -59,29 +60,6 @@ def main(argv=None):
         for target in targets:
             key, mods = DEVICES[target]
             report = verify_entry(entries[key], ROOT / "firmware", revision)
-            if args.command in {"build-deps", "baseline"}:
-                output = ROOT / "out" / target / "deps"
-                for mod in mods:
-                    subprocess.run([sys.executable, "-m", "elekloader.sdk.build",
-                                    str(ROOT / "vendor/elekloader/mods" / mod),
-                                    "--stock", report["image"], "--out", str(output)], check=True)
-                report["built_dependencies"] = list(mods)
-                report["output"] = str(output)
-                write_json(output / "stock-baseline.json", report)
-                if args.command == "baseline":
-                    artifacts = sorted(output.glob("*.elemod"))
-                    if len(artifacts) != len(mods):
-                        raise ValueError("unexpected/stale dependency artifacts; inspect " + str(output))
-                    image = output.parent / "x0x-baseline.syx"
-                    command = [sys.executable, "-m", "elekloader.patch", "--stock", report["image"]]
-                    for artifact in artifacts:
-                        command += ["--mod", str(artifact)]
-                    command += ["--out", str(image), "--version", "X0X0"]
-                    subprocess.run(command, check=True)
-                    report["baseline_image"] = str(image)
-                    report["baseline_sha256"] = hashlib.sha256(image.read_bytes()).hexdigest()
-                    report["scope"] = "Core/companion baseline only; no x0x kick machine"
-                    write_json(output.parent / "baseline-build.json", report)
             reports.append(report)
         print(json.dumps(dict(status="passed", reports=reports)))
         return 0

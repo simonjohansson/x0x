@@ -108,6 +108,14 @@ probe_maximum:
     DM(I4,M6)=R1;
     R1=R1-R3;
     DM(I4,M5)=R1;
+    // Only the 808 age describes this witness; 909 reuses the tagged payload.
+    R4=244;
+    R4=R15+R4;
+    I4=R4;
+    R4=DM(I4,M5);
+    R5=1;
+    COMP(R4,R5);
+    IF NE JUMP probe_finish;
     R3=I6;
     R4=-20;
     R3=R3+R4;

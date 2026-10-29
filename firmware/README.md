@@ -27,6 +27,9 @@ requires a matching reviewed SDK/profile and integration evidence. Do not fall
 back to an older supported profile when the latest OS needs a port. Historical
 profiles present in a dependency do not expand x0x's supported OS set.
 
-Host tests and bounded instruction diagnostics do not require stock firmware.
-Firmware integration commands currently report unavailable rather than claiming
-that an unimplemented machine was built or emulated.
+Stock-free model and bounded instruction checks do not require firmware images.
+The normal `mise run firmware:dt`, `firmware:dn` and `firmware:dn2` tasks build
+the combined x0x mod, including the new 808 ASM and retained provisional 909.
+Each output directory records its stock verification, source paths, model hash
+and firmware SHA-256. Native-emulator and physical-device results are separate
+from packaging evidence; see the current plan in GitHub issue #82.

@@ -1,20 +1,11 @@
 #include "adapter.h"
+#include "../../targets/coldfire/engine.h"
 
 #define X0X_ID 80
 
 static struct x0x_dn_frame frame;
 static struct x0x_dn_adapter adapter;
-/* Existing private ColdFire selector ABI, shared with Digitakt. */
-static uint32_t selection[8][3];
-static int32_t body[8][5];
-static int32_t tone_state[8];
-static int32_t coupling_state[8][2];
-extern int x0x_selector(uint32_t bank[8][3], uint32_t notice[4], const uint32_t input[4]);
-extern void x0x_silence(int32_t output[32]);
-extern void x0x_808_body(int32_t state[5], int32_t output[32], uint32_t start, uint32_t decay_raw);
-extern void x0x_808_tone(int32_t *state, int32_t output[32], uint32_t tone_raw);
-extern void x0x_808_coupling(int32_t state[2], int32_t output[32]);
-extern void x0x_909_body(int32_t state[4], int32_t output[32], uint32_t start, uint32_t decay_raw, uint32_t tune_raw);
+static struct x0x_voice voices[8];
 
 void x0x_dn_begin(void)
 {
@@ -22,10 +13,7 @@ void x0x_dn_begin(void)
     for (uint32_t slot = 0; slot < 8; ++slot) {
         if ((FW_VOICE_PARAM(slot, 0) >> 8) == X0X_ID)
             continue;
-        selection[slot][0] = selection[slot][1] = selection[slot][2] = 0;
-        body[slot][0] = body[slot][1] = body[slot][2] = body[slot][3] = body[slot][4] = 0;
-        tone_state[slot] = 0;
-        coupling_state[slot][0] = coupling_state[slot][1] = 0;
+        voices[slot].selected = 0;
         x0x_dn_forget(&adapter, (int32_t)slot);
     }
 }
@@ -36,22 +24,10 @@ void x0x_dn_end(void) { x0x_dn_frame_end(&frame); }
 
 static void render_body(void *context, const struct x0x_dn_input *input)
 {
-    (void)context;
-    /* shortcut: restart the whole body chain; residual retrigger behavior follows in #9. */
-    if (selection[input->slot][1] == 0) {
-        if (input->flags & X0X_DN_NATIVE_START) {
-            tone_state[input->slot] = 0;
-            coupling_state[input->slot][0] = coupling_state[input->slot][1] = 0;
-        }
-        x0x_808_body(body[input->slot], input->output, !!(input->flags & X0X_DN_NATIVE_START),
-                     input->value[1].position.numerator);
-        x0x_808_tone(&tone_state[input->slot], input->output, input->value[0].position.numerator);
-        x0x_808_coupling(coupling_state[input->slot], input->output);
-    } else {
-        /* shortcut: Attack awaits the following 909 circuit stage in #25. */
-        x0x_909_body(body[input->slot], input->output, !!(input->flags & X0X_DN_NATIVE_START),
-                     input->value[1].position.numerator, input->value[0].position.numerator);
-    }
+    uint32_t model = *(const uint32_t *)context;
+    x0x_render(&voices[input->slot], input->output, !!(input->flags & X0X_DN_NATIVE_START),
+        input->value[0].position.numerator, input->value[1].position.numerator,
+        model);
 }
 
 static void x0x_dn_machine_render(int32_t slot, int32_t *block, const struct dnm_voice *voice)
@@ -61,7 +37,7 @@ static void x0x_dn_machine_render(int32_t slot, int32_t *block, const struct dnm
         {X0X_TUNE, 119}, {X0X_DECAY, 120}, {X0X_ATTACK, 121}
     };
     int32_t raw, minimum, maximum;
-    uint32_t model, notice[4], valid = 1;
+    uint32_t model, valid = 1;
     if ((uint32_t)slot >= 8 || !block)
         return;
     if (!voice || (uint32_t)voice->track >= 4 || voice->velocity < 1 || voice->velocity > 127 ||
@@ -69,26 +45,20 @@ static void x0x_dn_machine_render(int32_t slot, int32_t *block, const struct dnm
         x0x_silence(block);
         return;
     }
-    for (uint32_t parameter = 119; parameter <= 121; ++parameter)
+    for (uint32_t parameter = 119; parameter <= 120; ++parameter)
         valid &= x0x_dn_frame_read(&frame, slot, parameter, &raw, &minimum, &maximum);
     valid &= x0x_dn_frame_model(&frame, slot, 124, &raw, &model);
     if (adapter.slot[slot].active && adapter.slot[slot].track != (uint32_t)voice->track) {
-        selection[slot][0] = selection[slot][1] = selection[slot][2] = 0;
-        body[slot][0] = body[slot][1] = body[slot][2] = body[slot][3] = body[slot][4] = 0;
-        tone_state[slot] = 0;
-        coupling_state[slot][0] = coupling_state[slot][1] = 0;
+        voices[slot].selected = 0;
     }
-    const uint32_t input[] = {(uint32_t)slot, valid ? model : 0, (uint32_t)voice->fresh, valid};
-    if (x0x_selector(selection, notice, input) == 1) {
-        enum x0x_instrument instrument = notice[0] ? X0X_909 : X0X_808;
-        if (notice[3]) {
-            body[slot][0] = body[slot][1] = body[slot][2] = body[slot][3] = body[slot][4] = 0;
-            tone_state[slot] = 0;
-            coupling_state[slot][0] = coupling_state[slot][1] = 0;
-        }
-        if (x0x_dn_render_frame(&adapter, slot, block, voice, instrument, &frame,
-                notice[0] ? controls_909 : controls_808, notice[0] ? 3 : 2, render_body, 0))
-            return;
+    /* Commit a new tag only after the complete frame reaches render_body. */
+    uint32_t selected = valid && voice->fresh ? (model < 16384 ? 1 : 2) : voices[slot].selected;
+    uint32_t chosen_model = selected == 2 ? 32512 : 0;
+    if (valid && (selected == 1 || selected == 2)) {
+        enum x0x_instrument instrument=selected == 2 ? X0X_909 : X0X_808;
+        if (x0x_dn_render_frame(&adapter,slot,block,voice,instrument,&frame,
+                selected == 2 ? controls_909 : controls_808,
+                selected == 2 ? 3 : 2, render_body, &chosen_model)) return;
     }
     x0x_silence(block);
 }

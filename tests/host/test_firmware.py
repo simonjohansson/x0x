@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from elekloader import formats
 from x0x import firmware
-from x0x.fixtures import ROOT, load_json
+from x0x.firmware import ROOT, load_json
 
 
 class LatestFirmwareTests(unittest.TestCase):

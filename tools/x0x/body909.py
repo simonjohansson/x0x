@@ -115,35 +115,3 @@ def continue_reference(state, decay_raw, tune_raw, frames):
         c8=vca909.step(c8,decay_raw,initial_remaining-i>0)
         samples.append(-GAIN*vca909.gain(c8)*shaped_triangle(value))
     return samples, (phases[-1], voltages[-1], remaining, c8*vca909.STATE_SCALE)
-
-
-def compare():
-    import json
-    import struct
-    from pathlib import Path
-
-    root = Path(__file__).resolve().parents[2]
-    cases = []
-    for setting in (0, 1, 16384, 16385, 32511, 32512):
-        cf = json.loads((root / f"out/coldfire/body909/samples_{setting}.json").read_text())
-        raw = (root / f"out/sharc/body808/samples_909_{setting}.f32").read_bytes()
-        sharc = struct.unpack(f"<{len(raw)//4}f", raw)
-        assert len(cf) == len(sharc) == 24000, "matching 909 renders must contain 24000 samples"
-        expected = reference(len(cf), setting)
-        assert all(math.isfinite(x) for x in [*cf, *sharc])
-        errors = dict(coldfire_oracle=max(abs(a-b) for a,b in zip(cf,expected)),
-                      sharc_oracle=max(abs(a-b) for a,b in zip(sharc,expected)),
-                      cross_cpu=max(abs(a-b) for a,b in zip(cf,sharc)))
-        assert all(error <= 1e-5 for error in errors.values()), (setting, errors)
-        cases.append(dict(raw=setting, maximum_errors_fs=errors))
-    report = dict(status="passed", scope="diode-shaped909 with finite C8 charge and first-order base-current VCA; no complete circuit fidelity claim",
-                  frames=24000, sample_rate=SAMPLE_RATE, decay_cases=cases,
-                  maximum_errors_fs={key:max(row["maximum_errors_fs"][key] for row in cases) for key in errors},
-                  limit_fs=1e-5, alignment_samples=0, normalization=False)
-    (root / "out/909-body-comparison.json").write_text(json.dumps(report,indent=2)+'\n')
-    return report
-
-
-if __name__ == "__main__":
-    import json
-    print(json.dumps(compare()))

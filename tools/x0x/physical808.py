@@ -28,12 +28,12 @@ def instrument(folder=OUT):
     if table.count(old)!=1:raise ValueError('Unexpected generated state-size declaration')
     (folder/'tables.s').write_text(table.replace(old,'.VAR sharc_voice_state_bytes. = 1232;'))
     programs=cpu.ROOT/'vendor/digikit/out/tools/selache/target/release'
-    for path,name in ((WRAPPER,'wrapper'),(folder/'kernel.s','kernel'),(folder/'tables.s','tables')):
+    for path,name in ((WRAPPER,'wrapper'),(folder/'kernel.s','kernel'),(cpu.ROOT/'targets/sharc/body909.s','909'),(folder/'tables.s','tables')):
         cpu.command([programs/'selas','-proc','ADSP-21569','-o',folder/(name+'.doj'),path])
     executable=folder/'device.dxe'
     cpu.command([programs/'seld','-proc','ADSP-21569','-T',folder/'baseline/layout.ldf',
                  '-entry','sharc_voice_render.','-Map',folder/'device.map','-o',executable,
-                 folder/'wrapper.doj',folder/'kernel.doj',folder/'tables.doj'])
+                 folder/'wrapper.doj',folder/'kernel.doj',folder/'909.doj',folder/'tables.doj'])
     code,data,entry=dsp.read_executable(executable.read_bytes(),base['layout'])
     artifact=voice_artifact(code,data,0,20,64,code_bytes=dsp.CODE_BYTES,voice_bytes=STATE_BYTES)
     (folder/'voice.sharc.json').write_text(json.dumps(artifact,indent=2)+'\n')
@@ -57,7 +57,7 @@ def build(health,folder=OUT):
     source_dir=cpu.ROOT/'machines/digitone2'
     manifest=json.loads((source_dir/'mod.json').read_text())
     manifest['sources']=[str(source_dir/p) for p in manifest['sources']]
-    manifest['description']='Instrumented SHARC 808 device test; Tone/Decay latched, 909 silent'
+    manifest['description']='Instrumented combined x0x device test; new 808 and provisional 909'
     (folder/'mod.json').write_text(json.dumps(manifest,indent=2)+'\n')
     artifacts=[sdk.build(str(p),stock['image'],str(folder/'deps'))[0] for p in
                (cpu.ROOT/'vendor/elekloader/mods/core-dn2',cpu.ROOT/'vendor/elekloader/mods/machines-dn2',folder)]

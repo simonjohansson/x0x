@@ -38,7 +38,7 @@ class SharcFieldTests(unittest.TestCase):
         self.assertNotIn('corners.png',text)
         self.assertIn('src="waveforms.png"',text)
         self.assertIn('Executed ASM qualification',text)
-        self.assertIn('909 is silent',text)
+        self.assertIn('retains the provisional 909',text)
 
     def test_exported_cubic_basis_matches_original_model(self):
         for tone,decay in ((0,0),(32512,32512),(12345,17001)):
@@ -72,8 +72,8 @@ class SharcFieldTests(unittest.TestCase):
         other,_=runner.call(32512,32512,True,slot=15)
         self.assertEqual(first,other)
         self.assertEqual(first,runner.call(32512,32512,True)[0])
-        self.assertEqual(runner.call(32512,32512,True,model=32512)[0],(0.,)*32)
-        self.assertEqual(runner.call(0,0)[0],(0.,)*32)
+        self.assertTrue(any(runner.call(32512,32512,True,model=32512)[0]))
+        self.assertTrue(any(runner.call(0,0)[0]))
         self.assertEqual(first,runner.call(32512,32512,True)[0])
         runner.core.poke(self.receipt['state_base']+232,struct.pack('<I',264000),4)
         for _ in range(3):

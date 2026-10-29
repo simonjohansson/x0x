@@ -4,6 +4,7 @@ uv = "0.11.8"
 cmake = "4.4.4"
 clang = "23.1.3"
 rust = "1.98.1"
+node = "24.10.0"
 
 [bootstrap.packages]
 "brew:m68k-elf-gcc" = "latest"
@@ -28,327 +29,45 @@ run = [
 ]
 
 [tasks.test]
-description = "Run host fixtures, measurements and isolated C adapter tests"
+description = "Run current model, assembled engines and native C adapter checks"
+env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
 run = [
-  "python -m unittest discover -s tests/host -p 'test_*.py'",
-  "mise run test:ui",
+  'PYTHONPATH="{{config_root}}/vendor/digikit:{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --with networkx==3.4.2 --with mypy==2.3.1 --python "$(mise which python)" python -m unittest discover -s tests/host -p test_*.py',
+  'mise exec -- node tests/host/diagnose808_listening.js',
+  'python -m x0x.ui_test',
 ]
-
-[tasks."test:host"]
-description = "Run host fixtures and measurements without firmware or emulators"
-run = "python -m unittest discover -s tests/host -p 'test_*.py'"
-
-[tasks."test:ui"]
-description = "Compile and run all C boundaries with fake native services"
-run = [
-  "python -m x0x.ui_test",
-  "mise run test:ui:dt",
-  "mise run test:ui:dn",
-  "mise run test:ui:dn2",
-]
-
-[tasks."test:ui:dt"]
-description = "Test Digitakt adapter and approved machine declarations without firmware"
-run = ["python -m x0x.digitakt_adapter --host", "python -m x0x.digitakt_silent --host"]
-
-[tasks."test:ui:dn"]
-description = "Test Digitone adapter and production-machine declarations without firmware"
-run = ["python -m x0x.digitone_adapter --host", "python -m x0x.digitone_silent --host"]
-
-[tasks."test:ui:dn2"]
-description = "Test the Digitone II C adapter and approved controls without firmware or an emulator"
-run = ["python -m x0x.digitone2_adapter --host", "mise run test:ui:dn2:controls"]
-
-[tasks."test:ui:dn2:controls"]
-description = "Test the approved DN2 808/909 pages and START-latched selector with a fake DSP"
-run = "python -m x0x.digitone2_controls --host"
-
-[tasks."test:ui:coldfire"]
-description = "Check that C controls cross-compile without unsupported runtime helpers"
-run = "python -m x0x.ui_test --coldfire"
-
-[tasks."test:coldfire"]
-description = "Execute bounded assembled diagnostics in digiemu"
-run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.cpu coldfire'
-
-[tasks."test:sharc"]
-description = "Execute bounded assembled diagnostics in Digikit"
-run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0x.cpu sharc'
-
-[tasks."test:coldfire:arithmetic"]
-description = "Check fixed-point arithmetic, EMAC context and shared fixtures in digiemu"
-run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.coldfire_arithmetic'
-
-[tasks."test:sharc:callback"]
-description = "Check the pinned upstream voice ABI and slot state in Digikit"
-run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0x.sharc_callback'
-
-[tasks."test:coldfire:selector"]
-description = "Execute per-voice 808/909 selection and state guards in digiemu"
-run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.coldfire_selector'
-
-[tasks."test:sharc:selector"]
-description = "Execute the DN2 selector diagnostic against the host C policy in Digikit"
-run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0x.sharc_selector'
-
-[tasks."test:emulators"]
-description = "Run bounded instruction, arithmetic, callback and selector diagnostics"
-run = ["mise run test:coldfire", "mise run test:sharc", "mise run test:coldfire:arithmetic", "mise run test:sharc:callback", "mise run test:coldfire:selector", "mise run test:sharc:selector"]
-
-[tasks."test:dt:component"]
-description = "Execute the compiled Digitakt C adapter and ASM with native-service fakes"
-run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.digitakt_adapter'
-
-[tasks."test:dt:native"]
-description = "Test bounded Digitakt OS routines, linked SDK values and the C-to-ASM path"
-run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.digitakt_adapter --native'
-
-[tasks."test:dt:transport"]
-description = "Boot Digitakt and trace native panel PLAY through C and ASM observers"
-run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.digitakt_transport'
-
-[tasks."test:dt:silent"]
-description = "Test the production DT registration with actual selector/body ASM in digiemu"
-run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.digitakt_silent'
-
-[tasks."test:dt:silent:full-os"]
-description = "Boot the DT mod and check controls, MODEL and first 808 audio"
-run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.digitakt_silent --full-os'
-
-[tasks."test:dn:component"]
-description = "Execute the compiled Digitone C adapter and ASM with native-service fakes"
-run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.digitone_adapter'
-
-[tasks."test:dn:companion"]
-description = "Test Digitone companion START, gate and AMP/velocity with stock parameter records"
-run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.digitone_adapter --companion'
-
-[tasks."test:dn:native"]
-description = "Test bounded Digitone OS live edits through the linked SDK and C-to-ASM path"
-run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.digitone_adapter --native'
-
-[tasks."test:dn:frame"]
-description = "Test final DN frames through the C adapter and ASM with injected native state"
-run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.digitone_transport'
-
-[tasks."test:dn:machine"]
-description = "Test final controls through actual DN companion callbacks with an ignored diagnostic machine"
-run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.digitone_machine'
-
-[tasks."test:dn:endpoints"]
-description = "Test approved DN native endpoints and canonical MODEL through existing selector ASM"
-run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.digitone_endpoints'
-
-[tasks."test:dn:transport"]
-description = "Test DN final-frame adapter diagnostics in a standard non-strict full-OS Session"
-run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.digitone_transport --full-os'
-
-[tasks."test:dn:silent"]
-description = "Boot the DN mod and test controls, MODEL and first 808 audio"
-run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.digitone_silent'
-
-[tasks."firmware:dn:silent"]
-description = "Build the latest-OS Digitone first-body mod with the pinned SDK"
-run = "python -m x0x.digitone_silent --build"
-
-[tasks."test:dn2:component"]
-description = "Test Digitone II C snapshots and the pinned SHARC bridge in Digikit"
-run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0x.digitone2_adapter'
-
-[tasks."test:dn2:silent"]
-description = "Execute the DN2 808 body with approved controls and guards in Digikit"
-run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0x.digitone2_silent'
-
-[tasks."test:dn2:silent:full-os"]
-description = "Boot the installed DN2 mod through the public coupled emulator API"
-run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" SHARC_GEN_DIR="{{config_root}}/vendor/digikit/out/native/shared-core/gen" uv run --frozen --project vendor/digikit --python "$(mise which python)" python -m x0x.digitone2_silent --full-os'
-
-[tasks."firmware:dn2:silent"]
-description = "Build and verify the latest-OS DN2 first-body mod without claiming coupled boot"
-run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0x.digitone2_silent --build'
-
-[tasks."test:adapters"]
-description = "Run firmware-independent C-to-ASM adapter component checks"
-run = ["mise run test:dt:component", "mise run test:dn:component", "mise run test:dn2:component"]
-
-[tasks."firmware:verify"]
-description = "Verify the latest-only local stock images and pinned SDK identities"
-run = "python -m x0x.firmware verify"
-
-[tasks."build:deps:dt"]
-description = "Build Core and machine-pages for the latest Digitakt OS"
-run = "python -m x0x.firmware build-deps dt"
-
-[tasks."build:deps:dn"]
-description = "Build Core and machines for the latest Digitone OS"
-run = "python -m x0x.firmware build-deps dn"
-
-[tasks."build:deps:dn2"]
-description = "Build Core for the latest Digitone II OS"
-run = "python -m x0x.firmware build-deps dn2"
 
 [tasks."firmware:dt"]
-description = "Package a latest-OS Core/companion baseline for Digitakt emulator work"
-run = "python -m x0x.firmware baseline dt"
+description = "Build the normal combined dt x0x mod"
+env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
+run = 'PYTHONPATH="{{config_root}}/vendor/digikit:{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --with networkx==3.4.2 --with mypy==2.3.1 --python "$(mise which python)" python -m x0x.build dt'
 
 [tasks."firmware:dn"]
-description = "Package a latest-OS Core/companion baseline for Digitone emulator work"
-run = "python -m x0x.firmware baseline dn"
+description = "Build the normal combined dn x0x mod"
+env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
+run = 'PYTHONPATH="{{config_root}}/vendor/digikit:{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --with networkx==3.4.2 --with mypy==2.3.1 --python "$(mise which python)" python -m x0x.build dn'
 
 [tasks."firmware:dn2"]
-description = "Package a latest-OS Core baseline for Digitone II emulator work"
-run = "python -m x0x.firmware baseline dn2"
-
-[tasks."test:dt"]
-description = "Run native Digitakt first-body acceptance (reset failures remain explicit)"
-run = "mise run test:dt:silent:full-os"
-
-[tasks."test:dn"]
-description = "Run native Digitone first-body acceptance"
-run = "mise run test:dn:silent"
-
-[tasks."test:dn2"]
-description = "Run coupled Digitone II first-body acceptance"
-run = "mise run test:dn2:silent:full-os"
-
-[tasks.render]
-description = "Render a synthetic diagnostic fixture as test equipment"
-run = "python -m x0x.cli render"
-
-[tasks.analyze]
-description = "Measure a mono WAV or validated render result"
-run = "python -m x0x.cli analyze"
-
-[tasks.compare]
-description = "Compare fixture-matched render results against an independent oracle"
-run = "python -m x0x.cli compare"
-
-[tasks."test:808:coldfire"]
-description = "Render the first 808 body in actual ColdFire ASM against its analytic oracle"
-run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.coldfire_body808'
-
-[tasks."test:808:sharc"]
-description = "Check combined SHARC 808/909 bodies with callback guards"
-run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" python -m x0x.sharc_body808'
-
-[tasks."test:808:body"]
-description = "Check actual ASM body/Tone/coupling and matching unshifted CPU samples"
-run = ["mise run test:808:coldfire", "mise run test:808:coldfire:tone", "mise run test:808:coldfire:coupling", "mise run test:808:sharc", "python -m x0x.body808"]
-
-[tasks."test:808:coldfire:tone"]
-description = "Test the source-derived RC Tone stage and composed ColdFire audio"
-run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.coldfire_tone808'
-
-[tasks."test:808:coldfire:coupling"]
-description = "Check the isolated C47 coupling stage and composed ColdFire audio"
-run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.coldfire_coupling808'
-
-[tasks."test:909:coldfire"]
-description = "Render the first unshaped 909 triangle in actual ColdFire ASM"
-run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --python "$(mise which python)" python -m x0x.coldfire_body909'
-
-[tasks."test:909:body"]
-description = "Check actual 909 triangle bodies and matching unshifted CPU samples"
-run = ["mise run test:909:coldfire", "mise run test:808:sharc", "python -m x0x.body909"]
-
-[tasks."research:plaits"]
-description = "Render pinned third-party drum classes for host-only research"
-run = "python -m x0x.plaits_reference"
-
-[tasks."research:808:reference"]
-description = "Compare current 808 ASM against five captured settings and build the portable report"
-run = 'PYTHONPATH="{{config_root}}/vendor/digiemu:{{config_root}}/vendor/digikit:$PYTHONPATH" MPLCONFIGDIR="{{config_root}}/out/matplotlib" uv run --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --with matplotlib==3.11.2 --python "$(mise which python)" python -m x0x.reference808_compare'
-
-[tasks."test:808:model"]
-description = "Check the fresh 808 protocol and reproduce the evaluated waveform teacher"
-run = [
-  'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --python "$(mise which python)" python -m unittest discover -s tests/host -p test_fit808.py',
-  'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --python "$(mise which python)" python -m x0x.fit808 benchmark',
-  'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --python "$(mise which python)" python -m x0x.fit808 benchmark --partition validation --output out/808-model/protocol-validation.json',
-]
-
-[tasks."test:808:capacity"]
-description = "Test the compact 808 capacity equations and synthetic optimizer recovery"
+description = "Build the normal combined dn2 x0x mod"
 env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
-run = 'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --with scipy==1.18.0 --python "$(mise which python)" python -m unittest discover -s tests/host -p test_capacity808.py'
+run = 'PYTHONPATH="{{config_root}}/vendor/digikit:{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --with networkx==3.4.2 --with mypy==2.3.1 --python "$(mise which python)" python -m x0x.build dn2'
 
-[tasks."research:808:capacity"]
-description = "Fit the two predeclared compact 808 candidates to fitting-only measurements"
+[tasks."test:dt:mod"]
+description = "Bounded native-panel smoke of the normal dt package"
 env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
-run = [
-  'mise run test:808:capacity',
-  'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --with scipy==1.18.0 --python "$(mise which python)" python -m x0x.capacity808',
-  'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --with scipy==1.18.0 --python "$(mise which python)" python -m x0x.capacity808 --candidate harmonic',
-]
+run = 'PYTHONPATH="{{config_root}}/vendor/digikit:{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --with networkx==3.4.2 --with mypy==2.3.1 --python "$(mise which python)" python -m x0x.mod_smoke dt'
 
-[tasks."test:808:diagnose"]
-description = "Check full-rate fitting diagnostics, causal output and the blind listening controller"
+[tasks."test:dn:mod"]
+description = "Bounded native-panel smoke of the normal dn package"
 env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
-run = [
-  'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --with scipy==1.18.0 --python "$(mise which python)" python -m unittest discover -s tests/host -p test_diagnose808.py',
-  'node tests/host/diagnose808_listening.js',
-]
-
-[tasks."research:808:diagnose"]
-description = "Diagnose the fixed 808 fitting cohort and build the offline listening report"
-env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", MPLCONFIGDIR = "{{config_root}}/out/matplotlib" }
-run = [
-  'mise run test:808:diagnose',
-  'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --with scipy==1.18.0 --with matplotlib==3.11.2 --python "$(mise which python)" python -m x0x.diagnose808',
-]
-
-[tasks."test:808:tone-factor"]
-description = "Check the conditional Tone filter and its shared control fit"
-env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
-run = 'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --python "$(mise which python)" python -m unittest discover -s tests/host -p test_tone_factor808.py'
-
-[tasks."research:808:tone-factor"]
-description = "Test whether one Tone law filters recorded inputs across Decay settings"
-env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", MPLCONFIGDIR = "{{config_root}}/out/matplotlib" }
-run = [
-  'mise run test:808:tone-factor',
-  'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --with matplotlib==3.11.2 --python "$(mise which python)" python -m x0x.tone_factor808',
-]
-
-[tasks."test:808:field"]
-description = "Check the shared quantized 808 field and standalone renderer"
-env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
-run = 'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --with scipy==1.18.0 --python "$(mise which python)" python -m unittest discover -s tests/host -p test_field808.py'
-
-[tasks."research:808:field"]
-description = "Fit and evaluate the complete quantized 808 field, then build listening material"
-env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", MPLCONFIGDIR = "{{config_root}}/out/matplotlib" }
-run = [
-  'mise run test:808:field',
-  'uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with soundfile==0.14.0 --with scipy==1.18.0 --with matplotlib==3.11.2 --python "$(mise which python)" python -m x0x.field808',
-]
-
-[tasks."test:808:sharc-model"]
-description = "Check the frozen-field SHARC ASM encoding and isolated instruction execution"
-env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
-run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" uv run --offline --frozen --project vendor/digikit --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --python "$(mise which python)" python -m unittest discover -s tests/host -p test_sharc_field808.py'
+run = 'PYTHONPATH="{{config_root}}/vendor/digikit:{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --with networkx==3.4.2 --with mypy==2.3.1 --python "$(mise which python)" python -m x0x.mod_smoke dn'
 
 [tasks."research:808:sharc-model"]
-description = "Compare actual SHARC ASM waveforms against the frozen 808 model and capture cohort"
-env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", MPLCONFIGDIR = "{{config_root}}/out/matplotlib" }
-run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" uv run --offline --frozen --project vendor/digikit --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --with matplotlib==3.11.2 --python "$(mise which python)" python -m x0x.sharc_field808 qualify'
-
-[tasks."firmware:dn2:808-model"]
-description = "Package the isolated-hit SHARC ASM 808 candidate for a physical DN2 test"
+description = "Compare actual sharc ASM with the frozen model and source cohort"
 env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
-run = 'PYTHONPATH="{{config_root}}/vendor/digikit:$PYTHONPATH" uv run --offline --frozen --project vendor/digikit --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --python "$(mise which python)" python -m x0x.sharc_field808 package'
-
-[tasks."test:808:coldfire-model"]
-description = "Check the frozen-field ColdFire ASM against its independent integer reference"
-env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
-run = 'PYTHONPATH="{{config_root}}/vendor/digikit:{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --python "$(mise which python)" python -m unittest discover -s tests/host -p test_coldfire_field808.py'
+run = 'PYTHONPATH="{{config_root}}/vendor/digikit:{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --with networkx==3.4.2 --with mypy==2.3.1 --with matplotlib==3.11.2 --python "$(mise which python)" python -m x0x.sharc_field808 qualify'
 
 [tasks."research:808:coldfire-model"]
-description = "Render the full frozen 808 cohort through actual ColdFire ASM and build the listening report"
-env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", MPLCONFIGDIR = "{{config_root}}/out/matplotlib" }
-run = 'PYTHONPATH="{{config_root}}/vendor/digikit:{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --with matplotlib==3.11.2 --python "$(mise which python)" python -m x0x.coldfire_field808 qualify'
-
-[tasks."test:808:coldfire-emulator"]
-description = "Boot the staged DT1 ColdFire 808 package and verify one native callback/PCM smoke"
+description = "Compare actual coldfire ASM with the frozen model and source cohort"
 env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
-run = 'PYTHONPATH="{{config_root}}/vendor/digikit:{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --offline --frozen --project vendor/digiemu --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --python "$(mise which python)" python -m x0x.coldfire_field808_dt smoke'
+run = 'PYTHONPATH="{{config_root}}/vendor/digikit:{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --with networkx==3.4.2 --with mypy==2.3.1 --with matplotlib==3.11.2 --python "$(mise which python)" python -m x0x.coldfire_field808 qualify'
