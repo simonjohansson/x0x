@@ -6,12 +6,37 @@ import hashlib
 import json
 from pathlib import Path
 import struct
+import tempfile
 import time
 import numpy as np
 import soundfile as sf
 from . import cpu,field909,fit909,sharc_field808 as sharc,coldfire_field909 as coldfire
+from .firmware import load_json
 
 OUT=cpu.ROOT/'out/909-model/qualification'
+
+
+def input_hashes():
+    paths = [*cpu.ROOT.glob('tools/x0x/*.py'), *cpu.ROOT.glob('tools/x0x/*_ref.c'),
+             *cpu.ROOT.glob('targets/*/*.s'), *cpu.ROOT.glob('tests/asm/*.s'),
+             *cpu.ROOT.glob('models/*.npz')]
+    return {str(p.relative_to(cpu.ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in sorted(paths)}
+
+
+def load_report(target):
+    report = load_json(OUT/target/'report.json')
+    if (report['status'] != 'passed' or report['target'] != target
+            or report['model_sha256'] != field909.MODEL_SHA
+            or (report['test_settings'], report['test_events']) != (721, 724)):
+        raise ValueError('Both complete matching ASM qualifications are required')
+    if report.get('inputs_sha256') != input_hashes():
+        raise ValueError('Historical qualification: source inputs differ; rerun qualification')
+    for path_key, hash_key in [('rendered_wav', 'rendered_wav_sha256'),
+                               ('corners_png', 'corners_png_sha256')]:
+        if hashlib.sha256(Path(report[path_key]).read_bytes()).hexdigest() != report[hash_key]:
+            raise ValueError('Qualification artifact hash mismatch: ' + path_key)
+    return report
 
 
 def measure(predicted,reference):
@@ -50,7 +75,10 @@ def plots(folder,corners):
 
 
 def qualify(target):
-    folder=OUT/target;folder.mkdir(parents=True,exist_ok=True)
+    destination=OUT/target;destination.mkdir(parents=True,exist_ok=True)
+    runs=destination/'runs';runs.mkdir(exist_ok=True)
+    folder=Path(tempfile.mkdtemp(prefix='run-',dir=runs))
+    inputs=input_hashes()
     model=field909.load();events=fit909.load_events();raw=fit909.raw_audio()
     interaction={tuple(e[k+'_cc'] for k in ('tune','attack','decay')):e for e in events if e['split']=='interaction'}
     corner_keys=[(t,a,d) for t in (0,127) for a in (0,127) for d in (0,127)]
@@ -95,9 +123,16 @@ def qualify(target):
     report=dict(status='passed',scope='Isolated actual-instruction ASM renders; no physical-device or perceptual acceptance',target=target,model_sha256=field909.MODEL_SHA,capture_sha256='ad05ef41060e4477dd5bb8fddcfe9de4c106576f448800b29f0693b86fc667ba',build=receipt,renders=len(cases),test_settings=len(groups),test_events=len(selected),maximum_port_dsp_fs=maximum_port,gain_to_capture=.25,alignment_samples=0,rendered_wav=str(wavpath),rendered_wav_sha256=hashlib.sha256(wavpath.read_bytes()).hexdigest(),rows=rows)
     for metric in ('l2','after10ms_l2','max_fs','level_db','peak_db','t99_delta_ms'):
         report[metric]=dict(zip(('min','median','p95','max'),map(float,np.quantile([r[metric] for r in selected],[0,.5,.95,1]))))
+    if input_hashes() != inputs:
+        raise ValueError('Source inputs changed during qualification')
+    report.update(inputs_sha256=inputs, corners_png=str(folder/'corners.png'),
+                  corners_png_sha256=hashlib.sha256((folder/'corners.png').read_bytes()).hexdigest())
     (folder/'report.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
     png=base64.b64encode((folder/'corners.png').read_bytes()).decode()
     (folder/'report.html').write_text('<!doctype html><html><meta charset="utf-8"><title>909 '+target+' ASM</title><style>body{font:17px system-ui;max-width:1400px;margin:40px auto;padding:0 20px;line-height:1.5}img{width:100%}pre{white-space:pre-wrap}</style><h1>909 '+target+' ASM versus VST</h1><p>Every frozen test setting is rendered through the assembled instructions. The VST recordings are unchanged. DSP output is divided by four to match the capture gain, with no per-hit gain fit or sample alignment. This is a waveform comparison, not listening or physical-device acceptance.</p><pre>'+json.dumps({k:v for k,v in report.items() if k not in ('rows','build')},indent=2)+'</pre><img alt="VST and actual ASM at eight corners" src="data:image/png;base64,'+png+'"><p><a href="report.json">Complete numerical receipt</a></p></html>')
+    with tempfile.NamedTemporaryFile(dir=destination, suffix='.json', delete=False) as pending:
+        pending.write((folder/'report.json').read_bytes())
+    Path(pending.name).replace(destination/'report.json')
     print(target,'DONE',{k:v for k,v in report.items() if k not in ('rows','build')},flush=True)
 
 
