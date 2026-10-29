@@ -184,6 +184,9 @@ body_weight909:
     IF NE JUMP body_rank909;
 continue909:
     R13=DM(0,I4);
+    R0=96000;
+    COMP(R13,R0);
+    IF GE JUMP expired_block909;
     R12=32;
 sample909:
     R0=96000;
@@ -288,6 +291,10 @@ next909:
     IF NE JUMP sample909;
     DM(0,I4)=R13;
     JUMP x0x_voice_done.;
+expired_block909:
+    R0=0;
+    DM(127,I4)=R0;
+    JUMP silent909;
 silent909:
     R12=32;
     R0=0;

@@ -217,6 +217,9 @@ continued:
     R0=R15+R0;
     I4=R0;
     R13=DM(I4,M6);
+    R0=264000;
+    COMP(R13,R0);
+    IF GE JUMP expired_block;
     R0=DM(I4,M5);
     CALL sine;
     R10=R0;
@@ -391,6 +394,7 @@ write:
 next_sample:
     R12=R12-1;
     IF NE JUMP sample;
+save_block:
     R0=232;
     R0=R15+R0;
     I4=R0;
@@ -417,8 +421,14 @@ no_carry:
     DM(I4,M6)=R0;
     DM(I4,M5)=R2;
     JUMP x0x_voice_done.;
+expired_block:
+    CALL zero_block;
+    JUMP save_block;
 x0x_silent.:
 silent:
+    CALL zero_block;
+    JUMP finish;
+zero_block:
     R12=32;
     R0=0;
 silent_loop:
@@ -428,6 +438,7 @@ silent_loop:
     R14=R14+R1;
     R12=R12-1;
     IF NE JUMP silent_loop;
+    RTS;
 x0x_render_return.:
 finish:
     I12=DM(M7,I6);

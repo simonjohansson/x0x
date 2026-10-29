@@ -1,5 +1,6 @@
 """Independent field encoding, actual parcels and isolated voice lifecycle."""
 import struct
+import itertools
 import statistics
 import tempfile
 from pathlib import Path
@@ -38,6 +39,42 @@ class SharcFieldTests(unittest.TestCase):
                 counts = [runner.call(16384, 16384, b == 0, model=model)[1]
                           for b in range(200)]
                 self.assertLess(statistics.median(counts[50:]), budget)
+
+    def test_full_hit_peak_work_at_control_corners_and_defaults(self):
+        for model, frames, budget in ((0, 264000, 18000), (32512, 96000, 42000)):
+            cases = list(itertools.product((0, 32512), repeat=3)) if model else [
+                (tone, 16384, decay) for tone, decay in itertools.product((0, 32512), repeat=2)]
+            for tone, attack, decay in cases + [(16384, 16384, 16384)]:
+                with self.subTest(model=model, controls=(tone, attack, decay)):
+                    runner = dsp.Runner(self.receipt, self.artifact)
+                    counts = [runner.call(tone, decay, b == 0, model=model, attack=attack, track=0)[1]
+                              for b in range(frames//32)]
+                    self.assertLess(max(counts), budget)
+                    self.assertLess(runner.call(tone, decay, model=model, attack=attack, track=0)[1], 350)
+
+    def test_expired_block_preserves_state_and_restart(self):
+        for model, age, word in ((0, 264000, 58), (32512, 96000, 0)):
+            with self.subTest(model=model):
+                runner = dsp.Runner(self.receipt, self.artifact)
+                fresh = dsp.Runner(self.receipt, self.artifact)
+                runner.call(12345, 17001, True, model=model, attack=23001)
+                base = self.receipt['state_base']
+                runner.core.poke(base+4*word, struct.pack('<I', age), 4)
+                before = [runner.core.peek(base+4*i) for i in range(128)]
+                expected = before.copy()
+                expected[127] = 0
+                if model == 0:
+                    phase = (before[59]<<32) | before[60]
+                    step = round(self.tables['frequency']*32/48000*2**64)
+                    phase = (phase+step) % 2**64
+                    expected[59:61] = [phase>>32, phase & 0xffffffff]
+                output, count = runner.call(12345, 17001, model=model, attack=23001)
+                self.assertEqual(output, (0.,)*32)
+                self.assertLess(count, 350)
+                self.assertEqual([runner.core.peek(base+4*i) for i in range(128)], expected)
+                self.assertEqual(runner.call(12345, 17001, True, model=model, attack=23001)[0],
+                                 fresh.call(12345, 17001, True, model=model, attack=23001)[0])
+                runner.check_tables()
 
     def test_report_links_the_generated_plot_and_includes_asm_scope(self):
         page=Path(self.folder.name)/'preview.html'

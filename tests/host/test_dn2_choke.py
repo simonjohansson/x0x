@@ -66,6 +66,12 @@ class ChokeTests(unittest.TestCase):
                 for slot in range(14):
                     self.assertEqual(runner.call(16384, 16384, slot=slot, model=models[slot % 2],
                                                  track=slot % 2)[0], (0.,)*32)
+                # Component instructions for two live engines plus fourteen retired slots.
+                for block in range(200):
+                    total = sum(runner.call(16384, 16384, slot=slot,
+                                           model=models[slot % 2], track=slot % 2)[1]
+                                for slot in range(16))
+                    self.assertLess(total, 90000, (models, block, total))
 
     def test_invalid_attack_or_missing_owner_cannot_choke_another_voice(self):
         runner = self.runner()
