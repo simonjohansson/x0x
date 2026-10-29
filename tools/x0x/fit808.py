@@ -1,4 +1,4 @@
-"""Frozen fresh-corpus protocol and benchmark for the replacement 808 (#82)."""
+"""Frozen capture protocol and waveform metrics for the current 808 model."""
 import argparse
 from collections import defaultdict
 import csv
@@ -70,28 +70,16 @@ def checked_path(root, name):
 
 def verify_artifacts(folder, config, events):
     expected = dict(config['artifacts_sha256'])
-    for name in ('SHA256SUMS', 'model/SHA256SUMS'):
-        path = folder / name
-        if digest(path) != expected[name]:
-            raise ValueError('Checksum manifest mismatch: ' + name)
-        for line in path.read_text().splitlines():
-            value, relative = line.split('  ', 1)
-            relative = str(checked_path(folder, str(Path(name).parent / relative)).relative_to(folder.resolve()))
-            if relative in expected and expected[relative] != value:
-                raise ValueError('Conflicting artifact hashes: ' + relative)
-            expected[relative] = value
     for name, value in expected.items():
         if digest(checked_path(folder, name)) != value:
             raise ValueError('Artifact hash mismatch: ' + name)
     capture = json.loads((folder / '808-corpus-protocol.json').read_text())
-    split = json.loads((folder / 'model/split.json').read_text())
-    if len(capture['events']) != len(events) or len(split['events']) != len(events):
-        raise ValueError('Capture/split length mismatch')
-    for frozen, original, assigned in zip(events, capture['events'], split['events']):
+    if len(capture['events']) != len(events):
+        raise ValueError('Capture length mismatch')
+    for frozen, original in zip(events, capture['events']):
         if (any(original[k] != frozen[k] for k in frozen if k not in ('capture_group', 'partition')) or
-                original['split'] != frozen['capture_group'] or
-                any(assigned[k] != frozen[k] for k in assigned)):
-            raise ValueError('Capture/split differs from frozen manifest')
+                original['split'] != frozen['capture_group']):
+            raise ValueError('Capture differs from frozen manifest')
     with (folder / '808-corpus-control-readbacks.tsv').open() as stream:
         rows = list(csv.DictReader(stream, delimiter='\t'))
     if len(rows) != 256 or len({(r['cc'], r['parameter']) for r in rows}) != 256:
@@ -200,84 +188,29 @@ def summarize(rows, config):
     return result
 
 
-def teacher_weights(model, queries):
-    """Local cubic tensor interpolation of the independent axes and joint residual."""
+def sample_objective(reference, config):
+    """Deterministic quadrature for full-slot and equally weighted short-window losses."""
     import numpy as np
-    def weights(knots, targets):
-        x = np.array([source_step(int(k)) / 255 for k in knots])
-        if len(x) < 4 or not np.all(np.diff(x) > 0):
-            raise ValueError('Teacher knots must be strictly increasing')
-        matrix = np.zeros((len(targets), len(x)))
-        for row, target in enumerate(targets):
-            z = source_step(int(target)) / 255
-            if not x[0] <= z <= x[-1]:
-                raise ValueError('Teacher extrapolation is forbidden')
-            exact = np.flatnonzero(x == z)
-            if len(exact):
-                matrix[row, exact[0]] = 1
-                continue
-            start = int(np.clip(np.searchsorted(x, z) - 2, 0, len(x) - 4))
-            selected = range(start, start + 4)
-            for j in selected:
-                matrix[row, j] = np.prod([(z - x[k]) / (x[j] - x[k]) for k in selected if k != j])
-        return matrix
-    index = {tuple(pair): i for i, pair in enumerate(model['pairs'])}
-    result = np.zeros((len(queries), len(index)))
-    for key in ('axis', 'grid'):
-        t = weights(model[key], [p[0] for p in queries])
-        d = weights(model[key], [p[1] for p in queries])
-        if key == 'axis':
-            for j, cc in enumerate(model[key]):
-                result[:, index[cc, 0]] += t[:, j]
-                result[:, index[0, cc]] += d[:, j]
-            result[:, index[0, 0]] -= 1
-        else:
-            for i, tone in enumerate(model[key]):
-                for j, decay in enumerate(model[key]):
-                    w = t[:, i] * d[:, j]
-                    result[:, index[tone, decay]] += w
-                    result[:, index[tone, 0]] -= w
-                    result[:, index[0, decay]] -= w
-                    result[:, index[0, 0]] += w
-    return result
-
-
-def benchmark(folder, config, events, partition):
-    import numpy as np
-    import soundfile as sf
-    with np.load(folder / config['teacher']['path'], allow_pickle=False) as data:
-        model = {k: data[k] for k in data.files}
-    expected_pairs = sorted({(e['tone_cc'], e['decay_cc']) for e in events if e['partition'] == 'train'})
-    if (model['pairs'].tolist() != [list(p) for p in expected_pairs] or
-            model['basis'].shape != (48, FRAMES) or model['coefficients'].shape != (193, 48) or
-            str(model['method']) != 'cubic' or not bool(model['interaction']) or
-            not np.isfinite(model['basis']).all() or not np.isfinite(model['coefficients']).all()):
-        raise ValueError('Expected the frozen fitting-only teacher, not the all-data refit')
-    selected = [e for e in events if e['partition'] == partition]
-    rows = []
-    with sf.SoundFile(folder / '808-corpus.wav') as wav:
-        for start in range(0, len(selected), 8):
-            batch = selected[start:start + 8]
-            weights = teacher_weights(model, [(e['tone_cc'], e['decay_cc']) for e in batch])
-            predicted = ((weights @ model['coefficients']) @ model['basis']).astype('float32')
-            for event, y in zip(batch, predicted):
-                rows.append(dict(index=event['index'], tone_cc=event['tone_cc'], decay_cc=event['decay_cc'],
-                                 **measure(y, read_slot(wav, event), config)))
-    summary = summarize(rows, config)
-    expected = config['teacher']['expected_' + partition]
-    for name, actual in summary.items():
-        for metric, old in [('median', 'median_relative_l2'), ('p95', 'p95_relative_l2'), ('worst', 'worst_relative_l2')]:
-            if abs(actual['relative_l2'][metric] - expected[name][old]) > config['teacher']['regression_absolute_tolerance']:
-                raise ValueError('Teacher benchmark regression: ' + name + '/' + metric)
-    return dict(partition=partition, reproduced=True, summary=summary, records=rows)
+    indices = np.concatenate([np.arange(0, 288), np.arange(288, 2400, 4),
+                              np.arange(2400, 24000, 16), np.arange(24000, FRAMES, 128)])
+    width = np.diff(np.r_[indices, FRAMES])
+    energy = float(reference @ reference)
+    weight2 = width / energy
+    for name, (lo, hi) in config['windows'].items():
+        if name in ('whole', 'tail500ms_to_end'):
+            continue
+        region = reference[lo:hi]
+        region_energy = float(region @ region)
+        if np.sqrt(region_energy / len(region)) >= config['gates']['active_reference_rms_fs']:
+            weight2 += .25 * width * ((indices >= lo) & (indices < hi)) / region_energy
+    return indices, np.sqrt(weight2)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=('verify', 'benchmark'))
+    parser.add_argument('command', choices=('verify',))
     parser.add_argument('--corpus', type=Path, default=CORPUS)
-    parser.add_argument('--partition', choices=('validation', 'test'), default='test')
-    parser.add_argument('--output', type=Path, default=ROOT / 'out/808-model/protocol-benchmark.json')
+    parser.add_argument('--output', type=Path, default=ROOT / 'out/808-model/protocol-verification.json')
     args = parser.parse_args()
     if (args.output.resolve().is_relative_to(args.corpus.resolve()) or
             args.output.resolve().is_relative_to(FIXTURES.resolve())):
@@ -304,8 +237,6 @@ def main():
             raise ValueError('Capture onset/clipping/quiet-tail audit failed')
         result['audio'] = dict(slots=512, maximum_peak_fs=maximum, maximum_last250ms_fs=quiet,
                                threshold_onset_sample=1, normalization=False, alignment=False)
-    if args.command == 'benchmark':
-        result.update(benchmark(args.corpus, config, events, args.partition))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2, allow_nan=False) + '\n')
     print(f"Verified {len(hashes)} artifacts and 512 audio slots; {args.output}")

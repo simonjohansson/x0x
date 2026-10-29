@@ -1,4 +1,4 @@
-"""Legacy ASM partition within the pinned 64 KiB DN2 voice owner."""
+"""Private ASM partition within the pinned 64 KiB DN2 voice owner."""
 from . import cpu
 
 CODE_BYTES = 8192

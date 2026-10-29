@@ -33,7 +33,7 @@ description = "Run current model, assembled engines and native C adapter checks"
 env = { OPENBLAS_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }
 run = [
   'PYTHONPATH="{{config_root}}/vendor/digikit:{{config_root}}/vendor/digiemu:$PYTHONPATH" uv run --frozen --project vendor/digiemu --with numpy==2.5.4 --with scipy==1.18.0 --with soundfile==0.14.0 --with networkx==3.4.2 --with mypy==2.3.1 --python "$(mise which python)" python -m unittest discover -s tests/host -p test_*.py',
-  'mise exec -- node tests/host/diagnose808_listening.js',
+  'mise exec -- node tests/host/listening808.js',
   'python -m x0x.ui_test',
 ]
 

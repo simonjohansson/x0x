@@ -1,6 +1,4 @@
 /research/*
-!/research/manifest.json
-!/research/manifest-components.json
 /out/
 /firmware/*
 !/firmware/README.md

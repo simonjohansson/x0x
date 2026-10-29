@@ -1,6 +1,6 @@
 /* Frozen 808 field: Q26 envelopes/state, Q31 carrier/Tone, 64-bit phase.
  * Private C ABI: field(state[352], output[32], START, Tone, Decay, MODEL).
- * Controls latch on START; MODEL=909 is silent in this development entry.
+ * Controls latch on START; MODEL=909 is silent in this private 808 entry.
  * Frame: callee registers 0..43, EMAC 44..75, private scratch 76..127.
  */
 .text
@@ -203,12 +203,16 @@ x0x_field808:
     rts
 
 /* Fractional EMAC multiplication: two nearest-even narrowing steps. */
+.globl x0x_cf_mul
+x0x_cf_mul:
 .Lmul:
     moveq #0,%d2
     move.l %d2,%acc0
     mac.l %d0,%d1,%acc0
     movclr.l %acc0,%d0
     rts
+.globl x0x_cf_dot
+x0x_cf_dot:
 .Ldot:
     moveq #0,%d0
     move.l %d0,%acc0
@@ -220,6 +224,8 @@ x0x_field808:
     bne .Ldot_loop
     movclr.l %acc0,%d0
     rts
+.globl x0x_cf_horner
+x0x_cf_horner:
 .Lhorner:
     move.l (%a0)+,%d0
     moveq #3,%d3
@@ -231,6 +237,8 @@ x0x_field808:
     bne .Lhorner_loop
     rts
 /* Exact floor((numerator<<31)/denominator), without a 64-bit DIV opcode. */
+.globl x0x_cf_fraction
+x0x_cf_fraction:
 .Lfraction:
     cmp.l %d1,%d0
     bhs .Lfraction_one
@@ -251,6 +259,8 @@ x0x_field808:
 .Lfraction_one:
     move.l #0x7fffffff,%d0
     rts
+.globl x0x_cf_sine
+x0x_cf_sine:
 .Lsine:
     move.l %d0,%d2
     moveq #21,%d1

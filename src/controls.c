@@ -9,7 +9,7 @@ int x0x_send_control(enum x0x_instrument instrument, uint32_t voice,
                     (instrument == X0X_909 && (common || control == X0X_TUNE || control == X0X_ATTACK));
     if (!supported || !receiver || !maximum || raw > maximum)
         return 0;
-    /* Position is unitless; the shared model supplies the pot/circuit mapping. */
+    /* Position is unitless; the shared model supplies the captured parameter response. */
     struct x0x_position position = {raw, maximum};
     receiver(context, voice, control, position);
     return 1;

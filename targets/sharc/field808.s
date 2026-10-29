@@ -1,5 +1,5 @@
 // Frozen spline/carrier 808, 48 kHz / 32 mono floats. SDK input in R4.
-// Tone/Decay latch on START; MODEL selects the new 808 or provisional 909.
+// Tone/Decay latch on START; MODEL selects the 808 or reference-driven 909.
 // State: weights[8], segment[5], cubic[32], scratch, filter/age/phase/tag,
 // with interval-cached onset coefficients. SDK owns sixteen independent states.
 .SECTION/SW seg_swco;

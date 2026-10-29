@@ -2,7 +2,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
-const html = fs.readFileSync('tools/x0x/diagnose808.html', 'utf8');
+const html = fs.readFileSync('tools/x0x/listening808.html', 'utf8');
 const elements = new Map();
 function element(id) {
   if (!elements.has(id)) elements.set(id, {hidden:false,disabled:false,textContent:'',value:0,append(){},click(){}});

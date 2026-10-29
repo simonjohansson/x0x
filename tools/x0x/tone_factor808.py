@@ -3,7 +3,7 @@ import argparse
 import json
 from pathlib import Path
 
-from . import diagnose808, fit808
+from . import listening808, fit808
 
 OUT = fit808.ROOT / 'out/808-model/tone-factor'
 
@@ -129,8 +129,8 @@ def main():
             artifacts_verified=len(hashes), source_sha256=hashes['808-corpus.wav'],
             driver_sha256=fit808.digest(Path(__file__)), benchmark_driver_sha256=fit808.digest(Path(fit808.__file__)),
             protocol_sha256=fit808.digest(fit808.FIXTURES / 'protocol.json'),
-            listening_helper_sha256=fit808.digest(Path(diagnose808.__file__)),
-            listening_template_sha256=fit808.digest(Path(diagnose808.__file__).with_suffix('.html')),
+            listening_helper_sha256=fit808.digest(Path(listening808.__file__)),
+            listening_template_sha256=fit808.digest(Path(listening808.__file__).with_suffix('.html')),
             environment=dict(numpy=np.__version__, scipy=scipy.__version__, soundfile=sf.__version__),
             resources=dict(encoded_parameter_bytes=parameters.nbytes, relative_filter_states_direct_form_i=2,
                 relative_filter_states_transposed=1,
@@ -168,7 +168,7 @@ def main():
     manifest = {k: v for k, v in report.items() if k.endswith('_sha256')}
     manifest['scope'] = 'Tone-stage test only: the input is a recorded Tone-127 kick, not a synthesized oscillator.'
     manifest['cohort_note'] = 'The curve was fitted at Decay zero. Other Decay settings here test the filter using recorded inputs, not full-generator generalization.'
-    report['listening_gain'] = diagnose808.listening_report(output, listening, references, predictions, manifest)
+    report['listening_gain'] = listening808.listening_report(output, listening, references, predictions, manifest)
     make_plots(output, parameters, report['records'], references, predictions)
     (output / 'report.json').write_text(json.dumps(report, indent=2, allow_nan=False) + '\n')
     print('Tone filter converged:', optimizer['converged'], 'parameter bytes:', parameters.nbytes, flush=True)

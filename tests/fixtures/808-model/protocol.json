@@ -74,125 +74,15 @@
   "aggregation": "Arithmetic mean of each metric across takes at identical controls; each setting has equal weight in medians and NumPy linear percentiles. Gate level/duration maxima also use grouped absolute errors. Per-take failures are retained as diagnostics; quiet-window residual limits apply to every take.",
   "events_sha256": "2fc6e7771cc1d09915ada3831ea02a18ee928c961d0b9d5c9c0e177af216f62e",
   "artifacts_sha256": {
-    "SHA256SUMS": "9c0681f7c779e60b177bae734758a95ef32cc47f2278d851bd307aa1a690ca86",
-    "model/SHA256SUMS": "5ada3150808224e83d51f1e5843515ed20286b98399ca23f00423d834390c72e",
     "808-corpus.wav": "6b2ab6eb4e69582864366bc3baea4ebf340dcbc34b4e6d99267e56ad5366faf6",
     "808-corpus-protocol.json": "f17da9fbf09f14e68d2423155aac0c553933656734adb887a5d1a074e5123998",
     "808-corpus-control-readbacks.tsv": "fcf8dafc2b66226fb0d833df0243c69f872f0459c7d25928081cf7dbf941f18b",
     "808-corpus-before.tsv": "2f518e7d3a62d66b26a2e76ad0abf5aec312f58cdc6e8796b01ef73ab3aeb993",
     "808-corpus-after.tsv": "2f518e7d3a62d66b26a2e76ad0abf5aec312f58cdc6e8796b01ef73ab3aeb993",
-    "environment.json": "5b47ea3fe40d984deacc222c686636a12e80806563ad5b1660b01b5ea501f2aa",
-    "model/split.json": "29be9cf500fa197c01e87a89bdc25812f946aa7194f99038c8b802caf6f18b29",
-    "model/selection.json": "033ff41d6d9ac37f3490457c542c45ee1b609ebbac95685c32b092eed5cb6636",
-    "model/summary.json": "de928c9451bf1bb9003df1b23866f273b7f5752f8cfcb6b79806fcf5af062568",
-    "model/evaluated-model.npz": "abc837e5eda7aaf8d39f62ac8fd0cf038e06d3a0639cbe47a4e8f3957efa3d96",
-    "model/model.npz": "b3d35f90cb8a21b746c214c759b414879416ca007d7b21cb2ba8b07aa74b76c3"
-  },
-  "teacher": {
-    "path": "model/evaluated-model.npz",
-    "method": "cubic",
-    "rank": 48,
-    "training_settings": 193,
-    "expected_test": {
-      "all": {
-        "settings": 143,
-        "median_relative_l2": 0.00016038441791835204,
-        "p95_relative_l2": 0.00232207862841946,
-        "worst_relative_l2": 0.007417315431088687,
-        "median_snr_db": 75.89675655405438,
-        "worst_controls": [
-          93,
-          8
-        ],
-        "p95_absolute_t99_error_ms": 0.06249999999996305,
-        "maximum_absolute_t99_error_ms": 0.08333333333334281,
-        "p95_absolute_peak_error_db": 0.013691398640477585,
-        "p95_absolute_energy_error_percent": 0.07753582486286882
-      },
-      "isolated": {
-        "settings": 62,
-        "median_relative_l2": 1.1391499160071417e-05,
-        "p95_relative_l2": 0.00028272281033244357,
-        "worst_relative_l2": 0.0023219193768334806,
-        "median_snr_db": 98.8683823505468,
-        "worst_controls": [
-          0,
-          7
-        ],
-        "p95_absolute_t99_error_ms": 0.020833333333369806,
-        "maximum_absolute_t99_error_ms": 0.02083333333337123,
-        "p95_absolute_peak_error_db": 0.0003964811648505673,
-        "p95_absolute_energy_error_percent": 0.02363318238391195
-      },
-      "interaction": {
-        "settings": 81,
-        "median_relative_l2": 0.0007835925535500196,
-        "p95_relative_l2": 0.0042797962288241564,
-        "worst_relative_l2": 0.007417315431088687,
-        "median_snr_db": 62.1181939948299,
-        "worst_controls": [
-          93,
-          8
-        ],
-        "p95_absolute_t99_error_ms": 0.0625,
-        "maximum_absolute_t99_error_ms": 0.08333333333334281,
-        "p95_absolute_peak_error_db": 0.015452636973252753,
-        "p95_absolute_energy_error_percent": 0.20589842171873096
-      }
-    },
-    "expected_validation": {
-      "all": {
-        "settings": 144,
-        "median_relative_l2": 8.493399429653465e-05,
-        "p95_relative_l2": 0.005709089732798778,
-        "worst_relative_l2": 0.008462338759061569,
-        "median_snr_db": 81.4183690265695,
-        "worst_controls": [
-          127,
-          8
-        ],
-        "p95_absolute_t99_error_ms": 0.0625,
-        "maximum_absolute_t99_error_ms": 1.1458333333333286,
-        "p95_absolute_peak_error_db": 0.04243591347603387,
-        "p95_absolute_energy_error_percent": 0.47337467485722295
-      },
-      "isolated": {
-        "settings": 64,
-        "median_relative_l2": 1.219807771864535e-05,
-        "p95_relative_l2": 0.0003928753039720551,
-        "worst_relative_l2": 0.0007260358870493884,
-        "median_snr_db": 98.27417207824598,
-        "worst_controls": [
-          1,
-          0
-        ],
-        "p95_absolute_t99_error_ms": 0.02083333333337123,
-        "maximum_absolute_t99_error_ms": 1.1458333333333286,
-        "p95_absolute_peak_error_db": 0.0011176070974687155,
-        "p95_absolute_energy_error_percent": 0.02055056418010901
-      },
-      "interaction": {
-        "settings": 80,
-        "median_relative_l2": 0.0005281107254061642,
-        "p95_relative_l2": 0.00716849571560799,
-        "worst_relative_l2": 0.008462338759061569,
-        "median_snr_db": 65.54550024661664,
-        "worst_controls": [
-          127,
-          8
-        ],
-        "p95_absolute_t99_error_ms": 0.0833333333333293,
-        "maximum_absolute_t99_error_ms": 0.1041666666666714,
-        "p95_absolute_peak_error_db": 0.05427796721247944,
-        "p95_absolute_energy_error_percent": 0.5790985086040994
-      }
-    },
-    "regression_absolute_tolerance": 1e-08
+    "environment.json": "5b47ea3fe40d984deacc222c686636a12e80806563ad5b1660b01b5ea501f2aa"
   },
   "limitations": [
     "Software source only; no physical TR-808 claim.",
-    "Fixed Tune/velocity/accent and isolated triggers; no dynamic-control/retrigger-history fidelity.",
-    "Teacher is too large for DSP installation. Compact-model and hardware feasibility remain open.",
-    "Original withholding is retrospective. The all-data model is not an independent holdout teacher."
+    "Fixed Tune/velocity/accent and isolated triggers; no dynamic-control/retrigger-history fidelity."
   ]
 }

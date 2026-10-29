@@ -1,4 +1,4 @@
-"""Normal x0x mod builds: shared frozen 808, provisional 909, pinned stock SDK."""
+"""Normal x0x mod builds: shared frozen 808 and 909, pinned stock SDK."""
 
 from pathlib import Path
 import argparse
@@ -6,7 +6,7 @@ import hashlib
 import json
 import shutil
 
-from . import cpu, firmware, sharc_field808, coldfire_field808
+from . import cpu, firmware, sharc_field808, coldfire_field808, coldfire_field909
 
 DEVICES = {
     "dt": ("digitakt", "digitakt-mk1", ("core", "machine-pages")),
@@ -27,6 +27,9 @@ def stage(device, folder):
     else:
         model = coldfire_field808.write_tables(folder / "model")
         manifest["sources"].append(str(folder / "model/tables.s"))
+        model["model909"] = coldfire_field909.write_tables(folder / "model")
+        model["combined_table_bytes"] = model["table_bytes"] + model["model909"]["table_bytes"]
+        manifest["sources"].append(str(folder / "model/tables909.s"))
     (folder / "mod.json").write_text(json.dumps(manifest, indent=2) + "\n")
     return model
 
@@ -81,7 +84,7 @@ def build(device, folder=None):
         defaults_correction_sha256=hashlib.sha256(correction.read_bytes()).hexdigest()
         if correction
         else None,
-        note="New frozen-model 808 plus retained provisional 909; final new-909 source qualification remains separate.",
+        note="Frozen-model 808 and 909; component, emulator, device and listening evidence are reported separately.",
     )
     (folder / "build.json").write_text(json.dumps(report, indent=2) + "\n")
     return report

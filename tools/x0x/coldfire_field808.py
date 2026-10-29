@@ -141,15 +141,20 @@ def build(folder=OUT,combined=False):
     objects=[]
     extra=''
     if combined:
-        seed=seed.replace('bsr x0x_field808','bsr x0x_render')
+        from . import coldfire_field909
+        coldfire_field909.write_tables(folder)
+        seed=(cpu.ROOT/'tests/asm/coldfire_mod_probe.s').read_text()
         obj=folder/'dispatch.o'
         cpu.command(['m68k-elf-gcc','-mcpu=54455','-msoft-float','-O2','-ffreestanding',
                      '-fno-builtin','-c',cpu.ROOT/'targets/coldfire/engine.c','-o',obj])
         objects.append(obj)
-        for name in ('body909','silence'):
+        for name in ('field909','silence'):
             obj=folder/(name+'.o')
             cpu.command(['m68k-elf-as','-mcpu=54455',cpu.ROOT/'targets/coldfire'/(name+'.s'),'-o',obj])
             objects.append(obj)
+        obj=folder/'tables909.o'
+        cpu.command(['m68k-elf-as','-mcpu=54455',folder/'tables909.s','-o',obj])
+        objects.append(obj)
     probe=folder/'probe.s'
     probe.write_text(seed+'\n'+SOURCE.read_text()+'\n'+extra+'\n'+(folder/'tables.s').read_text())
     image,_=cpu.build_coldfire(folder,probe,objects)
@@ -160,8 +165,8 @@ def build(folder=OUT,combined=False):
 
 
 class Runner:
-    BASE,OUTPUT,STATES=0x40000400,0x40010004,0x40011004
-    SNAPSHOT,STACK,STOP=0x40018004,0x40020000,0x40030000
+    BASE,OUTPUT,STATES=0x40000400,0x40048004,0x40040004
+    SNAPSHOT,STACK,STOP=0x40049004,0x40050000,0x40060000
     def __init__(self,image,guarded=True,words=WORDS,stack_bytes=168):
         harness=cpu.require_module('emu.harness','digiemu')
         from unicorn import UC_HOOK_CODE,UC_HOOK_MEM_WRITE,m68k_const
@@ -179,7 +184,7 @@ class Runner:
         if not any(a<=address and address+size<=b for a,b in self.allowed):self.invalid.append((address,size))
     def check_tables(self):
         assert bytes(self.uc.mem_read(self.BASE,len(self.image)))==self.image,'Code/table changed'
-    def call(self,tone,decay,start=False,slot=0,model=0):
+    def call(self,tone,decay,start=False,slot=0,model=0,attack=16384):
         from .cpu import EMAC_SEED
         assert 0<=slot<8
         b=self;u=self.uc;r=lambda n:getattr(self.regs,'UC_M68K_REG_'+n)
@@ -187,7 +192,10 @@ class Runner:
         before=bytes(u.mem_read(self.STATES-4,b.extent))
         u.mem_write(self.OUTPUT-4,b'\xa5'*136);u.mem_write(self.SNAPSHOT-4,b'\xa5'*44)
         u.mem_write(self.STACK-self.stack_bytes-16,b'\xa5'*(self.stack_bytes+80))
-        args=struct.pack('>8I',self.STOP,state,self.OUTPUT,int(start),tone,decay,model,self.SNAPSHOT)
+        arguments=[self.STOP,state,self.OUTPUT,int(start),tone,decay,model]
+        if self.words==353:arguments.append(attack)
+        arguments.append(self.SNAPSHOT)
+        args=struct.pack('>'+str(len(arguments))+'I',*arguments)
         u.mem_write(self.STACK,args);u.reg_write(r('SR'),0x2700)
         saved={r(n):0x10203040+i for i,n in enumerate([*(f'D{i}' for i in range(2,8)),*(f'A{i}' for i in range(2,7))])}
         for reg,v in saved.items():u.reg_write(reg,v)
@@ -213,7 +221,7 @@ def qualify(folder=OUT):
     import numpy as np
     import soundfile as sf
     import time
-    from . import fit808,field808,diagnose808
+    from . import fit808,field808,listening808
     folder=Path(folder);receipt,image=build(folder)
     (folder/'engine-source.s').write_bytes(SOURCE.read_bytes())
     (folder/'qualification-driver.py').write_bytes(Path(__file__).read_bytes())
@@ -265,7 +273,7 @@ def qualify(folder=OUT):
         unqualified=['physical ColdFire timing','full-OS wiring is reported separately','this standalone 808 kernel is dispatched alongside 909 by the normal mod','fresh independent source acceptance'])
     manifest={k:v for k,v in report.items() if k.endswith('_sha256')};manifest.update(scope=report['scope'],
         cohort_note='Same development cohort as SHARC; actual assembled ColdFire prediction audio, no new fitting or per-recording gain/alignment.')
-    report['listening_gain']=diagnose808.listening_report(folder,chosen,references,predictions,manifest)
+    report['listening_gain']=listening808.listening_report(folder,chosen,references,predictions,manifest)
     shared.make_plots(folder,references,predictions,rows,backend='ColdFire')
     page=folder/'index.html'
     page.write_text(page.read_text().replace('Native integration and physical deadlines remain untested.',

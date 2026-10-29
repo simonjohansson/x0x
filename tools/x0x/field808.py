@@ -3,7 +3,7 @@ import argparse
 import json
 from pathlib import Path
 
-from . import capacity808, diagnose808, fit808, tone_factor808
+from . import listening808, fit808, tone_factor808
 
 RANK = 8
 OUT = fit808.ROOT / 'out/808-model/field'
@@ -121,7 +121,7 @@ def fit_body(targets, decays, config, model):
     coordinates = [fit808.native_coordinate(d * 256) for d in decays]
     if np.any(np.linalg.norm(targets, axis=1) == 0):
         raise ValueError('Silent targets cannot define an equal-setting relative loss')
-    indices, _ = capacity808.sample_objective(np.ones(fit808.FRAMES), config)
+    indices, _ = fit808.sample_objective(np.ones(fit808.FRAMES), config)
     widths = np.diff(np.r_[indices, fit808.FRAMES])
     matrix = dictionary(model, indices / fit808.RATE)
     _, singular, vectors = np.linalg.svd(matrix * np.sqrt(widths)[:, None], full_matrices=False)
@@ -130,7 +130,7 @@ def fit_body(targets, decays, config, model):
     inverse = vectors[retained].T / singular[retained]
     coefficients, norms, solves = [], [], []
     for target in targets:
-        _, weights = capacity808.sample_objective(target, config)
+        _, weights = fit808.sample_objective(target, config)
         c, _, rank, spectrum = np.linalg.lstsq(matrix * weights[:, None], target[indices] * weights, rcond=1e-7)
         coefficients.append(c)
         norms.append(np.linalg.norm(target))
@@ -165,7 +165,7 @@ def fit_body(targets, decays, config, model):
 
 def listening_subset(events):
     """Four fitting corners and twelve stratified validation settings, all distinct."""
-    chosen = [next(e for e in events if (e['tone_cc'], e['decay_cc']) == pair) for pair in diagnose808.CORNERS]
+    chosen = [next(e for e in events if (e['tone_cc'], e['decay_cc']) == pair) for pair in listening808.CORNERS]
     for tone in (0, 42, 85, 127):
         for decay in (8, 59, 119):
             candidates = [e for e in events if e['partition'] == 'validation' and e not in chosen]
@@ -181,7 +181,7 @@ def make_plots(output, references, predictions, summaries):
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     fig, axes = plt.subplots(4, 2, figsize=(12, 10), layout='constrained')
-    for row, pair in enumerate(diagnose808.CORNERS):
+    for row, pair in enumerate(listening808.CORNERS):
         ref, pred = references[pair], predictions[pair]
         axes[row, 0].plot(np.arange(2400) / 48, ref[:2400], color='black', label='Recorded')
         axes[row, 0].plot(np.arange(2400) / 48, pred[:2400], '--', color='#00838c', label='Quantized candidate')
@@ -265,15 +265,15 @@ def main():
         source_sha256=hashes['808-corpus.wav'], artifacts_verified=len(hashes),
         driver_sha256=fit808.digest(Path(__file__)), benchmark_driver_sha256=fit808.digest(Path(fit808.__file__)),
         tone_driver_sha256=fit808.digest(Path(tone_factor808.__file__)),
-        objective_driver_sha256=fit808.digest(Path(capacity808.__file__)),
-        listening_driver_sha256=fit808.digest(Path(diagnose808.__file__)),
-        listening_template_sha256=fit808.digest(Path(diagnose808.__file__).with_suffix('.html')),
+        objective_driver_sha256=fit808.digest(Path(fit808.__file__)),
+        listening_driver_sha256=fit808.digest(Path(listening808.__file__)),
+        listening_template_sha256=fit808.digest(Path(listening808.__file__).with_suffix('.html')),
         protocol_sha256=fit808.digest(fit808.FIXTURES / 'protocol.json'), model_sha256=fit808.digest(output / 'model.npz'),
         environment=dict(numpy=np.__version__, scipy=scipy.__version__, soundfile=sf.__version__),
         fitting=dict(tone_optimizer=optimizer, canonical_provenance=provenance, **evidence),
         resources=dict(array_payload_bytes=sum(a.nbytes for a in model.values()),
             arrays={k: dict(shape=list(a.shape), dtype=str(a.dtype), bytes=a.nbytes) for k, a in model.items()},
-            note='Payload only; metadata, code, mutable state, alignment and initialized-data packaging require a new linked budget. This exceeds the original 1 KiB 808-table proposal.',
+            note='Payload only; metadata, code, mutable state, alignment and initialized-data packaging require a new linked budget. Use the normal linked build receipt for target resource limits.',
             target_instruction_cost=None, target_mutable_state_bytes=None, combined_budget_qualified=False),
         records=dict(train=[], validation=[]))
     references, predictions = {}, {}
@@ -302,7 +302,7 @@ def main():
     manifest = {k: v for k, v in report.items() if k.endswith('_sha256')}
     manifest['scope'] = report['scope']
     manifest['cohort_note'] = 'Four fitting corners plus twelve stratified validation settings. Validation was used for complexity selection; this is a development listening test, not fresh independent acceptance.'
-    report['listening_gain'] = diagnose808.listening_report(output, chosen, references, predictions, manifest)
+    report['listening_gain'] = listening808.listening_report(output, chosen, references, predictions, manifest)
     make_plots(output, references, predictions, report['records'])
     (output / 'report.json').write_text(json.dumps(report, indent=2, allow_nan=False) + '\n')
     for name, summary in report['summary'].items():

@@ -2,7 +2,7 @@
   "id": "x0x",
   "version": "0.1",
   "title": "X0X KICKS",
-  "description": "Frozen-model 808 and provisional 909 in SHARC ASM",
+  "description": "Frozen-model 808 and frozen-model 909 in SHARC ASM",
   "license": "GPL-2.0-or-later",
   "device": "digitone-mk2",
   "os": "1.12",

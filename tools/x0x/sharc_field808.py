@@ -367,7 +367,7 @@ def python_witness(receipt,artifact):
 def qualify(folder=OUT):
     import numpy as np
     import soundfile as sf
-    from . import diagnose808
+    from . import listening808
     folder=Path(folder)
     driver_bytes=Path(__file__).read_bytes()
     receipt,artifact=build(folder)
@@ -434,7 +434,7 @@ def qualify(folder=OUT):
     manifest.update(scope=report['scope'],cohort_note='Same development listening cohort as the frozen model; four fitting corners and twelve validation settings. Prediction audio is actual assembled SHARC output.')
     if SOURCE.read_bytes() != (folder/'engine-source.s').read_bytes():
         raise ValueError('ASM source changed during qualification')
-    report['listening_gain']=diagnose808.listening_report(folder,chosen,references,predictions,manifest)
+    report['listening_gain']=listening808.listening_report(folder,chosen,references,predictions,manifest)
     make_plots(folder,references,predictions,rows)
     (folder/'report.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
     return report

@@ -27,7 +27,7 @@ static void render_body(void *context, const struct x0x_dn_input *input)
     uint32_t model = *(const uint32_t *)context;
     x0x_render(&voices[input->slot], input->output, !!(input->flags & X0X_DN_NATIVE_START),
         input->value[0].position.numerator, input->value[1].position.numerator,
-        model);
+        model, model >= 16384 ? input->value[2].position.numerator : 0);
 }
 
 static void x0x_dn_machine_render(int32_t slot, int32_t *block, const struct dnm_voice *voice)

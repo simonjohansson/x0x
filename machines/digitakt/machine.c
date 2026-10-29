@@ -11,7 +11,7 @@ void x0x_dt_render(int32_t *blocks)
         }
         x0x_render(&voices[track], blocks + 32 * track, (fw_voice_start >> track) & 1u,
             (uint32_t)cm_src_value(track, 0), (uint32_t)cm_src_value(track, 1),
-            (uint32_t)cm_src_value(track, 5));
+            (uint32_t)cm_src_value(track, 5), (uint32_t)cm_src_value(track, 2));
     }
 }
 

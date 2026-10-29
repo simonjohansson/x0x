@@ -1,9 +1,8 @@
 # Local firmware inputs
 
-Use only the latest official OS for each active device. The current baseline was
-verified against Elektron's support pages on **26 October 2026**:
+Use the pinned stock images supported by the current engine builds:
 
-| Device | Latest OS | Official support page | Local stock image |
+| Device | Pinned OS | Official support page | Local stock image |
 | --- | --- | --- | --- |
 | Digitakt mk1 | 1.54 | [Digitakt downloads](https://www.elektron.se/support-downloads/digitakt) | `Digitakt_OS1.54.syx` |
 | Digitone mk1 | 1.44 | [Digitone downloads](https://www.elektron.se/support-downloads/digitone) | `Digitone_and_Digitone_Keys_OS1.44.syx` |

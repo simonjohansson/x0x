@@ -8,7 +8,7 @@ volatile uint8_t fw_render_machine[8];
 volatile uint32_t fw_voice_start;
 const char cm_ui_v3[]="test";
 static int32_t values[8][8];
-static uint32_t calls[8],starts[8],tones[8],decays[8],which[8];
+static uint32_t calls[8],starts[8],tones[8],decays[8],which[8],attacks[8];
 static int32_t *owners[8];
 int32_t cm_src_value(int32_t track,int32_t knob) {return values[track][knob];}
 void x0x_silence(int32_t *out) {memset(out,0,128);}
@@ -20,8 +20,8 @@ static void record(int32_t *state,int32_t *out,uint32_t start,uint32_t tone,uint
 }
 void x0x_field808(int32_t *s,int32_t *o,uint32_t a,uint32_t t,uint32_t d,uint32_t m)
 {assert(m==0);record(s,o,a,t,d,808);}
-void x0x_909_body(int32_t *s,int32_t *o,uint32_t a,uint32_t d,uint32_t t)
-{record(s,o,a,t,d,909);}
+void x0x_field909(int32_t *s,int32_t *o,uint32_t a,uint32_t t,uint32_t d,uint32_t attack)
+{record(s,o,a,t,d,909);for(unsigned i=0;i<8;++i)if(owners[i]==s)attacks[i]=attack;}
 int main(void)
 {
     const struct cm_machine *m=&x0x_dt_machine;
@@ -36,11 +36,12 @@ int main(void)
     }
     int32_t guarded[258];for(unsigned k=0;k<258;++k) guarded[k]=123;
     fw_render_machine[0]=fw_render_machine[7]=80;
-    values[0][0]=12345;values[0][1]=17001;values[7][5]=32512;
+    values[0][0]=12345;values[0][1]=17001;values[7][5]=32512;values[7][0]=23456;values[7][1]=7890;values[7][2]=5432;
     x0x_dt_render(guarded+1);assert(!calls[0]);
     fw_voice_start=(1u<<7)|1;x0x_dt_render(guarded+1);
     assert(calls[0]==1 && calls[1]==1 && starts[0] && starts[1]);
     assert(tones[0]==12345 && decays[0]==17001 && which[0]==808 && which[1]==909);
+    assert(tones[1]==23456 && decays[1]==7890 && attacks[1]==5432);
     assert(guarded[0]==123 && guarded[257]==123 && guarded[33]==123);
     fw_voice_start=0;values[0][5]=32512;values[7][5]=0;x0x_dt_render(guarded+1);
     assert(which[0]==808 && which[1]==909 && !starts[0]);
@@ -50,5 +51,9 @@ int main(void)
     fw_render_machine[0]=80;fw_voice_start=0;values[0][0]=12345;x0x_dt_render(guarded+1);
     assert(calls[0]==before && guarded[1]==0);
     fw_voice_start=1;x0x_dt_render(guarded+1);assert(which[0]==909 && calls[0]==before+1);
+    values[0][5]=0;values[0][2]=0;fw_voice_start=1;x0x_dt_render(guarded+1);
+    assert(which[0]==808);before=calls[0];values[0][5]=32512;values[0][2]=-1;
+    x0x_dt_render(guarded+1);assert(calls[0]==before && guarded[1]==0);
+    fw_voice_start=0;x0x_dt_render(guarded+1);assert(calls[0]==before+1 && which[0]==808);
     return 0;
 }

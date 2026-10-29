@@ -52,7 +52,7 @@ class Fit808ProtocolTests(unittest.TestCase):
             (root / 'model').mkdir()
             (root / 'SHA256SUMS').write_text('0' * 64 + '  ../outside\n')
             (root / 'model/SHA256SUMS').write_text('')
-            config = {'artifacts_sha256': {p: fit808.digest(root / p) for p in ('SHA256SUMS', 'model/SHA256SUMS')}}
+            config = {'artifacts_sha256': {'../outside': '0'*64}}
             with self.assertRaisesRegex(ValueError, 'escapes'):
                 fit808.verify_artifacts(root, config, [])
 
@@ -63,7 +63,7 @@ class Fit808ProtocolTests(unittest.TestCase):
             (root / 'input.wav').write_bytes(b'original')
             (root / 'SHA256SUMS').write_text(fit808.digest(root / 'input.wav') + '  input.wav\n')
             (root / 'model/SHA256SUMS').write_text('')
-            config = {'artifacts_sha256': {p: fit808.digest(root / p) for p in ('SHA256SUMS', 'model/SHA256SUMS')}}
+            config = {'artifacts_sha256': {'input.wav': fit808.digest(root/'input.wav')}}
             (root / 'input.wav').write_bytes(b'changed')
             with self.assertRaisesRegex(ValueError, 'Artifact hash mismatch: input.wav'):
                 fit808.verify_artifacts(root, config, [])
@@ -159,15 +159,3 @@ class Fit808MetricTests(unittest.TestCase):
         for p in (r[:-1], np.full_like(r, np.nan), r.reshape(1, -1)):
             with self.assertRaises(ValueError):
                 fit808.measure(p, r, self.config)
-
-    def test_teacher_recovers_a_joint_cubic_polynomial_and_exact_nodes(self):
-        np = self.np
-        knots = [0, 17, 51, 102, 127]
-        pairs = [(t, d) for t in knots for d in knots]
-        model = dict(pairs=np.array(pairs), axis=knots, grid=knots)
-        def truth(points):
-            t, d = np.array([[fit808.source_step(int(v)) / 255 for v in p] for p in points]).T
-            return 1 + t + d ** 2 + t ** 3 * d ** 2
-        queries = [(1, 25), (76, 120)]
-        np.testing.assert_allclose(fit808.teacher_weights(model, queries) @ truth(pairs), truth(queries), atol=1e-13)
-        np.testing.assert_allclose(fit808.teacher_weights(model, pairs), np.eye(len(pairs)), atol=1e-14)
