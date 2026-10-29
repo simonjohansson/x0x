@@ -35,29 +35,29 @@ class PhysicalObserverTests(unittest.TestCase):
                 self.assertEqual(actual,expected)
                 if block==32:witness=actual
             address=self.base['state_base']+slot*probe.STATE_BYTES
-            self.assertEqual(observed.core.peek(address+1060),40)
-            self.assertEqual(observed.core.peek(address+1080),1)
-            self.assertEqual(observed.core.peek(address+1084),1024)
-            self.assertEqual(observed.core.peek(address+1088),tone)
-            self.assertEqual(observed.core.peek(address+1092),decay)
-            words=[observed.core.peek(address+1096+4*i) for i in range(32)]
+            self.assertEqual(observed.core.peek(address+512),40)
+            self.assertEqual(observed.core.peek(address+532),1)
+            self.assertEqual(observed.core.peek(address+536),1024)
+            self.assertEqual(observed.core.peek(address+540),tone)
+            self.assertEqual(observed.core.peek(address+544),decay)
+            words=[observed.core.peek(address+548+4*i) for i in range(32)]
             self.assertEqual(struct.unpack('<32f',struct.pack('<32I',*words)),witness)
             for other in range(16):
                 if other!=slot:
-                    self.assertEqual(observed.core.peek(self.base['state_base']+other*probe.STATE_BYTES+1060),0)
+                    self.assertEqual(observed.core.peek(self.base['state_base']+other*probe.STATE_BYTES+512),0)
             observed.check_tables()
             observed.call(tone,decay,True,slot)
-            self.assertEqual(observed.core.peek(address+1080),0)
+            self.assertEqual(observed.core.peek(address+532),0)
 
     def test_909_cannot_publish_a_stale_808_age_as_a_waveform_witness(self):
-        observed=dsp.Runner(self.base,self.artifact)
+        observed=dsp.Runner(self.base,self.artifact,state_bytes=probe.STATE_BYTES)
         for block in range(32):observed.call(16384,16384,block==0)
         address=self.base['state_base']
         self.assertEqual(observed.core.peek(address+232),1024)
         observed.call(16384,16384,True,model=32512)
         observed.call(16384,16384,model=32512)
         self.assertEqual(observed.core.peek(address+244),2)
-        self.assertEqual(observed.core.peek(address+1080),0)
+        self.assertEqual(observed.core.peek(address+532),0)
         observed.check_tables()
 
     def test_observer_regions_fit_the_expanded_owner(self):

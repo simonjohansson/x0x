@@ -1,9 +1,9 @@
 # x0x
 
-808 and provisional 909 kick engines for Digitakt, Digitone and Digitone II.
-The normal mod uses the frozen learned 808 model, with audio sample loops written
-in ColdFire and SHARC assembly. The former 808 circuit/body/Tone/coupling chain
-has been removed. The retained 909 is provisional; its replacement is next.
+808 and 909 kick engines for Digitakt, Digitone and Digitone II.
+The normal mod uses the frozen learned 808 model in ColdFire and SHARC assembly.
+SHARC now also runs the fresh reference-driven 909 candidate. The ColdFire 909
+replacement is in progress; its production engine remains provisional.
 
 | Device | Pinned stock OS | DSP | Saved machine ID |
 | --- | --- | --- | --- |
@@ -14,7 +14,8 @@ has been removed. The retained 909 is provisional; its replacement is next.
 `TNTUN`, `DECAY`, `ATTK` and `MODEL` keep their saved positions and defaults.
 MODEL selects 808 below native value 16384 and 909 above it. Each voice latches
 MODEL on START. The 808 also latches Tone and Decay on START; editing them affects
-the next hit. The provisional 909 retains live Tune/Decay; ATTK remains reserved.
+the next hit. The SHARC 909 latches Tune, Attack and Decay on START. The provisional
+ColdFire 909 retains live Tune/Decay with ATTK reserved until its replacement lands.
 The mod writes 32 mono samples per callback at 48 kHz. Stock envelopes, filters,
 velocity, mixing and voice allocation remain the SDK/firmware's responsibility.
 
@@ -69,12 +70,12 @@ and generate each target's numerical representation. No capture archive is
 needed to build the mod.
 
 ColdFire uses a tagged 1,412-byte voice state, with a shared payload for 808/909.
-SHARC uses 1,060 bytes per voice; combined code is 4,794 bytes, with 29,980 bytes
-of initialized tables. Tables plus all 16 state slots consume 46,944 bytes of the
+SHARC uses 512 bytes per voice; combined code is 4,516 bytes, with 44,396 bytes
+of initialized tables. Tables plus all 16 state slots consume 52,592 bytes of the
 private data allocation. The private code/data split stays inside the 64 KiB SDK
 owner. Audio arithmetic remains in ASM; C handles native frames and dispatch.
 
-The accepted historical isolated-render cohort had at most 2.7e-6 DSP full-scale
+The accepted historical 808 isolated-render cohort had at most 2.7e-6 DSP full-scale
 port error against the frozen model, and about 0.56% median / 0.70% worst relative
 L2 error against the selected source recordings. Those are waveform metrics,
 not audibility thresholds. Listening round four returned 16/16 “can't tell”.
@@ -84,6 +85,30 @@ build also passed a fresh physical code/table, native START/control-latch,
 mixed-model state and stack-guard smoke. That smoke did not capture new audio.
 
 The current plan and acceptance evidence live in [#82](https://github.com/simonjohansson/x0x/issues/82).
-[#94](https://github.com/simonjohansson/x0x/issues/94) tracks final coexistence
-with the future replacement 909. Sixteen simultaneous kicks, broad platform
+[#94](https://github.com/simonjohansson/x0x/issues/94) tracks the 909 ports and final
+coexistence. The prior physical smoke predates the new 909 and private layout. Sixteen simultaneous kicks, broad platform
 qualification and full-device headroom are outside mod acceptance.
+
+## Fresh 909 candidate
+
+[models/909.json](models/909.json) records source hashes, partitions, decoder
+equations and full host metrics; [models/909.npz](models/909.npz) is the frozen
+coefficient source. `python -m x0x.fit909` under the test task's mise/uv environment
+reproduces the fit from the checksum-verified local corpus in
+`research/reference/909-fit-model/`, writing derived output to `out/909-model/host/`.
+The raw WAV and captures stay outside Git.
+
+The corpus has 384 isolated knob samples and 4,096 interaction samples. The
+selected host model has 2.26% median / 3.93% p95 validation waveform error, and
+2.53% median / 3.91% p95 test error. Worst test error is 7.02% whole-hit and
+4.94% after 10 ms. These unaligned, unity-gain waveform scores include source
+variation and model error; they do not establish inaudibility.
+
+SHARC executes the phase sweep, cubic envelope field and joint onset residual
+in handwritten ASM. Initial complete-hit instruction renders match the frozen
+model within 6.2e-6 DSP full scale; broader component checks remain in progress.
+Removing the 808 full-onset cache gives bit-identical complete renders at four
+corners and a fractional setting against the prior committed ASM. Current
+SHARC and physical-observer host tests pass. ColdFire porting, normal-package
+smokes and listening acceptance are still pending. No A/B test is requested
+until both ASM ports are close to the VST recordings.

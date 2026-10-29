@@ -1,6 +1,6 @@
 // Device-test wrapper only: raw EMUCLK spans and one immutable 32-sample witness.
-// Per voice: original 1060 bytes, then calls/last/max/previous-clock/period,
-// ready/age/Tone/Decay, 32 floats, captured span and captured period (1232 total).
+// Per voice: original 512 bytes, then calls/last/max/previous-clock/period,
+// ready/age/Tone/Decay, 32 floats, captured span and captured period (684 total).
 // The measured interval includes the inner C-frame call/return, not this observer.
 .SECTION/SW seg_swco;
 .GLOBAL sharc_voice_render.;
@@ -17,7 +17,7 @@ sharc_voice_render.:
     R0=R1 AND R0;
     R0=PASS R0;
     IF NE JUMP field808_render.;
-    R0=1232;
+    R0=684;
     R0=R1*R0(SSI);
     R1=DM(field_state_base.);
     R0=R0+R1;
@@ -42,7 +42,7 @@ sharc_voice_render.:
     R5=PASS R5;
     IF EQ JUMP probe_saved;
     R1=0;
-    R0=1080;
+    R0=532;
     R0=R3+R0;
     I4=R0;
     DM(I4,M5)=R1;
@@ -55,7 +55,7 @@ sharc_voice_render.:
     I0=R0;
     R6=DM(I0,M6);
     R7=DM(I0,M5);
-    R0=1088;
+    R0=540;
     R0=R3+R0;
     I4=R0;
     DM(I4,M6)=R6;
@@ -89,7 +89,7 @@ probe_return:
     R2=R2+R3;
     I4=R2;
     R15=DM(I4,M5);
-    R2=1060;
+    R2=512;
     R2=R15+R2;
     I4=R2;
     R2=DM(I4,M5);
@@ -101,7 +101,7 @@ probe_return:
     IF LE JUMP probe_maximum;
     DM(I4,M5)=R0;
 probe_maximum:
-    R3=1072;
+    R3=524;
     R3=R15+R3;
     I4=R3;
     R3=DM(I4,M5);
@@ -130,7 +130,7 @@ probe_maximum:
     I4=R4;
     R4=DM(I4,M5);
     I0=R4;
-    R4=1096;
+    R4=548;
     R4=R15+R4;
     I1=R4;
     R5=32;
@@ -141,11 +141,11 @@ probe_copy:
     IF NE JUMP probe_copy;
     DM(I1,M6)=R0;
     DM(I1,M5)=R1;
-    R0=1084;
+    R0=536;
     R0=R15+R0;
     I4=R0;
     DM(I4,M5)=R3;
-    R0=1080;
+    R0=532;
     R0=R15+R0;
     I4=R0;
     R0=1;

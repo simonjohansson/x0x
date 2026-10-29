@@ -10,7 +10,7 @@ from . import cpu, firmware, sharc_field808 as dsp
 from .sharc_layout import voice_artifact
 
 OUT=cpu.ROOT/'out/808-model/sharc/device-physical'
-STATE_BYTES=1232
+STATE_BYTES=dsp.STATE_BYTES+172
 WRAPPER=cpu.ROOT/'targets/sharc/field808_device.s'
 
 
@@ -19,16 +19,16 @@ def instrument(folder=OUT):
     folder=Path(folder).resolve();folder.mkdir(parents=True,exist_ok=True)
     base,artifact=dsp.build(folder/'baseline')
     source=dsp.SOURCE.read_text()
-    if source.count('R0=1060;')!=1:
+    if source.count(f'R0={dsp.STATE_BYTES};')!=1:
         raise ValueError('Unexpected source state-stride declaration')
-    source=source.replace('sharc_voice_render.','field808_render.').replace('R0=1060;','R0=1232;')
+    source=source.replace('sharc_voice_render.','field808_render.').replace(f'R0={dsp.STATE_BYTES};',f'R0={STATE_BYTES};')
     (folder/'kernel.s').write_text(source)
     table=(folder/'baseline/tables.s').read_text()
-    old='.VAR sharc_voice_state_bytes. = 1060;'
+    old=f'.VAR sharc_voice_state_bytes. = {dsp.STATE_BYTES};'
     if table.count(old)!=1:raise ValueError('Unexpected generated state-size declaration')
-    (folder/'tables.s').write_text(table.replace(old,'.VAR sharc_voice_state_bytes. = 1232;'))
+    (folder/'tables.s').write_text(table.replace(old,f'.VAR sharc_voice_state_bytes. = {STATE_BYTES};'))
     programs=cpu.ROOT/'vendor/digikit/out/tools/selache/target/release'
-    for path,name in ((WRAPPER,'wrapper'),(folder/'kernel.s','kernel'),(cpu.ROOT/'targets/sharc/body909.s','909'),(folder/'tables.s','tables')):
+    for path,name in ((WRAPPER,'wrapper'),(folder/'kernel.s','kernel'),(cpu.ROOT/'targets/sharc/field909.s','909'),(folder/'tables.s','tables')):
         cpu.command([programs/'selas','-proc','ADSP-21569','-o',folder/(name+'.doj'),path])
     executable=folder/'device.dxe'
     cpu.command([programs/'seld','-proc','ADSP-21569','-T',folder/'baseline/layout.ldf',
@@ -82,8 +82,8 @@ def build(health,folder=OUT):
         elekloader_revision=sdk_revision,stock=stock,baseline=base,code_bytes=len(code),
         data_bytes=len(data),state_bytes=STATE_BYTES,state_base=base['state_base'],entry=entry,
         artifact_sha256=dsp.fit808.digest(folder/'voice.sharc.json'),wrapper_sha256=dsp.fit808.digest(WRAPPER),
-        witness=dict(age=1024,ready_offset=1080,age_offset=1084,tone_offset=1088,decay_offset=1092,
-                     output_offset=1096,span_offset=1224,period_offset=1228),
+        witness=dict(age=1024,ready_offset=532,age_offset=536,tone_offset=540,decay_offset=544,
+                     output_offset=548,span_offset=676,period_offset=680),
         timing_note='Raw EMUCLK span includes the nested call/return and interrupts; observer outside that interval. Period is between starts for the same voice; no idle-busy headroom inference.')
     (folder/'build.json').write_text(json.dumps(receipt,indent=2)+'\n')
     return receipt

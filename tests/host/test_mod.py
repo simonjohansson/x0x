@@ -5,7 +5,7 @@ from pathlib import Path
 import struct
 import tempfile
 import unittest
-from x0x import cpu, body909, coldfire_field808 as cf, sharc_field808 as sh
+from x0x import cpu, body909, field909, coldfire_field808 as cf, sharc_field808 as sh
 
 
 class ModTests(unittest.TestCase):
@@ -92,7 +92,7 @@ class ModTests(unittest.TestCase):
             receipt, artifact = sh.build(Path(tmp))
             mixed = sh.Runner(receipt, artifact)
             isolated = sh.Runner(receipt, artifact)
-            state = body909.INITIAL_STATE
+            expected909 = 4 * field909.render(field909.load(), 7890, 16384, 23456, frames=3200)
             for block in range(100):
                 self.assertEqual(
                     mixed.call(
@@ -100,7 +100,7 @@ class ModTests(unittest.TestCase):
                     )[0],
                     isolated.call(12345, 17001, start=block == 0)[0],
                 )
-                expected, state = body909.continue_reference(state, 23456, 7890, 32)
+                expected = expected909[block*32:(block+1)*32]
                 actual, _ = mixed.call(
                     7890,
                     23456,

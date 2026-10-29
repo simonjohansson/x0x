@@ -38,7 +38,7 @@ class SharcFieldTests(unittest.TestCase):
         self.assertNotIn('corners.png',text)
         self.assertIn('src="waveforms.png"',text)
         self.assertIn('Executed ASM qualification',text)
-        self.assertIn('retains the provisional 909',text)
+        self.assertIn('reference-driven 909',text)
 
     def test_exported_cubic_basis_matches_original_model(self):
         for tone,decay in ((0,0),(32512,32512),(12345,17001)):
@@ -48,11 +48,11 @@ class SharcFieldTests(unittest.TestCase):
         for group in self.tables['groups']:
             self.assertTrue(np.isfinite(group['basis']).all())
 
-    def test_real_layout_retains_explicit_909_reservations(self):
+    def test_real_layout_contains_both_models_and_observer_margin(self):
         r=self.receipt
-        self.assertLessEqual(r['code_bytes']+64+3584+768+704,dsp.CODE_BYTES)
-        self.assertLessEqual(r['initialized_plus_states']+1280+256+512,r['layout']['data_bytes'])
-        self.assertEqual(self.artifact['voice_state']['voice_bytes'],1060)
+        self.assertLessEqual(r['code_bytes']+64+768,dsp.CODE_BYTES)
+        self.assertLessEqual(r['initialized_plus_states']+16*172,r['layout']['data_bytes'])
+        self.assertEqual(self.artifact['voice_state']['voice_bytes'],512)
         for code_bytes,voice_bytes in ((True,0),(63,0),(65536,0),(12288,True),(12288,32768)):
             with self.assertRaises(ValueError):
                 sharc_layout.voice_artifact(bytes(4),b'',0,20,0,code_bytes=code_bytes,voice_bytes=voice_bytes)

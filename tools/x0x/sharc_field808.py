@@ -4,14 +4,14 @@ import hashlib
 import json
 import struct
 
-from . import cpu, field808, fit808, tone_factor808
+from . import cpu, field808, field909, fit808, tone_factor808
 
 MODEL = cpu.ROOT / 'models/808.npz'
 MODEL_SHA = 'fb4519537afc1142f3c108bc9e94fe40b752f2b967a97ab6e185e5e47a04d112'
 OUT = cpu.ROOT / 'out/808-model/sharc'
 SOURCE = cpu.ROOT / 'targets/sharc/field808.s'
-STATE_BYTES = 1060
-CODE_BYTES = 12288
+STATE_BYTES = 512
+CODE_BYTES = 6144
 
 
 def polynomial(values):
@@ -146,7 +146,7 @@ def write_data(tables, folder):
         add(f'field_descriptor{h}', descriptor)
         channels = group['coefficients'].shape[1]
         size = group['coefficients'].shape[2]
-        headers.extend([f'field_descriptor{h}.', 0 if h == 0 else hex(addresses['field_body'] + offset*32),
+        headers.extend([f'field_descriptor{h}.', hex(addresses['field_body'] + offset*32),
                         channels, 32+4*h, 52+16*group['channel'], size*32])
         offset += channels*size
     add('field_groups', headers)
@@ -165,6 +165,8 @@ def write_data(tables, folder):
         floats('k_'+name, [value])
     step = round(tables['frequency']*32/48000*2**64)
     add('phase_step_hi', [step >> 32]); add('phase_step_lo', [step & 0xffffffff])
+    from .sharc_field909 import write_tables
+    write_tables(add, floats)
     add('sharc_voice_state_bytes', [STATE_BYTES])
     data_bytes = count + 4
     state_base = voice_layout(CODE_BYTES)['data_address'] + (data_bytes + 7)//8*8
@@ -213,7 +215,7 @@ def build(folder=OUT):
     if cpu.revision(selache) != cpu.SELACHE_PIN:
         raise ValueError('Selache revision mismatch')
     programs = selache/'target/release'
-    for source, name in ((SOURCE,'engine'), (cpu.ROOT/'targets/sharc/body909.s','909'), (folder/'tables.s','tables')):
+    for source, name in ((SOURCE,'engine'), (cpu.ROOT/'targets/sharc/field909.s','909'), (folder/'tables.s','tables')):
         cpu.command([programs/'selas','-proc','ADSP-21569','-o',folder/(name+'.doj'), source])
     ldf = f'''ARCHITECTURE(ADSP-21569)
 $OBJECTS = $COMMAND_LINE_OBJECTS;
@@ -237,8 +239,8 @@ PROCESSOR p0 {{ OUTPUT($COMMAND_LINE_OUTPUT_FILE) SECTIONS {{
     doc = voice_artifact(code,data,0,20,0,code_bytes=CODE_BYTES,voice_bytes=STATE_BYTES)
     assert 0x20090000+doc['voice_state']['offset_bytes']==state_base
     (folder/'voice.sharc.json').write_text(json.dumps(doc,indent=2)+'\n')
-    receipt = dict(model_sha256=MODEL_SHA, source_sha256=fit808.digest(SOURCE),
-        legacy_909_sha256=fit808.digest(cpu.ROOT/'targets/sharc/body909.s'),
+    receipt = dict(model_sha256=MODEL_SHA, model909_sha256=field909.MODEL_SHA, source_sha256=fit808.digest(SOURCE),
+        field909_sha256=fit808.digest(cpu.ROOT/'targets/sharc/field909.s'),
         data_bytes=len(data), code_bytes=len(code), state_bytes=STATE_BYTES,
         state_base=state_base, layout=layout, initialized_plus_states=(len(data)+7)//8*8+16*STATE_BYTES,
         entry=struct.unpack_from('<I',raw,24)[0], artifact_sha256=fit808.digest(folder/'voice.sharc.json'))
@@ -283,12 +285,12 @@ class Runner:
         self.core.set_option(native.OPT_STOP_PC,self.STOP)
         self.maximum_instructions=0
 
-    def call(self, tone, decay, start=False, slot=0, model=0):
+    def call(self, tone, decay, start=False, slot=0, model=0, attack=16384):
         from tools.sharc_dev import sharc_trace as trace
         state = self.receipt['state_base']+slot*self.state_bytes
         words = [self.OUTPUT,slot,60*256,int(start),self.PARAM,state]
         self.core.poke(self.INPUT,struct.pack('<6I',*words),4)
-        self.core.poke(self.PARAM,struct.pack('<40I',tone,decay,16384,0,0,model,*([0]*34)),4)
+        self.core.poke(self.PARAM,struct.pack('<40I',tone,decay,attack,0,0,model,*([0]*34)),4)
         self.core.poke(self.OUTPUT-4,b'\xa5'*136,4)
         for name,value in dict(R4=self.INPUT,I6=self.FRAME,I7=self.FRAME-8,M5=0,M6=1,M7=0xffffffff,M13=0,M14=1,M15=0xffffffff).items():
             self.core.set_reg(trace.UREG_CODES[name],trace.Const(value))
@@ -463,7 +465,7 @@ def make_plots(folder,references,predictions,rows,backend='SHARC'):
 def decorate_html(page,rows):
     text=page.read_text().replace('src="corners.png"','src="waveforms.png"')
     text=text.replace('Full numerical report and optimizer diagnostics','Full numerical report and ASM qualification')
-    summary=f"<section><h2>Executed ASM qualification</h2><p>Maximum port error: {max(r['port_max_dsp_fs'] for r in rows):.4g} DSP FS. Native-package and physical checks are reported separately. Tone/Decay latch on START. The normal mod also retains the provisional 909; this report evaluates the 808 only.</p><img src='waveforms.png' style='width:100%;max-width:1200px' alt='Four-corner recorded and assembled waveforms and residuals'><p><a href='report.json'>Full numerical receipt</a></p></section>"
+    summary=f"<section><h2>Executed ASM qualification</h2><p>Maximum port error: {max(r['port_max_dsp_fs'] for r in rows):.4g} DSP FS. Native-package and physical checks are reported separately. Tone/Decay latch on START. The combined SHARC mod also includes the reference-driven 909; this report evaluates the 808 only.</p><img src='waveforms.png' style='width:100%;max-width:1200px' alt='Four-corner recorded and assembled waveforms and residuals'><p><a href='report.json'>Full numerical receipt</a></p></section>"
     page.write_text(text.replace('</html>',summary+'</html>'))
 
 

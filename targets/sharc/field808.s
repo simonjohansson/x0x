@@ -1,9 +1,10 @@
 // Frozen spline/carrier 808, 48 kHz / 32 mono floats. SDK input in R4.
 // Tone/Decay latch on START; MODEL selects the new 808 or provisional 909.
 // State: weights[8], segment[5], cubic[32], scratch, filter/age/phase/tag,
-// then 201 decoded onset coefficients. SDK owns sixteen independent states.
+// with interval-cached onset coefficients. SDK owns sixteen independent states.
 .SECTION/SW seg_swco;
 .GLOBAL sharc_voice_render.;
+.GLOBAL x0x_sine.;
 .EXTERN sharc_909_render.;
 .EXTERN field_groups.;
 .EXTERN field_body.;
@@ -58,7 +59,7 @@ sharc_voice_render.:
     R0=R4+R0;
     I4=R0;
     R15=DM(I4,M5);
-    R0=1060;
+    R0=512;
     R1=R1*R0(SSI);
     R0=DM(field_state_base.);
     R0=R0+R1;
@@ -109,8 +110,6 @@ sharc_voice_render.:
     R1=16384;
     COMP(R7,R1);
     IF LT JUMP start808;
-    R1=2;
-    DM(I4,M5)=R1;
     JUMP sharc_909_render.;
 start808:
     R1=1;
@@ -139,26 +138,6 @@ start808:
     I4=R0;
     R0=DM(I4,M5);
     CALL decay_weights;
-    // Decode the dense onset only once per hit; the tail stays interval-cached.
-    I0=field_body.;
-    R0=256;
-    R0=R15+R0;
-    I2=R0;
-    R8=201;
-prepare_onset:
-    I1=R15;
-    R7=8;
-    R2=0;
-prepare_sum:
-    R0=DM(I0,M6);
-    R1=DM(I1,M6);
-    F0=F0*F1;
-    F2=F2+F0;
-    R7=R7-1;
-    IF NE JUMP prepare_sum;
-    DM(I2,M6)=R2;
-    R8=R8-1;
-    IF NE JUMP prepare_onset;
     R0=32;
     R0=R15+R0;
     I4=R0;
@@ -400,6 +379,7 @@ finish:
     NOP;
 
 // Signed phase wraps to [-1/2,1/2). Fold to [-1/4,1/4], Taylor degree 11.
+x0x_sine.:
 sine:
     F0=FLOAT R0;
     R1=DM(k_cycle_scale.);
@@ -607,25 +587,6 @@ interval_found:
     I4=R0;
     DM(I4,M6)=R6;
     DM(I4,M5)=R4;
-    // Onset coefficients are per-voice; other groups combine eight basis rows.
-    R0=0;
-    COMP(R3,R0);
-    IF NE JUMP envelope_features;
-    R0=LSHIFT R8 BY 2;
-    R1=256;
-    R0=R0+R1;
-    R0=R15+R0;
-    I0=R0;
-    R0=188;
-    R0=R15+R0;
-    I2=R0;
-    R0=4;
-copy_onset:
-    R1=DM(I0,M6);
-    DM(I2,M6)=R1;
-    R0=R0-1;
-    IF NE JUMP copy_onset;
-    JUMP transform;
 envelope_features:
     R0=LSHIFT R8 BY 5;
     R3=R3+R0;

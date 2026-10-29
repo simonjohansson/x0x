@@ -1,0 +1,160 @@
+{
+  "model_sha256": "6ec82575d6355a44e16eba9b5724253295ef8322e4c342f1c4394c59abd450d2",
+  "capture_sha256": "ad05ef41060e4477dd5bb8fddcfe9de4c106576f448800b29f0693b86fc667ba",
+  "events_sha256": "e20bf4b026c50ae1bf301e614fa121977bb8f76c4bc637b10b2ad7b0080ae29f",
+  "source_plugin_sha256": "76a59c95faf08a530cc9f68131d379a079ff33177d4d9b54c7d60e97f0fc63e8",
+  "source": "Roland TR-909 VST3 1.1.3 build 22072",
+  "capture": {
+    "rate": 48000,
+    "channels": 2,
+    "frames": 430128000,
+    "slot_frames": 96000,
+    "preroll_frames": 48000,
+    "events": 4480,
+    "distinct_settings": 4432,
+    "isolated_positions_per_knob": 128,
+    "interaction_positions_per_knob": 16,
+    "controls": [
+      "Tune",
+      "Attack",
+      "Decay"
+    ],
+    "parameter_position": "floor(CC*255/127+0.5)/255; direct parameter delivery",
+    "gain": 0.25,
+    "velocity": 100,
+    "note": 36
+  },
+  "partitions": {
+    "train": {
+      "settings": 1884,
+      "events": 1908
+    },
+    "validation": {
+      "settings": 1827,
+      "events": 1848
+    },
+    "test": {
+      "settings": 721,
+      "events": 724
+    }
+  },
+  "decoder": {
+    "phase": "2*pi*(f0*n/48000+phi0+K*(1-(1-lambda)**n))",
+    "body": "five Decay field weights; DC and sine/cosine harmonics 1..5; cubic time splines",
+    "onset": "12 joint Tune/Attack residual components, dense first 320 samples then four-sample spacing to sample 1152",
+    "body_fade_samples": [
+      288,
+      384
+    ],
+    "residual_fade_samples": [
+      1056,
+      1152
+    ],
+    "dsp_gain": 4
+  },
+  "limits": [
+    "Static isolated source hits; no measured dynamic-control/retrigger acceptance.",
+    "Full measurements were inspected descriptively; partitions are fitting holdouts, not independent fresh-source acceptance.",
+    "Raw repeated source takes differ, up to 5.35% whole-waveform relative L2.",
+    "No per-hit alignment or gain correction. No perceptual or physical TR-909 equivalence claim.",
+    "Source global quality options were not freshly read; prior user confirmation is historical."
+  ],
+  "validation_metrics": {
+    "model_sha256": "6ec82575d6355a44e16eba9b5724253295ef8322e4c342f1c4394c59abd450d2",
+    "events": 1848,
+    "settings": 1827,
+    "gain": 1,
+    "alignment_samples": 0,
+    "l2": {
+      "min": 0.011533156900868783,
+      "median": 0.02261603186280266,
+      "p95": 0.0392695468004496,
+      "max": 0.06676642841407776
+    },
+    "after10ms_l2": {
+      "min": 0.010870281731798175,
+      "median": 0.017790262388755567,
+      "p95": 0.039000352073441706,
+      "max": 0.0638179576967816
+    },
+    "first10ms_l2": {
+      "min": 0.006815335787773818,
+      "median": 0.03806860279102834,
+      "p95": 0.07840286881226464,
+      "max": 0.13378399397876772
+    },
+    "max_fs": {
+      "min": 0.001721478840054698,
+      "median": 0.009351036321259786,
+      "p95": 0.035767196611001174,
+      "max": 0.06538386370972316
+    },
+    "level_db": {
+      "min": -0.06958539442090944,
+      "median": -0.0029339928798007477,
+      "p95": 0.03664577455401993,
+      "max": 0.14348693193134066
+    },
+    "peak_db": {
+      "min": -0.4950102563317479,
+      "median": -0.07220599656344155,
+      "p95": 0.054239059217862984,
+      "max": 0.152286663302472
+    },
+    "t99_delta_ms": {
+      "min": -2.7916666666666665,
+      "median": 0.0,
+      "p95": 0.22916666666666666,
+      "max": 2.0833333333333335
+    }
+  },
+  "test_metrics": {
+    "model_sha256": "6ec82575d6355a44e16eba9b5724253295ef8322e4c342f1c4394c59abd450d2",
+    "events": 724,
+    "settings": 721,
+    "gain": 1,
+    "alignment_samples": 0,
+    "l2": {
+      "min": 0.012309264194932865,
+      "median": 0.025298816723099738,
+      "p95": 0.039098650616859826,
+      "max": 0.07015835872685698
+    },
+    "after10ms_l2": {
+      "min": 0.010716136447135535,
+      "median": 0.018192556280583794,
+      "p95": 0.0339000759245158,
+      "max": 0.04941474459940023
+    },
+    "first10ms_l2": {
+      "min": 0.008184006207026277,
+      "median": 0.050661704521831524,
+      "p95": 0.08458234062426155,
+      "max": 0.18713833831369234
+    },
+    "max_fs": {
+      "min": 0.0017366921521510675,
+      "median": 0.013638181990637016,
+      "p95": 0.0413053484689651,
+      "max": 0.08923733992439456
+    },
+    "level_db": {
+      "min": -0.060283445561662735,
+      "median": -0.0032646293143793743,
+      "p95": 0.03438078924861978,
+      "max": 0.09925849041403367
+    },
+    "peak_db": {
+      "min": -0.45939750300765747,
+      "median": -0.05663544998367881,
+      "p95": 0.07553888295203073,
+      "max": 0.14561882263014608
+    },
+    "t99_delta_ms": {
+      "min": -2.125,
+      "median": 0.041666666666666664,
+      "p95": 0.22916666666666666,
+      "max": 1.9583333333333333
+    }
+  }
+}
