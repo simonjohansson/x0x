@@ -1,6 +1,6 @@
 #include "digitakt-mk1/core3.h"
 #include "../../targets/coldfire/engine.h"
-#define X0X_ID 80
+#define X0X_ID 20
 static struct x0x_voice voices[8];
 void x0x_dt_render(int32_t *blocks)
 {

@@ -6,15 +6,21 @@ frames and per-voice dispatch. The superseded circuit engines and fitters are re
 
 | Device | Stock OS | DSP | Saved machine ID |
 | --- | --- | --- | --- |
-| Digitakt mk1 | 1.54 | ColdFire ASM | 80 |
-| Digitone mk1 | 1.44 | ColdFire ASM | 80 |
+| Digitakt mk1 | 1.54 | ColdFire ASM | 20 |
+| Digitone mk1 | 1.44 | ColdFire ASM | 20 |
 | Digitone II | 1.12 | SHARC ASM | 20 |
 
 `TNTUN`, `DECAY`, `ATTK` and `MODEL` retain their saved slots, ranges and defaults.
-MODEL selects 808 below native value 16384 and 909 above it. Selection latches on
+MODEL selects 808 below native value 16384 and 909 at or above it. Selection latches on
 START. The 808 latches Tone/Decay; the 909 latches Tune/Attack/Decay. Changes take
 effect on the next hit. Each callback writes 32 mono samples at 48 kHz. Stock
 velocity, envelopes, filters, mixing and voice allocation belong to the SDK.
+
+Conditional TONE/TUNE labels, hiding ATTACK for 808, and the two-position MODEL
+selector are deferred to [Elekloader #109](https://github.com/simonjohansson/elekloader/issues/109).
+The current page keeps the labels and numeric selector described above. Digitakt
+and Digitone sounds saved with the former machine ID 80 must select X0X again
+and be saved with ID 20; there is no automatic project migration.
 
 ## Build and test
 

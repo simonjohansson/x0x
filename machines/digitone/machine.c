@@ -1,7 +1,7 @@
 #include "adapter.h"
 #include "../../targets/coldfire/engine.h"
 
-#define X0X_ID 80
+#define X0X_ID 20
 
 static struct x0x_dn_frame frame;
 static struct x0x_dn_adapter adapter;

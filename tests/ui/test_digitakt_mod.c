@@ -25,7 +25,7 @@ void x0x_field909(int32_t *s,int32_t *o,uint32_t a,uint32_t t,uint32_t d,uint32_
 int main(void)
 {
     const struct cm_machine *m=&x0x_dt_machine;
-    assert(m->id==80 && m->render==80 && m->params==3 && m->tag==CM_UI_TAG);
+    assert(m->id==20 && m->render==20 && m->params==3 && m->tag==CM_UI_TAG);
     assert(!strcmp(m->name,"X0X KICKS") && !strcmp(m->sname,"KICKS"));
     assert(m->ui->abi==cm_ui_v3 && m->ui->page_from==3 && !m->ui->on_switch);
     const char *labels[]={"TNTUN","DECAY","ATTK",0,0,"MODEL",0,0};
@@ -35,7 +35,7 @@ int main(void)
         assert(knob->def==(k==5?0:16384));
     }
     int32_t guarded[258];for(unsigned k=0;k<258;++k) guarded[k]=123;
-    fw_render_machine[0]=fw_render_machine[7]=80;
+    fw_render_machine[0]=fw_render_machine[7]=20;
     values[0][0]=12345;values[0][1]=17001;values[7][5]=32512;values[7][0]=23456;values[7][1]=7890;values[7][2]=5432;
     x0x_dt_render(guarded+1);assert(!calls[0]);
     fw_voice_start=(1u<<7)|1;x0x_dt_render(guarded+1);
@@ -48,7 +48,7 @@ int main(void)
     values[0][0]=-1;fw_voice_start=1;unsigned before=calls[0];x0x_dt_render(guarded+1);
     assert(calls[0]==before && guarded[1]==0);
     fw_render_machine[0]=0;x0x_dt_render(guarded+1);
-    fw_render_machine[0]=80;fw_voice_start=0;values[0][0]=12345;x0x_dt_render(guarded+1);
+    fw_render_machine[0]=20;fw_voice_start=0;values[0][0]=12345;x0x_dt_render(guarded+1);
     assert(calls[0]==before && guarded[1]==0);
     fw_voice_start=1;x0x_dt_render(guarded+1);assert(which[0]==909 && calls[0]==before+1);
     values[0][5]=0;values[0][2]=0;fw_voice_start=1;x0x_dt_render(guarded+1);

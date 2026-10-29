@@ -7,8 +7,8 @@
   "device": "digitakt-mk1",
   "os": "1.54",
   "sources": ["machine.c", "../../targets/coldfire/silence.s", "../../targets/coldfire/field909.s", "../../targets/coldfire/engine.c", "../../targets/coldfire/field808.s"],
-  "machines": [{"id": 80, "descriptor": "x0x_dt_machine"}],
+  "machines": [{"id": 20, "descriptor": "x0x_dt_machine"}],
   "subscribe": [{"event": "ev_render_voices", "fn": "x0x_dt_render", "order": 20}],
   "requires": ["core", "machine-pages"],
-  "resources": {"core": "4.1", "names": ["machine:80"]}
+  "resources": {"core": "4.1", "names": ["machine:20"]}
 }

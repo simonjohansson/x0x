@@ -163,7 +163,7 @@ def smoke(device="dt"):
                 tap("DOWN")
             tap("YES")
             sound = int.from_bytes(uc.mem_read(names["fw_kit"], 4), "big") + 0x20
-            assert bytes(uc.mem_read(sound + 126, 1)) == bytes([80]), (
+            assert bytes(uc.mem_read(sound + 126, 1)) == bytes([20]), (
                 "X0X machine not selected"
             )
         else:
@@ -175,7 +175,7 @@ def smoke(device="dt"):
             tap("RIGHT")
             tap("YES")
             kit = int.from_bytes(uc.mem_read(names["fw_kit"], 4), "big")
-            assert int.from_bytes(uc.mem_read(kit + 0x2C, 2), "big") == 80 << 8, (
+            assert int.from_bytes(uc.mem_read(kit + 0x2C, 2), "big") == 20 << 8, (
                 "X0X machine not selected"
             )
         pcm_start = len(session.pcm)
@@ -208,7 +208,7 @@ def smoke(device="dt"):
             )
         report.update(
             status="passed",
-            machine_id=80,
+            machine_id=20,
             checks=checks,
             pcm_peak_int16=peak,
             pcm_frames=len(pcm) // 4,

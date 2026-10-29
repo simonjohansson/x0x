@@ -20,7 +20,7 @@ static int32_t shown(void)
     void *bottom, *top, *manager, *view;
     int32_t track = fw_active_track;
     if (!x0x_dn_brain || track < 0 || track >= 4 || !fw_kit ||
-            (FW_SOUND_SLOT(fw_kit, track, 0) >> 8) != 80 ||
+            (FW_SOUND_SLOT(fw_kit, track, 0) >> 8) != 20 ||
             *(volatile int32_t *)KEYVAR_AT != 2)
         return 0;
     bottom = *(void *volatile *)((uint8_t *)x0x_dn_brain + 0x54);

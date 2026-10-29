@@ -28,13 +28,13 @@ void x0x_field909(int32_t *s,int32_t *o,uint32_t a,uint32_t t,uint32_t d,uint32_
 int main(void)
 {
     const struct dnm_machine *m=&x0x_dn_machine;
-    assert(m->id==80 && !strcmp(m->name,"X0X KICKS") && !m->flags && !m->icon);
+    assert(m->id==20 && !strcmp(m->name,"X0X KICKS") && !m->flags && !m->icon);
     assert(!strcmp(m->knobs[8].name,"TNTUN") && !strcmp(m->knobs[13].name,"MODEL"));
     assert(m->defaults[8]==16384 && m->defaults[9]==16384 && m->defaults[13]==0);
     int16_t words[8*CORE_PARAMS_VOICE]={0};
     struct dnm_voice voice={60<<16,100,1,2,1};
     int32_t out[34];for(unsigned i=0;i<34;++i)out[i]=12345;
-    FW_VOICE_PARAM(3,0)=80<<8;
+    FW_VOICE_PARAM(3,0)=20<<8;
     words[3*79+27]=12345;words[3*79+28]=17001;words[3*79+29]=23456;
     x0x_dn_begin();x0x_dn_capture(words);x0x_dn_ready(0);
     m->render(3,out+1,&voice);assert(count==1 && kind==808 && started && tone==12345 && decay==17001);
@@ -51,7 +51,7 @@ int main(void)
     m->render(3,out+1,&voice);assert(count==5 && !out[1]);
     words[3*79+29]=16384;voice.fresh=0;m->render(3,out+1,&voice);
     assert(count==6 && kind==808); /* Failed 909 START must not commit the tag. */
-    FW_VOICE_PARAM(3,0)=0;x0x_dn_begin();FW_VOICE_PARAM(3,0)=80<<8;
+    FW_VOICE_PARAM(3,0)=0;x0x_dn_begin();FW_VOICE_PARAM(3,0)=20<<8;
     x0x_dn_capture(words);x0x_dn_ready(0);voice.fresh=0;
     m->render(3,out+1,&voice);assert(count==6 && !out[1]);
     return 0;

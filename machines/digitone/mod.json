@@ -75,7 +75,7 @@
   "resources": {
     "core": "3.3",
     "names": [
-      "dnmachine:80"
+      "dnmachine:20"
     ]
   }
 }
