@@ -3,6 +3,7 @@ from pathlib import Path
 import argparse
 from dataclasses import replace
 import hashlib
+import importlib
 import json
 import struct
 import sys
@@ -42,7 +43,7 @@ def instrument(folder):
     state_end = receipt['state_base'] + 16*engine.STATE_BYTES
     if not state_end <= CAPTURE or CAPTURE + RESERVE != 0x2009fc00:
         raise ValueError('diagnostic capture does not fit before adapter state')
-    programs = cpu.ROOT / 'vendor/digikit/out/tools/selache/target/release'
+    programs = cpu.selache()/'target/release'
     staged = []
     for source, entry, finish, name in [
         (engine.SOURCE, 'sharc_voice_render.:', 'finish:', 'engine'),
@@ -191,14 +192,31 @@ def decode(data):
                 master_right=list(floats[64:]), pcm=list(struct.unpack_from('<64i', data, 448)))
 
 
-def read(folder):
+def client_modules(digihealth):
+    checkout = Path(digihealth).resolve()
+    if cpu.command(['git', 'status', '--porcelain'], cwd=checkout).strip():
+        raise ValueError('use a clean DigiHealth checkout for readback')
+    cpu.command(['git', 'merge-base', '--is-ancestor',
+                 'afc751d67b1b1575f7a5fc40f104c11451fc3ea5', 'HEAD'], cwd=checkout)
+    tools = checkout/'tools'
+    sys.path.insert(0, str(tools))
+    try:
+        modules = [importlib.import_module(name) for name in ('keymap', 'digiusb', 'midimido')]
+        if any(Path(module.__file__).resolve().parent != tools for module in modules):
+            raise ValueError('DigiHealth module loaded from a different checkout; restart the client')
+        return modules[1:]
+    finally:
+        sys.path.pop(0)
+
+
+def read(folder, digihealth):
     """No MIDI triggers or firmware writes; call after a hit has frozen its record."""
-    sys.path.insert(0, str(cpu.ROOT.parent/'digihealth/tools'))
-    import digiusb as health
-    import midimido
+    health, midimido = client_modules(digihealth)
     port = midimido.Port()
     try:
         diag = health.Diag(port)
+        if health.RemoteKeys(diag).product != 3:
+            raise ValueError('DN2 OS 1.12 revision-3 helper required')
         before = health.dsp_peek(diag, CAPTURE, 64)
         data = health.dsp_peek(diag, CAPTURE, RECORD)
         after = health.dsp_peek(diag, CAPTURE, 64)
@@ -221,11 +239,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=['build', 'read'])
     parser.add_argument('folder', type=Path)
-    parser.add_argument('--digihealth', type=Path, help='clean DN2 DigiHealth source checkout (build only)')
+    parser.add_argument('--digihealth', type=Path, required=True, help='clean matched DN2 DigiHealth source checkout')
     args = parser.parse_args()
-    if args.action == 'build' and args.digihealth is None:
-        parser.error('build requires --digihealth so the image supports DSP peek readback')
-    print(json.dumps(build(args.folder, args.digihealth) if args.action == 'build' else read(args.folder), indent=2))
+    print(json.dumps(build(args.folder, args.digihealth) if args.action == 'build' else read(args.folder, args.digihealth), indent=2))
 
 
 if __name__ == '__main__':

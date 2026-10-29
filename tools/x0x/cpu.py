@@ -30,6 +30,13 @@ def revision(path: Path) -> str:
     return command(["git", "rev-parse", "HEAD"], cwd=path).strip()
 
 
+def selache() -> Path:
+    path = Path(os.environ.get('SELACHE', ROOT/'vendor/digikit/out/tools/selache')).resolve()
+    if revision(path) != SELACHE_PIN:
+        raise ValueError('Selache revision mismatch')
+    return path
+
+
 def require_program(name: str) -> str:
     path = shutil.which(name)
     if path is None:

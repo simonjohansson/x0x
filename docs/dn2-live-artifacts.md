@@ -351,10 +351,12 @@ the record is frozen:
 
 ```sh
 mise exec -- uv run --python 3.12.13 --with mido --with python-rtmidi \
-  python -m x0x.dn2_capture read out/dn2/capture-XD01-live/readback
+  python -m x0x.dn2_capture read out/dn2/capture-XD01-live/readback \
+  --digihealth /private/tmp/x0x-digihealth-dn2-support
 ```
 
-The reader uses the sibling DigiHealth checkout's existing DSP peek and sends
+The reader uses the explicitly selected clean DigiHealth checkout, verifies
+revision-3 DN2 capabilities once, and uses its existing DSP peek. It sends
 no note, key or firmware command. It checks the header before and after the
 read, rejects changed/mismatched records, closes its MIDI port on failure and
 saves numbered `.bin`/`.json` pairs without overwriting existing captures.

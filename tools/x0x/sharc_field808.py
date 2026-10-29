@@ -211,9 +211,7 @@ def build(folder=OUT):
     model = load_model(); tables = export_tables(model)
     data_bytes, state_base = write_data(tables, folder)
     layout = voice_layout(CODE_BYTES)
-    selache = Path(os.environ.get('SELACHE', cpu.ROOT/'vendor/digikit/out/tools/selache')).resolve()
-    if cpu.revision(selache) != cpu.SELACHE_PIN:
-        raise ValueError('Selache revision mismatch')
+    selache = cpu.selache()
     programs = selache/'target/release'
     for source, name in ((SOURCE,'engine'), (cpu.ROOT/'targets/sharc/field909.s','909'),
                          (cpu.ROOT/'targets/sharc/choke.s','choke'), (folder/'tables.s','tables')):

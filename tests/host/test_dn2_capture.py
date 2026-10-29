@@ -10,6 +10,33 @@ from unittest import mock
 from x0x import cpu, dn2_capture as capture, sharc_field808 as engine
 
 
+class ClientSelectionTests(unittest.TestCase):
+    def test_explicit_checkout_and_cached_module_mismatch(self):
+        checkout = Path('/private/tmp/selected-digihealth')
+        modules = [SimpleNamespace(__file__=str(checkout/'tools'/f'{name}.py'))
+                   for name in ('keymap', 'digiusb', 'midimido')]
+        modules[2].Port = mock.Mock()
+        with mock.patch.object(cpu, 'command', return_value='') as command:
+            with mock.patch.object(capture.importlib, 'import_module', side_effect=modules):
+                self.assertEqual(capture.client_modules(checkout), modules[1:])
+            self.assertTrue(all(call.kwargs['cwd'] == checkout for call in command.call_args_list))
+            modules[1].__file__ = '/private/tmp/wrong-client/digiusb.py'
+            with mock.patch.object(capture.importlib, 'import_module', side_effect=modules):
+                with self.assertRaisesRegex(ValueError, 'different checkout'):
+                    capture.read('/private/tmp/unused-capture', checkout)
+            modules[2].Port.assert_not_called()
+
+    def test_dirty_or_unqualified_checkout_is_rejected_before_import(self):
+        with mock.patch.object(capture.importlib, 'import_module') as imported:
+            with mock.patch.object(cpu, 'command', return_value=' M tools/digiusb.py'):
+                with self.assertRaisesRegex(ValueError, 'clean DigiHealth'):
+                    capture.client_modules('/private/tmp/dirty')
+            with mock.patch.object(cpu, 'command', side_effect=['', RuntimeError('unqualified revision')]):
+                with self.assertRaisesRegex(RuntimeError, 'unqualified revision'):
+                    capture.client_modules('/private/tmp/old')
+            imported.assert_not_called()
+
+
 class CaptureTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -160,17 +187,15 @@ class CaptureTests(unittest.TestCase):
         for changed in (False, True):
             port = mock.Mock()
             final = data[:64] if not changed else bytes(64)
-            health = SimpleNamespace(Diag=lambda p: p, dsp_peek=mock.Mock(side_effect=[data[:64], data, final]))
-            with tempfile.TemporaryDirectory() as tmp, mock.patch.dict('sys.modules', {
-                'digiusb':health, 'midimido':SimpleNamespace(Port=lambda:port),
-            }):
+            health = SimpleNamespace(Diag=lambda p: p, RemoteKeys=lambda d: SimpleNamespace(product=3), dsp_peek=mock.Mock(side_effect=[data[:64], data, final]))
+            with tempfile.TemporaryDirectory() as tmp, mock.patch.object(capture, 'client_modules', return_value=(health, SimpleNamespace(Port=lambda:port))):
                 folder = Path(tmp)/'readback'
                 if changed:
                     with self.assertRaises(ValueError):
-                        capture.read(folder)
+                        capture.read(folder, Path(tmp))
                     self.assertFalse(folder.exists())
                 else:
-                    self.assertEqual(capture.read(folder)['epoch'], 1)
+                    self.assertEqual(capture.read(folder, Path(tmp))['epoch'], 1)
                     self.assertEqual((folder/'capture-000001.bin').read_bytes(), data)
                     self.assertEqual(json.loads((folder/'capture-000001.json').read_text())['frame'], 150)
                 port.close.assert_called_once()
