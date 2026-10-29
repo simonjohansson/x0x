@@ -1,5 +1,60 @@
 # Digitone II live-artifact investigation — 29 October 2026
 
+## Current installed image and audit validation — XA96
+
+The normal-DSP **XA96** build is installed and byte-verified after the
+[#96](https://github.com/simonjohansson/x0x/issues/96) audit fixes. Firmware SHA-256:
+`a41a52bc8eea810b6332bf9073cf51430fa640042ae82f140ddd2e038df382da`.
+Its private engine code is 5,122 bytes inside the existing 6,144-byte budget;
+model tables, sixteen 512-byte states, controls and saved formats are unchanged.
+The matched DigiHealth helper remains clean revision
+`afc751d67b1b1575f7a5fc40f104c11451fc3ea5`. There is no coherent capture observer.
+
+The terminal-silence optimization preserves complete-hit output and private
+state against the pre-change ASM. Six full hits at low/default/high controls
+cover 1,080,000 active samples, expired callbacks and restart. Expired callback
+work falls from about 614 to 322 component instructions for 808 and 406 to 278
+for 909. These are instruction counts, not measured hardware-cycle savings.
+Current tests check complete-hit peaks at control corners/defaults and the
+aggregate of two live renderers plus fourteen retired slots. All 88 stock-free
+checks, media checks and both native C test executables pass.
+
+Physical verification read back the complete adapter, padded code, tables,
+native binding and owner hook. DYN16 and unison OFF were inspected. All sixteen
+native slots were primed and verified against persistent DSP owner metadata,
+with exactly two independent live renderers. An initial check incorrectly used
+the transient outgoing word-39 tag after it had been restaged; that failed
+validation assumption is retained and excluded. The corrected native-owner and
+persistent-state checks passed without a firmware change.
+
+Six isolated/rapid dual-808, mixed and dual-909 captures plus four model-order
+live-control sweeps contain **438 recorded note-ons over 105.557 seconds** of
+valid 48 kHz stereo USB audio. Captures are finite/unclipped, advance continuously
+and report no PortAudio overflow. The unchanged onset-aligned late-window
+sideband check passes; the largest measured 1.4–1.6 kHz energy is 2.64e-9%.
+No new direct-output listening or independent analog recording is claimed.
+
+Raw handler maxima for the four sweep model orders (808/808, 909/909, 808/909,
+909/808) are **569,566 / 612,351 / 568,982 / 566,592 cycles**. Each sweep retains
+nine consecutive closed timing windows covering activity and settling; no
+closed window is omitted. These are observed handler spans for the listed
+workloads. The 666,667-cycle bound at the processor's maximum 1 GHz is a
+necessary bound, not proof of the configured clock, universal headroom or total
+DSP utilization. Broader qualification remains in #94; tail preservation stays
+in #95.
+
+The initial all-FM pattern was restored with the temporary snapshot after the
+scenarios. All sixteen FM machine IDs, distinct native owners and expected
+pitches were rechecked, every MIDI gate was released, and guard/heap checks
+passed. No project slot was written. The device remains on XA96, track 10 SYN.
+Checked receipts, scripts, raw audio and final-state evidence are local under
+`out/audit-96/XA96/`, summarized by `evidence.json`.
+
+## Historical XP03 qualification and earlier investigation
+
+Everything below describes its named historical build and workload. XA96 above
+is the current installation; older installation statements do not override it.
+
 The user-approved interim DN2 fix chokes older kicks on the same track, with a
 128-sample fade, for both models. XP02's sixteen-slot, two-track captures are
 clean and the user reports clean direct-output listening. A held stock FM
