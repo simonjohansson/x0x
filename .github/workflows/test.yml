@@ -1,0 +1,23 @@
+name: Host and component checks
+
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  stock-free:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          submodules: true
+          persist-credentials: false
+      - uses: jdx/mise-action@v5.2.4
+      - name: Install ColdFire tools
+        run: brew install m68k-elf-gcc m68k-elf-binutils
+      - name: Bootstrap pinned emulators and SHARC tools
+        run: mise run bootstrap
+      - name: Run required stock-free checks
+        run: mise run test
