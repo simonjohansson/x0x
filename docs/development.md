@@ -48,8 +48,12 @@ and generate target tables; the capture archives are unnecessary for building.
 Tests execute actual ASM, compare ColdFire output and state with independent
 integer specifications, and check START/latches, model transitions, independent
 slots, invalid controls, bounded writes, ABI/EMAC preservation and native C
-adapters. The full-OS emulator tasks exercise the normal 808 path; both-model
-adapter and DSP boundary checks are separate component tests. JIT execution
+adapters. The DT/DN full-OS smokes select 808, 909 at both Attack endpoints,
+and 808 again through native panel controls. Every observed sample block and
+private state is checked against the independent integer oracle. Each isolated
+tail finishes before the next UI edit; these smokes do not establish rapid live
+editing or broad polyphony acceptance (#20). Component checks cover those DSP
+boundaries separately. JIT execution
 requires executable memory. No physical-device result is implied by these tests.
 
 ## Frozen models and historical qualification

@@ -8,7 +8,7 @@ import os
 import struct
 import time
 import wave
-from . import build, cpu, coldfire_field808 as dsp
+from . import build, cpu, coldfire_field808 as dsp, coldfire_field909 as dsp909
 
 
 def smoke(device="dt"):
@@ -47,7 +47,8 @@ def smoke(device="dt"):
         names = json.loads((folder / "link-map.json").read_text())
         uc = session.m.uc
         names = {k: int(v, 0) if isinstance(v, str) else v for k, v in names.items()}
-        reference = dsp.Reference(folder / "integer-reference")
+        oracles = {1: dsp.Reference(folder / "integer-reference"),
+                   2: dsp909.Reference(folder / 'integer-reference909')}
         references = [(ctypes.c_int32 * dsp.WORDS)() for _ in range(8)]
         active = None
         returns = set()
@@ -55,6 +56,8 @@ def smoke(device="dt"):
         failures = []
         report["checks"] = checks
         report["failures"] = failures
+        checks['by_model'] = {kind: dict(callbacks=0, starts=0, start_controls=[])
+                              for kind in (1, 2)}
 
         def checked(fn):
             def hook(*args):
@@ -73,7 +76,7 @@ def smoke(device="dt"):
             nonlocal active
             if active is None or pc != active[-1]:
                 return
-            owner, out, slot, expected, _ret = active
+            owner, out, slot, expected, kind, _ret = active
             actual = list(struct.unpack(">32i", uc.mem_read(out, 128)))
             assert actual == expected, (
                 "Native callback output differs from integer reference"
@@ -82,15 +85,16 @@ def smoke(device="dt"):
                 ">352i", *references[slot]
             ), "Native callback state differs"
             checks["callbacks"] += 1
+            checks['by_model'][kind]['callbacks'] += 1
             checks["nonzero_blocks"] += int(any(actual))
             active = None
 
-        def entered(*_):
+        def entered(kind, *_):
             nonlocal active
             assert active is None, "Nested mod callback"
             sp = uc.reg_read(UC_M68K_REG_A7)
             ret = int.from_bytes(uc.mem_read(sp, 4), "big")
-            owner, out, start, tone, decay, model = struct.unpack(
+            owner, out, start, tone, decay, extra = struct.unpack(
                 ">6I", uc.mem_read(sp + 4, 24)
             )
             slot, offset = divmod(owner - names["voices"] - 4, (dsp.WORDS + 1) * 4)
@@ -102,12 +106,16 @@ def smoke(device="dt"):
                 + 128 * slot
             )
             assert ret in returns, ("Unobserved caller return", hex(ret))
+            reference = oracles[kind]
             reference.state = references[slot]
-            expected = reference.call(tone, decay, start, model=model)
+            expected = (reference.call(tone, decay, start, model=extra) if kind == 1
+                        else reference.call(tone, extra, decay, start))
             checks["starts"] += int(bool(start))
             if start:
-                checks["start_controls"] = dict(tone=tone, decay=decay, model=model)
-            active = (owner, out, slot, expected, ret)
+                controls = dict(tone=tone, decay=decay, attack=extra if kind == 2 else None)
+                checks['by_model'][kind]['starts'] += 1
+                checks['by_model'][kind]['start_controls'].append(controls)
+            active = (owner, out, slot, expected, kind, ret)
 
         # Install return probes before execution: adding a hook at entry can
         # invalidate the current Unicorn block and report the same entry twice.
@@ -134,7 +142,8 @@ def smoke(device="dt"):
                 returns.add(start + i + length)
         for ret in returns:
             session.at(ret, checked(returned))
-        session.at(names["x0x_field808"], checked(entered))
+        session.at(names['x0x_field808'], checked(lambda *args: entered(1, *args)))
+        session.at(names['x0x_field909'], checked(lambda *args: entered(2, *args)))
 
         def notified(*_):
             checks["render_notifications"] += 1
@@ -150,6 +159,12 @@ def smoke(device="dt"):
         def tap(key):
             session.tap(session.code(key), hold_ms=40, after_ms=80)
             assert not session.halted
+
+        def endpoint(knob, direction):
+            # Drain each bounded encoder packet before raising the next panel interrupt.
+            for _ in range(64):
+                session.turn(session.encoder(knob), 16 if direction > 0 else -16, after_ms=20)
+                assert not session.halted and not failures, (session.halted, failures)
 
         # Verified native menu sequences, sent in one bounded script.
         wait()
@@ -178,17 +193,41 @@ def smoke(device="dt"):
             assert int.from_bytes(uc.mem_read(kit + 0x2C, 2), "big") == 20 << 8, (
                 "X0X machine not selected"
             )
-        pcm_start = len(session.pcm)
-        tap("1" if device == "dt" else "9")
-        wait(250)
-        # A time budget may stop inside the callback; finish that observation.
-        for _ in range(20):
-            if active is None:
-                break
-            wait(0.05)
-        pcm = bytes(session.pcm[pcm_start:])
-        peak = max(abs(x) for x in struct.unpack("<" + "h" * (len(pcm) // 2), pcm))
-        report["pcm_peak_int16"] = peak
+        tap('SRC' if device == 'dt' else 'SYN2')
+        cases = []
+        report['cases'] = cases
+        for name, kind, model_turn, attack_turn, expected_attack in (
+            ('808', 1, -127, 0, None),
+            ('909-attack-min', 2, 127, -127, 0),
+            ('909-attack-max', 2, 0, 127, 32512),
+            ('808-return', 1, -127, 0, None),
+        ):
+            if cases:
+                # Finish the isolated tail before the next native UI edit.
+                wait(6000)
+            if model_turn:
+                endpoint('F', model_turn)
+            if attack_turn:
+                endpoint('C', attack_turn)
+            before = checks['by_model'][kind]['starts']
+            pcm_start = len(session.pcm)
+            tap('1' if device == 'dt' else '9')
+            wait(250)
+            # A time budget may stop inside the callback; finish that observation.
+            for _ in range(20):
+                if active is None:
+                    break
+                wait(0.05)
+            pcm = bytes(session.pcm[pcm_start:])
+            peak = max(abs(x) for x in struct.unpack('<'+'h'*(len(pcm)//2), pcm))
+            assert checks['by_model'][kind]['starts'] > before and peak > 0 and active is None, (name, checks)
+            controls = checks['by_model'][kind]['start_controls'][-1]
+            if expected_attack is not None:
+                assert controls['attack'] == expected_attack, (name, controls)
+            cases.append(dict(name=name, model=kind, controls=controls, pcm_peak_int16=peak, pcm_frames=len(pcm)//4))
+            with wave.open(str(folder/f'native-{name}.wav'), 'wb') as f:
+                f.setparams((2, 2, session.audio_cfg['rate'], 0, 'NONE', 'not compressed'))
+                f.writeframes(pcm)
         if device == "dt":
             report["render_machine_bytes"] = bytes(
                 uc.mem_read(names["fw_render_machine"], 8)
@@ -199,9 +238,6 @@ def smoke(device="dt"):
             and peak > 0
             and active is None
         ), checks
-        with wave.open(str(folder / "native-808.wav"), "wb") as f:
-            f.setparams((2, 2, session.audio_cfg["rate"], 0, "NONE", "not compressed"))
-            f.writeframes(pcm)
         if session.frames:
             panel.write_png(
                 session.frames[-1][1], str(folder / "selected.png"), scale=4
