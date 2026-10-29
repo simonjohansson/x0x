@@ -9,6 +9,7 @@ import csv,struct
 import soundfile as sf
 from . import cpu,fit808,field909
 ROOT=cpu.ROOT/'research/reference/909-fit-model'
+FIXTURES=cpu.ROOT/'tests/fixtures/909-model'
 OUT=cpu.ROOT/'out/909-model/host'
 RATE=48000;FRAMES=96000
 TIME=np.array([.004,.006,.009,.014,.022,.035,.05,.058,.060,.062,.064,.066,.070,.075,.080,.09,.105,.125,.15,.18,.22,.26,.32,.4,.55,.8,1.2,2.])
@@ -169,7 +170,7 @@ def evaluate(raw,events,model,partition,limit=0):
     return result
 
 def load_events():
-    path=ROOT/'events.csv'
+    path=FIXTURES/'events.csv'
     if fit808.digest(path)!='e20bf4b026c50ae1bf301e614fa121977bb8f76c4bc637b10b2ad7b0080ae29f':
         raise ValueError('909 setting/partition manifest changed')
     with path.open() as f:

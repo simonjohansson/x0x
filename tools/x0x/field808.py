@@ -291,7 +291,10 @@ def main():
                 # Independently exercise the scalar-control path used by callers.
                 np.testing.assert_allclose(render(model, pair[0] * 256, pair[1] * 256), prediction, rtol=1e-9, atol=1e-11)
     report['summary'] = {key: fit808.summarize(rows, config) for key, rows in report['records'].items()}
-    weights = np.array([control_weights(model, raw) for raw in range(32513)])
+    weights = spline([fit808.native_coordinate(raw) for raw in range(32513)],
+                     np.linspace(0, 1, int(model['control_breaks'][0]))) @ decode_rows(model, 'control').T
+    anchors = [0, 1, 12345, 32512]
+    np.testing.assert_array_equal(weights[anchors], [control_weights(model, raw) for raw in anchors])
     poles = tone_factor808.poles(model['tone'], [fit808.native_coordinate(raw) for raw in range(32513)])
     report['native_control_sanity'] = dict(words=32513, finite_weights=bool(np.isfinite(weights).all()),
         maximum_weight=float(abs(weights).max()), maximum_adjacent_weight_change=float(abs(np.diff(weights, axis=0)).max()),
