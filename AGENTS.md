@@ -29,97 +29,68 @@
 - When work is deferred or moved to a follow-up issue, link that issue and update the original issue, plan and affected docs. A deferred or untested check is not a passing check.
 - Distinguish host, component, emulator and physical-device evidence. Preserve historical evidence with an explicit historical label and a link to the current status.
 
-## Digitone II remote-control notebook
+## Documentation boundaries
 
-These are DN2 OS 1.12 / DigiHealth revision-3 controls, verified during the
-2026-10-29 investigation. Reuse a single MIDI port and `RemoteKeys` session
-for each batch. Do not launch Python, fetch HELLO/STATS and render a PNG after
-every button. Check once at a meaningful boundary; prefer memory readback for
-machine, parameters and voice allocation. Key completion confirms delivery,
-not completion of a project load or save.
+- Keep `README.md` focused on using x0x: supported devices/OS, obtaining and
+  installing a build, selecting the machine, controls and audible limitations.
+  Link developer setup, model internals, measurements and investigations from
+  `docs/`; do not append progress logs, addresses or build receipts to the README.
+- Keep one current status per topic. Mark superseded evidence as historical,
+  link its exact revision, and remove contradictory current instructions from
+  linked docs and roadmap issues. Check links when moving or deleting docs.
+- Keep reusable rules here and detailed procedures in linked runbooks. A dated
+  local path, firmware version or test result is evidence to recheck, not a
+  permanent environment guarantee.
 
-- Use the matched DigiHealth client. This session's clean checkout is
-  `/private/tmp/x0x-digihealth-dn2-support`, revision
-  `afc751d67b1b1575f7a5fc40f104c11451fc3ea5`. Run Python with `mise`.
-- `TRK(n)` selects track n; `SYN` opens its synth page; `VOICE` opens VOICE
-  SETUP. `FUNC(VOICE)` does not open that page. Normal tests need **DYN (16)**
-  and **UNISON STATE OFF**, not 16 locked voices or unison with 16 notes.
-- From SYN, `FUNC(SYN)` opens the machine selector. The XP03 order is
-  **FM TONE, FM DRUM, WAVETONE, SWARMER, X0X KICKS**. From confirmed FM TONE,
-  `DOWN,DOWN,DOWN,DOWN,YES` selects x0x. From confirmed x0x,
-  `UP,UP,UP,UP,YES` selects FM TONE. Allow the machine load to settle before
-  opening another menu. XB00 has no x0x entry.
-- From ordinary menus, successive `NO` presses return towards the main page.
-  Do not use this as a reset while a save/load/update confirmation is open.
-  SETTINGS remembers selection: do not assume its cursor is on PROJECT.
-- From SETTINGS with PROJECT selected: `YES` opens PROJECT. Its rows are
-  **LOAD PROJECT, SAVE PROJECT AS, MANAGE PROJECTS**. With LOAD selected,
-  `YES` opens the populated-slot list. With SAVE AS selected, `YES` opens the
-  destination list; selecting a destination opens a separate name screen,
-  whose `YES` actually saves. Wait for SAVING to finish.
-- In LOAD PROJECT, **CREATE NEW is the final unnumbered command**. Named
-  `NEW PROJECT` entries in slots 126/127 are existing saved projects, not
-  initialization commands. Handle the current-project save question and
-  initialization separately; do not send extra YES/NO through an unseen
-  transition.
-- Test-slot policy: use one documented, verified-empty slot for repeatable
-  tests and preserve a pristine all-FM baseline for reload. **Do not overwrite
-  slot 2**: it contains `DNII M1_FINAL`. The user's current SP setup was copied
-  to slot **006**; the pristine test slot is **007 NEW PROJECT** (saved and
-  verified). It has all 16 FM TONE tracks, DYN16, unison OFF, channels 1–16,
-  AMP volume 32, centered pan, sends zero and a step-1 trig on each track.
-  Reload that baseline before each scenario;
-  do not save x0x scenario changes over its pristine copy.
-- Full project reload/save shortcuts, with explicit starting cursors: in
-  LOAD PROJECT with **001 selected**, `DOWN` six times then `YES` loads 007
-  (the current inventory has every slot 001–007 populated). If asked to save
-  the modified current project, decline with one `NO`, then wait for loading.
-  In SAVE PROJECT AS with **001 selected**, the same six DOWNs and YES choose
-  007; wait for its name screen, then YES saves. Use this only for an intended
-  pristine-baseline update. Recheck navigation if populated slots change.
-- Fast scenario reset, physically verified: from the main page of the pristine
-  baseline, **`FUNC(YES)`** saves the current pattern to the temporary area.
-  After a scenario, **`FUNC(NO)`** restores that snapshot, including machine
-  selection and sound controls. A 16-voice readback verified x0x→all FM TONE.
-  Use this instead of reopening PROJECT for each model/knob test. It restores
-  the pattern, not project MIDI settings; establish it again after loading a
-  project or rebooting. Do not use FUNC+YES on a modified scenario if the
-  intent is to retain the pristine snapshot.
-- MIDI CONFIG is the fourth SETTINGS row. Its rows are **SYNC, PORT CONFIG,
-  CHANNELS**. CHANNELS starts at TRACK 1; `DOWN` selects the next track and
-  `LEFT`/`RIGHT` change its channel. For these tests use tracks **1→1 through
-  16→16**. A fresh project initially received only tracks 1–8; the user set
-  9→9 through 16→16. Leave subsequent channel options unchanged. Select track
-  10 while using all channels, matching this setup's auto channel.
-- Common MIDI controls: source A/B/C **CC40/41/42**, x0x model **CC45**
-  (808=0, 909=127), pan **CC89** (not CC10), AMP volume **CC90**, chorus/delay/
-  reverb sends **CC29/30/31**. Send model CC only to an x0x track.
-- Verify all 16 voices without an image: CF outgoing frame **0x80005e60**,
-  2688 bytes, big-endian uint16; pitch at word `1+slot`, machine at `74+slot`
-  (FM TONE=0, x0x=20). Native voice records at **0x40288300**, stride 20:
-  owner byte +5, gate word +6 (`0xffff` after note-off). Require 16 distinct
-  owners, active gates and expected pitches; owners persist after release.
-- Current DigiHealth `FRAME` returns 128×64 pixels and a generation number,
-  not a page/menu ID. Its `ev_tick` receives the native view controller and
-  `ev_draw` receives the composed frame. A semantic UI-state query is possible
-  follow-up work, but native page IDs and offsets have not been qualified.
-  Do not infer actual state solely from the last key sent. DSP peek is about
-  3 KB/s; use ordinary CF PEEK for UI/control/ownership checks.
-- For a previously inspected, fixed dialog, compare its fresh raw bitmap
-  region with the saved reference instead of rendering another image. The
-  XP03 restore confirmation was verified this way against the inspected XB00
-  `UPGRADE OS NOW / CONFIRM Y/N` modal. Keep generation freshness checks;
-  inspect an image only on a mismatch or an unknown transition.
+## Implementation and verification
 
-Run the documented chords with the matched client, for example:
+- Follow the existing device/target boundaries; keep host modelling, build
+  and qualification tools in `tools/x0x/`. Read each device's actual call path
+  before sharing adapter or manifest code; similar layouts do not establish
+  interchangeable device contracts.
+- Reuse the existing build, validation and report helpers. When retiring an
+  implementation, search callers, manifests and test runners for orphaned
+  headers, fixtures and tests; retain independent reference oracles in use.
+- Verify that each required test is reached by a documented mise task. A test
+  file that is never invoked provides no regression coverage. Report skipped
+  prerequisites explicitly; required acceptance checks must not silently pass.
+- Follow the existing 808 fixture pattern for small protocol/partition checks
+  that can run without private recordings; keep large capture archives local.
+- Test the changed path at its real boundary. Component DSP checks do not
+  establish native MODEL/ATTACK routing, save/reload behavior or device audio.
+- For DSP performance work, check START, interval boundaries, body, tail and
+  retirement at relevant control extremes, plus the intended concurrent-track
+  workload. Track maximum work as well as typical work; instruction counts,
+  measured handler cycles and total DSP utilization are different evidence.
 
-```sh
-mise exec -- uv run --offline --with mido --with python-rtmidi \
-  python /private/tmp/x0x-digihealth-dn2-support/tools/digiusb.py \
-  keys 'FUNC(NO),TRK(10),SYN'
-```
+## Evidence integrity
 
-That is the fast stock-pattern reset only after establishing the pristine
-snapshot with `FUNC(YES)`. For FM TONE→x0x on track 1, replace the final argument
-with `'TRK(1),FUNC(SYN),DOWN,DOWN,DOWN,DOWN,YES'`. Defaults are 100 ms taps;
-keep bounded holds and the client's duplicate/status/no-replay handling.
+- Reject non-finite audio and metrics before comparisons or success reports;
+  use strict JSON output for numerical receipts. Test an invalid result as
+  well as a passing result when changing a qualification gate.
+- Preserve completed evidence when rerunning a long job. Publish new outputs
+  and their success receipt together only after checks complete; an interrupted
+  run must not leave old passing metrics attached to new or partial artifacts.
+- Verify artifact hashes when consuming receipts. Bind results to the actual
+  source, model, toolchain and dependency inputs; label older-source evidence
+  as historical instead of presenting it as qualification of the current build.
+- A dependency's commit ID alone does not establish a clean pinned build.
+  Check the checkout and imported tool path used, including the matched client
+  for live readback. Reuse existing revision/cleanliness checks where available.
+  Use the same selected checkout/toolchain throughout build and readback.
+- Keep fixed gain, timing, cohort partitions and acceptance criteria explicit.
+  Preserve failed acquisitions and regressions; fitting holdouts and emulator
+  agreement do not establish fresh-source or listening acceptance.
+
+## Physical-device work
+
+- Follow the current request's authorization; prior installations and this
+  notebook do not authorize flashing, project writes or a new device test.
+- Read the [DN2 remote-control runbook](docs/dn2-remote-control.md) before DN2
+  work. Reuse one MIDI port/session per batch and verify state at meaningful
+  boundaries; key delivery is not proof of a completed load, save or update.
+- Preserve user projects. Do not overwrite slot 002 (`DNII M1_FINAL`). The
+  2026-10-29 setup used slot 006 for the user's SP copy and slot 007 for a
+  pristine all-FM baseline; recheck their identity before using them. Never
+  save an x0x scenario over the pristine baseline or replace its temporary
+  pattern snapshot with a modified scenario.
