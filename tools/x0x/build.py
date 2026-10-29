@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import shutil
+import os
 
 from . import cpu, firmware, sharc_field808, coldfire_field808, coldfire_field909
 
@@ -39,6 +40,9 @@ def build(device, folder=None):
     from elekloader import patch
 
     _, key, dependencies = DEVICES[device]
+    inputs = cpu.source_hashes()
+    project_revision = cpu.revision(cpu.ROOT)
+    project_dirty = cpu.command(['git', 'status', '--porcelain'], cwd=cpu.ROOT)
     folder = Path(folder or cpu.ROOT / "out" / device).resolve()
     folder.mkdir(parents=True, exist_ok=True)
     model = stage(device, folder / "mod")
@@ -69,6 +73,12 @@ def build(device, folder=None):
     image = folder / "x0x.syx"
     image.write_bytes(outputs["syx"])
     (folder / "link-map.json").write_text(json.dumps(manifest["_map"], indent=2) + "\n")
+    if cpu.source_hashes() != inputs:
+        raise ValueError('Source inputs changed during build')
+    prefix = os.environ.get('ELEKLOADER_CROSS', 'm68k-elf-')
+    tools = {name: cpu.tool_identity(prefix+name) for name in ('gcc', 'as', 'ld', 'objcopy')}
+    if device == 'dn2':
+        tools.update({name: cpu.tool_identity(cpu.selache()/'target/release'/name) for name in ('selas', 'seld')})
     report = dict(
         status="passed",
         scope="Normal combined x0x mod packaging; no emulator/device evidence implied",
@@ -76,6 +86,10 @@ def build(device, folder=None):
         version="X0X2",
         stock=stock,
         elekloader_revision=revision,
+        project_revision=project_revision,
+        project_dirty=project_dirty,
+        inputs_sha256=inputs,
+        tools=tools,
         model=model,
         firmware=str(image),
         firmware_sha256=hashlib.sha256(image.read_bytes()).hexdigest(),

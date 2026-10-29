@@ -4,10 +4,12 @@ import base64
 import ctypes
 import hashlib
 import json
+import os
 from pathlib import Path
 import struct
 import tempfile
 import time
+import sys
 import numpy as np
 import soundfile as sf
 from . import cpu,field909,fit909,sharc_field808 as sharc,coldfire_field909 as coldfire
@@ -17,11 +19,7 @@ OUT=cpu.ROOT/'out/909-model/qualification'
 
 
 def input_hashes():
-    paths = [*cpu.ROOT.glob('tools/x0x/*.py'), *cpu.ROOT.glob('tools/x0x/*_ref.c'),
-             *cpu.ROOT.glob('targets/*/*.s'), *cpu.ROOT.glob('tests/asm/*.s'),
-             *cpu.ROOT.glob('models/*.npz')]
-    return {str(p.relative_to(cpu.ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
-            for p in sorted(paths)}
+    return cpu.source_hashes()
 
 
 def load_report(target):
@@ -79,6 +77,10 @@ def qualify(target):
     runs=destination/'runs';runs.mkdir(exist_ok=True)
     folder=Path(tempfile.mkdtemp(prefix='run-',dir=runs))
     inputs=input_hashes()
+    provenance = dict(project_revision=cpu.revision(cpu.ROOT),
+                      project_dirty=cpu.command(['git', 'status', '--porcelain'], cwd=cpu.ROOT),
+                      dependencies={name: cpu.clean_revision(cpu.ROOT/'vendor'/name)
+                                    for name in ('digiemu', 'digikit', 'elekloader')})
     model=field909.load();events=fit909.load_events();raw=fit909.raw_audio()
     interaction={tuple(e[k+'_cc'] for k in ('tune','attack','decay')):e for e in events if e['split']=='interaction'}
     corner_keys=[(t,a,d) for t in (0,127) for a in (0,127) for d in (0,127)]
@@ -91,6 +93,22 @@ def qualify(target):
         receipt,artifact=sharc.build(folder/'build');runner=sharc.Runner(receipt,artifact)
     else:
         receipt,image=coldfire.build(folder/'build');runner=coldfire.Runner(image,guarded=False);oracle=coldfire.Reference(folder/'build')
+    if target == 'sharc':
+        provenance.update(native_library_sha256=hashlib.sha256(Path(runner.native.DEFAULT_LIB).read_bytes()).hexdigest(),
+                          native_info=runner.core.info(),
+                          tools={name: cpu.tool_identity(cpu.selache()/'target/release'/name) for name in ('selas', 'seld')})
+    else:
+        import unicorn
+        library=Path(unicorn.__file__).parent/'lib'/('libunicorn.2.dylib' if sys.platform=='darwin' else 'libunicorn.so.2')
+        provenance.update(native_library_sha256=hashlib.sha256(library.read_bytes()).hexdigest(),
+                          unicorn_version=unicorn.__version__,
+                          integer_reference_sha256=hashlib.sha256((cpu.ROOT/'tools/x0x/coldfire_field909_ref.c').read_bytes()).hexdigest(),
+                          tools={name: cpu.tool_identity(os.environ.get('ELEKLOADER_CROSS', 'm68k-elf-')+name)
+                                 for name in ('as', 'ld', 'objcopy')})
+    import scipy
+    provenance['environment'] = dict(python=sys.version, numpy=np.__version__, scipy=scipy.__version__, soundfile=sf.__version__)
+    provenance['tools']['python'] = cpu.tool_identity(sys.executable)
+    provenance['tools']['cc'] = cpu.tool_identity(os.environ.get('CC', 'clang'))
     rows=[];corners=[];started=time.monotonic();maximum_port=0.;test_count=0
     wavpath=folder/'rendered-native.wav'
     with sf.SoundFile(wavpath,'w',samplerate=48000,channels=1,subtype='FLOAT' if target=='sharc' else 'PCM_32') as wave, (folder/'rows.jsonl').open('w') as log:
@@ -125,7 +143,7 @@ def qualify(target):
         report[metric]=dict(zip(('min','median','p95','max'),map(float,np.quantile([r[metric] for r in selected],[0,.5,.95,1]))))
     if input_hashes() != inputs:
         raise ValueError('Source inputs changed during qualification')
-    report.update(inputs_sha256=inputs, corners_png=str(folder/'corners.png'),
+    report.update(provenance=provenance, inputs_sha256=inputs, corners_png=str(folder/'corners.png'),
                   corners_png_sha256=hashlib.sha256((folder/'corners.png').read_bytes()).hexdigest())
     (folder/'report.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
     png=base64.b64encode((folder/'corners.png').read_bytes()).decode()

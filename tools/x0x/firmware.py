@@ -7,6 +7,7 @@ import subprocess
 import sys
 
 from .cpu import ROOT
+from . import cpu
 
 def load_json(path):
     def reject_constant(value):
@@ -36,11 +37,13 @@ def verify_entry(entry, firmware_dir, sdk_revision):
 
 
 def baseline():
+    cpu.require_module('elekloader', 'elekloader')
     manifest = load_json(ROOT / "firmware/manifest.json")
     actual = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT / "vendor/elekloader",
                             text=True, capture_output=True, check=True).stdout.strip()
     if actual != manifest["elekloader_revision"]:
         raise ValueError("Elekloader pin differs from the SDK used to verify the firmware baseline")
+    cpu.clean_revision(ROOT/'vendor/elekloader')
     entries = {entry["device"]: entry for entry in manifest["entries"]}
     if set(entries) != {value[0] for value in DEVICES.values()} or len(manifest["entries"]) != 3:
         raise ValueError("expected exactly one latest firmware for each active device")

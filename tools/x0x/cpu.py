@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib
+import hashlib
 import os
 from pathlib import Path
 import shutil
@@ -30,9 +31,28 @@ def revision(path: Path) -> str:
     return command(["git", "rev-parse", "HEAD"], cwd=path).strip()
 
 
+def clean_revision(path: Path) -> str:
+    if command(['git', 'status', '--porcelain'], cwd=path).strip():
+        raise ValueError('Modified dependency checkout: ' + str(path))
+    return revision(path)
+
+
+def source_hashes() -> dict[str, str]:
+    paths = [ROOT/'mise.toml', ROOT/'firmware/manifest.json']
+    for folder in ('tools/x0x', 'targets', 'machines', 'src', 'include', 'models', 'tests/asm', 'tests/fixtures'):
+        paths.extend(p for p in (ROOT/folder).rglob('*') if p.is_file()
+                     and p.suffix in ('.py', '.c', '.s', '.h', '.json', '.npz', '.patch', '.csv', '.html'))
+    return {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(paths)}
+
+
+def tool_identity(name: str | Path) -> dict:
+    path = Path(require_program(str(name))).resolve()
+    return dict(path=str(path), sha256=hashlib.sha256(path.read_bytes()).hexdigest())
+
+
 def selache() -> Path:
     path = Path(os.environ.get('SELACHE', ROOT/'vendor/digikit/out/tools/selache')).resolve()
-    if revision(path) != SELACHE_PIN:
+    if clean_revision(path) != SELACHE_PIN:
         raise ValueError('Selache revision mismatch')
     return path
 

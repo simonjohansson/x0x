@@ -7,11 +7,31 @@ import unittest
 from unittest.mock import patch
 
 from elekloader import formats
-from x0x import firmware
+from x0x import firmware, cpu
 from x0x.firmware import ROOT, load_json
 
 
 class LatestFirmwareTests(unittest.TestCase):
+    def test_dirty_dependency_is_rejected_even_at_the_expected_revision(self):
+        with patch.object(cpu, 'command', return_value=' M sdk/build.py'):
+            with self.assertRaisesRegex(ValueError, 'Modified dependency'):
+                firmware.baseline()
+
+    def test_input_hashes_follow_source_edits_not_just_commit_ids(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(cpu, 'ROOT', Path(tmp)):
+            root = Path(tmp)
+            (root/'firmware').mkdir()
+            (root/'firmware/manifest.json').write_text('{}')
+            (root/'mise.toml').write_text('')
+            (root/'machines').mkdir()
+            source = root/'machines/adapter.c'
+            source.write_text('old')
+            before = cpu.source_hashes()
+            source.write_text('new')
+            after = cpu.source_hashes()
+            self.assertNotEqual(before['machines/adapter.c'], after['machines/adapter.c'])
+            self.assertEqual(before['firmware/manifest.json'], after['firmware/manifest.json'])
+
     def test_wrong_sdk_pin_and_duplicate_device_baseline_are_rejected(self):
         manifest = load_json(ROOT / "firmware/manifest.json")
         changed = copy.deepcopy(manifest)
