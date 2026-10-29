@@ -27,11 +27,17 @@ def main():
         print("ColdFire C control object has no undefined runtime imports")
         return
     compiler = shlex.split(os.environ.get("CC", "clang"))
-    subprocess.run(compiler + ["-std=c99", "-O2", "-Wall", "-Wextra", "-Werror",
-                   "-Iinclude", "src/controls.c", "tests/ui/test_controls.c", "-o", str(output)],
-                   cwd=ROOT, check=True)
-    subprocess.run([output], check=True)
-    print("C control boundary passed (fake receiver; no native pages or DSP)")
+    for name, sources in (
+        ('test_controls', ['src/controls.c', 'tests/ui/test_controls.c']),
+        ('test_digitone_adapter', ['src/controls.c', 'machines/digitone/adapter.c',
+                                   'tests/ui/test_digitone_adapter.c']),
+    ):
+        output = output.with_name(name)
+        subprocess.run(compiler + ['-std=c99', '-O2', '-Wall', '-Wextra', '-Werror',
+                       '-Iinclude', '-Ivendor/elekloader/elekloader/sdk/include',
+                       *sources, '-o', str(output)], cwd=ROOT, check=True)
+        subprocess.run([output], check=True)
+    print("C control and Digitone adapter boundaries passed (fake receivers; no native pages or DSP)")
 
 
 if __name__ == "__main__":
