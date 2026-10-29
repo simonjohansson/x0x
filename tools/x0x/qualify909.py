@@ -15,8 +15,19 @@ OUT=cpu.ROOT/'out/909-model/qualification'
 
 
 def measure(predicted,reference):
+    if not (np.isfinite(predicted).all() and np.isfinite(reference).all()):
+        raise ValueError('Non-finite qualification audio')
     error=predicted-reference;energy=np.cumsum(reference*reference);penergy=np.cumsum(predicted*predicted)
     return dict(l2=float(np.linalg.norm(error)/np.linalg.norm(reference)),after10ms_l2=float(np.linalg.norm(error[480:])/np.linalg.norm(reference[480:])),max_fs=float(abs(error).max()),level_db=float(20*np.log10(np.linalg.norm(predicted)/np.linalg.norm(reference))),peak_db=float(20*np.log10(max(abs(predicted))/max(abs(reference)))),t99_delta_ms=float((np.searchsorted(penergy,.99*penergy[-1])-np.searchsorted(energy,.99*energy[-1]))/48))
+
+
+def port_error(actual, expected):
+    if not (np.isfinite(actual).all() and np.isfinite(expected).all()):
+        raise ValueError('Non-finite port audio')
+    error = float(abs(actual-expected).max())
+    if error >= 1e-5:
+        raise AssertionError(('Port error', error))
+    return error
 
 
 def plots(folder,corners):
@@ -69,13 +80,12 @@ def qualify(target):
                     if bytes(runner.uc.mem_read(runner.STATES,1408))!=struct.pack('>352i',*oracle.state):raise AssertionError(('Integer state disagreement',settings,b))
                     blocks.extend(actual)
                 integers=np.asarray(blocks,dtype='int32');wave.write(integers);y=integers.astype(float)/2**31
-            expected=4*field909.render(model,*controls);port=float(abs(y-expected).max());maximum_port=max(maximum_port,port)
-            if port>=1e-5:raise AssertionError(('Port error',target,settings,port))
+            expected=4*field909.render(model,*controls);port=port_error(y,expected);maximum_port=max(maximum_port,port)
             runner.check_tables()
             for e in source_events:
                 offset=e['onset_sample'];reference=np.asarray(raw[offset:offset+96000,0],dtype=float)
                 row=dict(index=e['index'],settings=settings,partition=partition,render_offset=number*96000,port_max_dsp_fs=port,**measure(y/4,reference))
-                rows.append(row);log.write(json.dumps(row)+'\n')
+                rows.append(row);log.write(json.dumps(row,allow_nan=False)+'\n')
                 if partition=='test':test_count+=1
                 if partition=='corner':corners.append((settings,reference,y/4))
             if (number+1)%25==0:
@@ -85,7 +95,7 @@ def qualify(target):
     report=dict(status='passed',scope='Isolated actual-instruction ASM renders; no physical-device or perceptual acceptance',target=target,model_sha256=field909.MODEL_SHA,capture_sha256='ad05ef41060e4477dd5bb8fddcfe9de4c106576f448800b29f0693b86fc667ba',build=receipt,renders=len(cases),test_settings=len(groups),test_events=len(selected),maximum_port_dsp_fs=maximum_port,gain_to_capture=.25,alignment_samples=0,rendered_wav=str(wavpath),rendered_wav_sha256=hashlib.sha256(wavpath.read_bytes()).hexdigest(),rows=rows)
     for metric in ('l2','after10ms_l2','max_fs','level_db','peak_db','t99_delta_ms'):
         report[metric]=dict(zip(('min','median','p95','max'),map(float,np.quantile([r[metric] for r in selected],[0,.5,.95,1]))))
-    (folder/'report.json').write_text(json.dumps(report,indent=2)+'\n')
+    (folder/'report.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
     png=base64.b64encode((folder/'corners.png').read_bytes()).decode()
     (folder/'report.html').write_text('<!doctype html><html><meta charset="utf-8"><title>909 '+target+' ASM</title><style>body{font:17px system-ui;max-width:1400px;margin:40px auto;padding:0 20px;line-height:1.5}img{width:100%}pre{white-space:pre-wrap}</style><h1>909 '+target+' ASM versus VST</h1><p>Every frozen test setting is rendered through the assembled instructions. The VST recordings are unchanged. DSP output is divided by four to match the capture gain, with no per-hit gain fit or sample alignment. This is a waveform comparison, not listening or physical-device acceptance.</p><pre>'+json.dumps({k:v for k,v in report.items() if k not in ('rows','build')},indent=2)+'</pre><img alt="VST and actual ASM at eight corners" src="data:image/png;base64,'+png+'"><p><a href="report.json">Complete numerical receipt</a></p></html>')
     print(target,'DONE',{k:v for k,v in report.items() if k not in ('rows','build')},flush=True)
