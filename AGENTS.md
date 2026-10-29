@@ -20,7 +20,6 @@
 - If instructions are ambiguous or appear to conflict, stop and ask before implementing.
 - Treat established public/stable boundaries as off-limits unless explicitly asked to change them.
 - When corrected, pause, reassess, and reduce the diff instead of immediately trying a new design.
-- Before changing generated files, schemas, APIs, persisted formats, or other broad-impact artifacts, explain why it is necessary and wait for confirmation.
 
 ## Keep issues and documentation current
 
@@ -89,8 +88,8 @@
 - Read the [DN2 remote-control runbook](docs/dn2-remote-control.md) before DN2
   work. Reuse one MIDI port/session per batch and verify state at meaningful
   boundaries; key delivery is not proof of a completed load, save or update.
-- Preserve user projects. Do not overwrite slot 002 (`DNII M1_FINAL`). The
-  2026-10-29 setup used slot 006 for the user's SP copy and slot 007 for a
-  pristine all-FM baseline; recheck their identity before using them. Never
-  save an x0x scenario over the pristine baseline or replace its temporary
-  pattern snapshot with a modified scenario.
+- Preserve user projects. Identify protected projects and verify the chosen
+  test destination before any project write; never infer slot contents
+  from a previous session. Keep device-specific project inventory in local
+  operating notes. Never save an x0x scenario over a pristine baseline or
+  replace its temporary pattern snapshot with a modified scenario.

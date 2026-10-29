@@ -66,6 +66,4 @@ if a long kick gets cut off.
   for tested builds and workloads.
 
 For development, model research and test commands, see the
-[development guide](docs/development.md). The
-[DN2 investigation](docs/dn2-live-artifacts.md) contains the dated measurements
-and debugging history.
+[development guide](docs/development.md).

@@ -1,4 +1,4 @@
-"""Frozen 808 field exported to hand-written SHARC assembly; isolated-hit candidate."""
+"""Frozen 808 field export, combined SHARC build and component runner."""
 from pathlib import Path
 import hashlib
 import json

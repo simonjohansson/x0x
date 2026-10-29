@@ -2,7 +2,7 @@
 
 Reference-driven 808 and 909 kick engines for Digitakt, Digitone and Digitone II.
 Both engines run in handwritten ColdFire and SHARC ASM. C handles native control
-frames and per-voice dispatch. The superseded circuit engines and fitters are removed.
+frames and per-voice dispatch.
 
 | Device | Stock OS | DSP | Saved machine ID |
 | --- | --- | --- | --- |
@@ -10,128 +10,119 @@ frames and per-voice dispatch. The superseded circuit engines and fitters are re
 | Digitone mk1 | 1.44 | ColdFire ASM | 20 |
 | Digitone II | 1.12 | SHARC ASM | 20 |
 
-`TNTUN`, `DECAY`, `ATTK` and `MODEL` retain their saved slots, ranges and defaults.
-MODEL selects 808 below native value 16384 and 909 at or above it. Selection latches on
-START. The 808 latches Tone/Decay; the 909 latches Tune/Attack/Decay. Changes take
-effect on the next hit. Each callback writes 32 mono samples at 48 kHz. Stock
-velocity, envelopes, filters, mixing and voice allocation belong to the SDK.
+MODEL selects 808 below native value 16384 and 909 at or above it. Selection
+latches on START. The 808 latches Tone/Decay; the 909 latches Tune/Attack/Decay.
+Changes take effect on the next hit. Each callback writes 32 mono samples at
+48 kHz. Stock velocity, envelopes, filters, mixing and voice allocation belong
+to the SDK. Controls and user-visible limitations are in the [user guide](../README.md).
 
-Conditional TONE/TUNE labels, hiding ATTACK for 808, and the two-position MODEL
-selector are deferred to [Elekloader #109](https://github.com/simonjohansson/elekloader/issues/109).
-The current page keeps the labels and numeric selector described above. Digitakt
-and Digitone sounds saved with the former machine ID 80 must select X0X again
-and be saved with ID 20; there is no automatic project migration.
+On DN2, a new kick fades older kicks on its own track over 128 samples, then
+retires their synthesis. Other tracks remain independent and all sixteen native
+slots remain available. Preserving overlapping tails is tracked in
+[#95](https://github.com/simonjohansson/x0x/issues/95).
 
 ## Build and test
 
-Runtimes are managed with mise. The tested development environment is macOS
-with Homebrew `m68k-elf-gcc` and `m68k-elf-binutils` installed. Bootstrap builds
-both the patched ColdFire emulator and the firmware-free native SHARC library.
- Stock inputs stay local; see
+Runtimes are managed with mise. The development environment is macOS with
+Homebrew `m68k-elf-gcc` and `m68k-elf-binutils` installed. Bootstrap initializes
+the pinned dependencies and builds both the patched ColdFire emulator and the
+firmware-free native SHARC library. Stock inputs stay local; see
 [firmware/README.md](../firmware/README.md) for filenames and checksums.
 
 ```sh
 mise install
 mise run bootstrap
+mise run test
+```
+
+The stock-free test task executes actual ASM, compares ColdFire output and
+state with independent integer specifications, and checks START/latches, model
+transitions, independent slots, invalid controls, bounded writes, ABI/EMAC
+preservation and native C adapters. It also runs the listening-page controller
+checks. JIT execution requires executable memory. CI runs this task without
+stock firmware; a skipped required check fails the task.
+
+With the stock images installed locally:
+
+```sh
 mise run firmware:dt
 mise run firmware:dn
 mise run firmware:dn2
-mise run test
 mise run test:dt:mod
 mise run test:dn:mod
 ```
 
-Normal packages are `out/{dt,dn,dn2}/x0x.syx`, with build receipts, link maps and
-`.elemod` dependencies alongside them. Builds verify both frozen model sources
-and generate target tables; the capture archives are unnecessary for building.
+Builds create `out/{dt,dn,dn2}/x0x.syx`, with build receipts, link maps and
+`.elemod` dependencies alongside them. They verify both frozen model sources
+and generate target tables; capture archives are unnecessary for building.
 
-Tests execute actual ASM, compare ColdFire output and state with independent
-integer specifications, and check START/latches, model transitions, independent
-slots, invalid controls, bounded writes, ABI/EMAC preservation and native C
-adapters. The DT/DN full-OS smokes select 808, 909 at both Attack endpoints,
-and 808 again through native panel controls. Every observed sample block and
-private state is checked against the independent integer oracle. Each isolated
-tail finishes before the next UI edit; these smokes do not establish rapid live
-editing or broad polyphony acceptance (#20). Component checks cover those DSP
-boundaries separately. JIT execution
-requires executable memory. No physical-device result is implied by these tests.
+The DT/DN full-OS smokes select 808, 909 at both Attack endpoints, and 808 again
+through native panel controls. Each observed sample block and private state is
+checked against the independent integer oracle. Each isolated tail finishes
+before the next UI edit. These smokes do not establish rapid live editing,
+broad polyphony acceptance or physical-device behavior.
 
-## Frozen models and historical qualification
+## Frozen models and resources
 
-- [models/808.npz](../models/808.npz): frozen 808 field and Tone law, 9,179 bytes.
-- [models/909.npz](../models/909.npz): frozen 909 phase, envelope and joint onset
-  fields, 19,305 bytes. [models/909.json](../models/909.json) records capture hashes,
-  fitting partitions, equations and full host metrics.
+- [models/808.npz](../models/808.npz): quantized body field and shared Tone law.
+  `tools/x0x/field808.py` is its fitter and host reference;
+  `tools/x0x/tone_factor808.py` supplies Tone fitting and filtering.
+- [models/909.npz](../models/909.npz): phase, envelope and joint onset fields.
+  `tools/x0x/fit909.py` fits coefficients; `tools/x0x/field909.py` decodes them.
+  [models/909.json](../models/909.json) binds the frozen coefficients to their
+  capture/partition hashes and records model measurements.
 
-The following full-cohort metrics are historical evidence from the
-[combined-engine integration](https://github.com/simonjohansson/x0x/commit/04eff0ed65699e7addc403c992d6f05e46374267).
-They do not qualify subsequent source changes. The 909 source corpus contains 384 isolated-knob positions and 4,096 joint
-positions. Both ASM targets render all 721 withheld settings against 724 raw
-recordings, plus eight corners and two fractional cases. Whole-waveform error is
-about 2.53% median, 3.91% p95 and 7.02% worst; worst error after 10 ms is 4.94%.
-Maximum port differences from the frozen model are 6.56e-6 DSP FS for SHARC and
-1.16e-6 for ColdFire. ColdFire matches its integer oracle sample and state exactly.
-These unaligned waveform metrics include model error and source variation;
-audibility and independent fresh-source acceptance remain separate.
-
-SHARC has a 6,144-byte private code budget and 44,396 initialized data bytes,
-with 512 bytes per voice. Read the current code size from `out/dn2/build.json`
-(`model.code_bytes`); the XP03 historical build used 5,046 bytes. Tables and sixteen allocated states use 52,592 of the
+SHARC has a 6,144-byte private code budget, 44,396 initialized table bytes and
+512 bytes per voice. Tables and sixteen allocated states use 52,592 of the
 56,320 private data bytes inside the pinned 64 KiB SDK owner. ColdFire uses
-125,700 table bytes and a shared 1,412-byte tagged voice state; the normal DT
-package leaves about 102 KiB of DDR free. Audio loops are ASM; host C references
-are never linked into firmware.
+125,700 table bytes and a shared 1,412-byte tagged voice state. Read actual code
+size, linked layout and tool/source identities from a freshly generated
+`out/{dt,dn,dn2}/build.json`. Host C references are never linked into firmware.
 
-Full source/render evidence remains local in `research/reference/808-fit-model/`,
-`research/reference/909-fit-model/` and `out/909-model/qualification/`. The current
-909 report is `research/reference/909-fit-model/model-report.html`. Native rendered
-WAVs retain DSP gain; divide by four to match the capture track's 0.25 gain. No
-per-hit alignment or gain fitting is applied.
+## Reproduce fitting and source comparisons
 
-The frozen 909 protocol is tracked in `tests/fixtures/909-model/events.csv`.
-The large source recordings remain local. Use the shared pinned environment:
+Private recordings belong in `research/reference/808-fit-model/` and
+`research/reference/909-fit-model/`. The small protocol/partition fixtures are
+tracked in [tests/fixtures/808-model](../tests/fixtures/808-model) and
+[tests/fixtures/909-model](../tests/fixtures/909-model). Research commands require
+the matching recordings and metadata; a fresh clone includes neither recordings
+nor generated reports.
 
 ```sh
+mise run python -- -m x0x.fit808 verify
+mise run python -- -m x0x.field808
+mise run research:808:sharc-model
+mise run research:808:coldfire-model
 mise run research:909:fit
 mise run research:909:sharc-model
 mise run research:909:coldfire-model
 mise run research:909:report
 ```
 
-Fitting writes a candidate under `out/909-model/host/` and verifies it against the
-frozen decoder; it does not replace the tracked coefficient source. Qualification
-keeps each run under `out/909-model/qualification/{sharc,coldfire}/runs/` and
-atomically publishes the latest completed receipt. Failed runs remain available
-for investigation. Report generation rejects changed artifacts and historical
-source inputs; rerun both targets after changing inputs. The pinned corpus is a
-fitting holdout, not independent fresh-source or perceptual acceptance.
+808 fitting writes a candidate and listening report to `out/808-model/field/`;
+its target comparisons write to `out/808-model/{sharc,coldfire}/`. 909 fitting
+writes candidates under `out/909-model/host/` and verifies the frozen decoder.
+Neither fitter replaces the tracked coefficient source. 909 qualification keeps
+each run under `out/909-model/qualification/{sharc,coldfire}/runs/` and atomically
+publishes the latest completed receipt. Failed runs remain available for
+investigation. The report command verifies both completed target receipts and
+writes `research/reference/909-fit-model/model-report.html`; rerun both targets
+after changing source inputs.
 
-For another command, `mise run python -- -m x0x.MODULE ...` supplies the same
-Python and numeric-library versions used by builds and tests. The complete
-stock-free test task fails if a required check is skipped. CI runs this task
-without stock firmware; native firmware smokes still require the local images.
+Use `mise run python -- -m x0x.MODULE ...` for the shared pinned Python/numeric
+environment. Qualification receipts identify the gain convention of their
+rendered WAVs. DSP-scale output needs a factor of 0.25 to match capture gain;
+808 listening material already applies its reported playback gain. No per-hit
+alignment or gain fitting is used. Fitting holdouts do not establish independent
+fresh-source, listening or physical-device acceptance.
 
-Current integration and evidence are tracked in
+## Remaining acceptance
+
+Combined-engine qualification is tracked in
 [#94](https://github.com/simonjohansson/x0x/issues/94) and parent
-[#82](https://github.com/simonjohansson/x0x/issues/82). Physical ColdFire acceptance
-awaits a device. DN2 diagnostic work uses the matched client in the
-[remote-control runbook](dn2-remote-control.md); verify its checkout before use.
-
-The historical XP03 interim DN2 fix was verified for both models with sixteen native slots
-across one/two kick tracks: each new kick chokes older hits on its own track
-with a 128-sample fade, then retires their synthesis. Normal-DSP XP03 was
-installed and byte-verified during that qualification. Dual/mixed-model, live-control and held-stock-track
-USB tests pass; the user also heard the diagnostic build clean through the
-Digitone outputs/headphones. That historical run passed 76 host tests; current results belong to the
-current test task/CI and issue #96. This intentionally changes
-closely spaced kick overlap; it does not restrict the native voice pool to one.
-Preserving overlapping tails efficiently is tracked in [#95](https://github.com/simonjohansson/x0x/issues/95).
-The [live investigation](dn2-live-artifacts.md) separates the confirmed
-overload from the buffer-handoff fault, records the original-image A/B,
-sixteen-slot qualification and remaining broader device/fidelity checks.
-Matched fresh-project measurements put stock-DSP all-FM playback at about
-414k handler cycles, versus 420k with x0x installed but unused, 439k with one
-808 plus fifteen FM tracks, and 444k with one 909 plus fifteen FM tracks.
-These are handler averages, not total DSP utilization.
-The exact low-level handoff owner remains unproven; this fix prevents the
-tested kick workload from accumulating over-budget synthesis work.
+[#82](https://github.com/simonjohansson/x0x/issues/82). Physical ColdFire,
+independent fresh-source and listening acceptance remain open; broader emulator
+acceptance is tracked in [#20](https://github.com/simonjohansson/x0x/issues/20).
+Conditional TONE/TUNE labels, hiding ATTACK for 808 and a two-position MODEL
+selector are tracked in [Elekloader #109](https://github.com/simonjohansson/elekloader/issues/109).
+DN2 diagnostic work follows the [remote-control runbook](dn2-remote-control.md).

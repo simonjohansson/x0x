@@ -1,4 +1,4 @@
-"""Shared quantized 808 body field plus Tone filter; host listening candidate (#84)."""
+"""Fitter and host reference for the quantized 808 body field and Tone filter."""
 import argparse
 import json
 from pathlib import Path

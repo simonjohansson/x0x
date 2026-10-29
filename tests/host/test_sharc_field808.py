@@ -19,7 +19,7 @@ class SharcFieldTests(unittest.TestCase):
             import scipy
             cpu.require_module('tools.sharc_dev.sharc_transpile_run','digikit')
         except (ImportError,cpu.Unavailable) as error:
-            raise unittest.SkipTest('Run mise run test:808:sharc-model: '+str(error))
+            raise unittest.SkipTest('Run mise run bootstrap, then mise run test: '+str(error))
         cls.model=dsp.load_model()
         cls.tables=dsp.export_tables(cls.model)
         cls.folder=tempfile.TemporaryDirectory(prefix='x0x-sharc-field-')
