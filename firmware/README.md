@@ -28,7 +28,8 @@ profiles present in a dependency do not expand x0x's supported OS set.
 
 Stock-free model and bounded instruction checks do not require firmware images.
 The normal `mise run firmware:dt`, `firmware:dn` and `firmware:dn2` tasks build
-the combined x0x mod, including the new 808 ASM and retained provisional 909.
+the combined x0x mod, including both frozen reference-driven 808 and 909 ASM engines.
 Each output directory records its stock verification, source paths, model hash
 and firmware SHA-256. Native-emulator and physical-device results are separate
-from packaging evidence; see the current plan in GitHub issue #82.
+from packaging evidence; see [current qualification](https://github.com/simonjohansson/x0x/issues/94)
+and the [development guide](../docs/development.md).
