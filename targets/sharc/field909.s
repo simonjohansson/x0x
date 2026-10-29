@@ -4,6 +4,7 @@
 .SECTION/SW seg_swco;
 .GLOBAL sharc_909_render.;
 .EXTERN x0x_sine.;
+.EXTERN x0x_voice_done.;
 .EXTERN field_coordinate.;
 .EXTERN k_one.;
 .EXTERN k_half.;
@@ -286,7 +287,7 @@ next909:
     R12=R12-1;
     IF NE JUMP sample909;
     DM(0,I4)=R13;
-    JUMP finish909;
+    JUMP x0x_voice_done.;
 silent909:
     R12=32;
     R0=0;

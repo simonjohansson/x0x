@@ -215,7 +215,8 @@ def build(folder=OUT):
     if cpu.revision(selache) != cpu.SELACHE_PIN:
         raise ValueError('Selache revision mismatch')
     programs = selache/'target/release'
-    for source, name in ((SOURCE,'engine'), (cpu.ROOT/'targets/sharc/field909.s','909'), (folder/'tables.s','tables')):
+    for source, name in ((SOURCE,'engine'), (cpu.ROOT/'targets/sharc/field909.s','909'),
+                         (cpu.ROOT/'targets/sharc/choke.s','choke'), (folder/'tables.s','tables')):
         cpu.command([programs/'selas','-proc','ADSP-21569','-o',folder/(name+'.doj'), source])
     ldf = f'''ARCHITECTURE(ADSP-21569)
 $OBJECTS = $COMMAND_LINE_OBJECTS;
@@ -232,7 +233,7 @@ PROCESSOR p0 {{ OUTPUT($COMMAND_LINE_OUTPUT_FILE) SECTIONS {{
     executable = folder/'field808.dxe'
     cpu.command([programs/'seld','-proc','ADSP-21569','-T',folder/'layout.ldf',
                  '-entry','sharc_voice_render.','-Map',folder/'field808.map','-o',executable,
-                 folder/'engine.doj',folder/'909.doj',folder/'tables.doj'])
+                 folder/'engine.doj',folder/'909.doj',folder/'choke.doj',folder/'tables.doj'])
     raw = executable.read_bytes()
     code, data, entry = read_executable(raw, layout)
     assert len(data) == data_bytes, (len(data), data_bytes)
@@ -241,6 +242,7 @@ PROCESSOR p0 {{ OUTPUT($COMMAND_LINE_OUTPUT_FILE) SECTIONS {{
     (folder/'voice.sharc.json').write_text(json.dumps(doc,indent=2)+'\n')
     receipt = dict(model_sha256=MODEL_SHA, model909_sha256=field909.MODEL_SHA, source_sha256=fit808.digest(SOURCE),
         field909_sha256=fit808.digest(cpu.ROOT/'targets/sharc/field909.s'),
+        choke_sha256=fit808.digest(cpu.ROOT/'targets/sharc/choke.s'),
         data_bytes=len(data), code_bytes=len(code), state_bytes=STATE_BYTES,
         state_base=state_base, layout=layout, initialized_plus_states=(len(data)+7)//8*8+16*STATE_BYTES,
         entry=struct.unpack_from('<I',raw,24)[0], artifact_sha256=fit808.digest(folder/'voice.sharc.json'))
@@ -285,12 +287,15 @@ class Runner:
         self.core.set_option(native.OPT_STOP_PC,self.STOP)
         self.maximum_instructions=0
 
-    def call(self, tone, decay, start=False, slot=0, model=0, attack=16384):
+    def call(self, tone, decay, start=False, slot=0, model=0, attack=16384, track=None):
         from tools.sharc_dev import sharc_trace as trace
         state = self.receipt['state_base']+slot*self.state_bytes
         words = [self.OUTPUT,slot,60*256,int(start),self.PARAM,state]
         self.core.poke(self.INPUT,struct.pack('<6I',*words),4)
-        self.core.poke(self.PARAM,struct.pack('<40I',tone,decay,attack,0,0,model,*([0]*34)),4)
+        params=[tone,decay,attack,0,0,model,*([0]*34)]
+        if track is not None:
+            params[39]=0xa500+track
+        self.core.poke(self.PARAM,struct.pack('<40I',*params),4)
         self.core.poke(self.OUTPUT-4,b'\xa5'*136,4)
         for name,value in dict(R4=self.INPUT,I6=self.FRAME,I7=self.FRAME-8,M5=0,M6=1,M7=0xffffffff,M13=0,M14=1,M15=0xffffffff).items():
             self.core.set_reg(trace.UREG_CODES[name],trace.Const(value))

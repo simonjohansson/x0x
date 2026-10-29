@@ -6,7 +6,10 @@
   "license": "GPL-2.0-or-later",
   "device": "digitone-mk2",
   "os": "1.12",
-  "sources": ["page.c"],
+  "sources": ["page.c", "choke.c", "choke.s"],
+  "sites": [
+    {"addr": "0x40025e94", "stock": "487980005e60", "op": "jmp", "target": "x0x_frame_owner"}
+  ],
   "sharc": {"artifact": "voice.sharc.json"},
   "requires": ["core", "machines-dn2"],
   "resources": {"core": "0.2"},

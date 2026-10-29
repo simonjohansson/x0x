@@ -5,7 +5,12 @@
 .SECTION/SW seg_swco;
 .GLOBAL sharc_voice_render.;
 .GLOBAL x0x_sine.;
+.GLOBAL x0x_render_return.;
+.GLOBAL x0x_silent.;
 .EXTERN sharc_909_render.;
+.EXTERN x0x_choke_start.;
+.EXTERN x0x_choke_block.;
+.EXTERN x0x_voice_done.;
 .EXTERN field_groups.;
 .EXTERN field_body.;
 .EXTERN field_control.;
@@ -103,7 +108,39 @@ sharc_voice_render.:
     COMP(R7,R0);
     IF GT JUMP silent;
     R3=PASS R3;
-    IF EQ JUMP continued;
+    IF EQ JUMP check_909_controls;
+    R0=16384;
+    COMP(R7,R0);
+    IF LT JUMP controls_ready;
+    JUMP check_attack;
+check_909_controls:
+    I4=R15;
+    R0=DM(61,I4);
+    R1=2;
+    COMP(R0,R1);
+    IF NE JUMP controls_ready;
+check_attack:
+    I4=R2;
+    R8=DM(2,I4);
+    R0=0xffff8000;
+    R0=R8 AND R0;
+    R0=PASS R0;
+    IF NE JUMP silent;
+    R0=32512;
+    COMP(R8,R0);
+    IF GT JUMP silent;
+controls_ready:
+    R3=PASS R3;
+    IF EQ JUMP check_choked;
+    CALL x0x_choke_start.;
+    JUMP select_start;
+check_choked:
+    I4=R15;
+    R0=DM(125,I4);
+    R0=PASS R0;
+    IF NE JUMP x0x_choke_block.;
+    JUMP continued;
+select_start:
     R0=244;
     R0=R15+R0;
     I4=R0;
@@ -114,6 +151,16 @@ sharc_voice_render.:
 start808:
     R1=1;
     DM(I4,M5)=R1;
+    // Private interval metadata; coefficients and model/voice layout stay unchanged.
+    R0=256;
+    R0=R15+R0;
+    I4=R0;
+    R0=0;
+    DM(1,I4)=R0;
+    DM(6,I4)=R0;
+    DM(11,I4)=R0;
+    DM(16,I4)=R0;
+    DM(21,I4)=R0;
     // Keep delivered Decay across the Tone helper.
     R0=248;
     R0=R15+R0;
@@ -259,6 +306,13 @@ body:
     R1=DM(I4,M5);
     F0=F0+F1;
     DM(I4,M5)=R0;
+    R0=1440;
+    COMP(R13,R0);
+    IF LT JUMP blend;
+    R2=DM(I4,M5);
+    R0=0;
+    F0=F0+F2;
+    JUMP tone_filter;
 blend:
     R0=960;
     R0=R13-R0;
@@ -291,6 +345,7 @@ fade_bounded:
     F2=F2*F4;
     F0=F0+F2;
     // Transposed relative Tone filter, retaining capture units internally.
+tone_filter:
     R1=224;
     R1=R15+R1;
     I4=R1;
@@ -361,7 +416,8 @@ no_carry:
     I4=R1;
     DM(I4,M6)=R0;
     DM(I4,M5)=R2;
-    JUMP finish;
+    JUMP x0x_voice_done.;
+x0x_silent.:
 silent:
     R12=32;
     R0=0;
@@ -372,6 +428,7 @@ silent_loop:
     R14=R14+R1;
     R12=R12-1;
     IF NE JUMP silent_loop;
+x0x_render_return.:
 finish:
     I12=DM(M7,I6);
     JUMP(M14,I12)(DB);
@@ -538,6 +595,16 @@ control_row:
 
 // Group R0 -> one/two envelope values F0/F1; preserves F10/F11, R12..R15.
 envelope:
+    R1=20;
+    R1=R0*R1(SSI);
+    R2=256;
+    R2=R15+R2;
+    R1=R1+R2;
+    I3=R1;
+    R2=DM(1,I3);
+    F9=FLOAT R13;
+    COMP(F9,F2);
+    IF LT JUMP evaluate_cached;
     R1=24;
     R1=R0*R1(SSI);
     R2=field_groups.;
@@ -692,20 +759,31 @@ evaluate:
     R0=DM(I4,M5);
     I0=R0;
     R0=DM(I0,M6);
+    DM(0,I3)=R0;
     R1=DM(I0,M6);
+    DM(1,I3)=R1;
     R1=DM(I0,M5);
-    F9=FLOAT R13;
-    F9=F9-F0;
-    F9=F9*F1;
+    DM(2,I3)=R1;
     R0=204;
     R0=R15+R0;
     I4=R0;
     R0=DM(I4,M5);
+    I4=R0;
+    R1=DM(2,I4);
+    DM(4,I3)=R1;
     R1=16;
     R0=R0+R1;
     I4=R0;
     R0=DM(I4,M5);
     R0=R15+R0;
+    DM(3,I3)=R0;
+evaluate_cached:
+    R0=DM(0,I3);
+    R1=DM(2,I3);
+    F9=FLOAT R13;
+    F9=F9-F0;
+    F9=F9*F1;
+    R0=DM(3,I3);
     I0=R0;
     R0=DM(I0,M6);
     R1=DM(I0,M6);
@@ -718,6 +796,10 @@ evaluate:
     F0=F0*F9;
     F0=F0+F1;
     R8=R0;
+    R0=DM(4,I3);
+    R1=1;
+    COMP(R0,R1);
+    IF EQ JUMP envelope_done;
     R0=DM(I0,M6);
     R1=DM(I0,M6);
     F0=F0*F9;
@@ -728,5 +810,6 @@ evaluate:
     R1=DM(I0,M5);
     F0=F0*F9;
     F1=F0+F1;
+envelope_done:
     R0=R8;
     RTS;

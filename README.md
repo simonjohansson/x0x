@@ -88,3 +88,21 @@ Current integration and evidence are tracked in
 [#94](https://github.com/simonjohansson/x0x/issues/94) and parent
 [#82](https://github.com/simonjohansson/x0x/issues/82). Physical ColdFire acceptance
 awaits a device. DN2 flashing uses DigiHealth on `codex/dn2-support`.
+
+The interim DN2 fix is verified for both models with sixteen native slots
+across one/two kick tracks: each new kick chokes older hits on its own track
+with a 128-sample fade, then retires their synthesis. Normal-DSP XP03 is
+installed and byte-verified. Dual/mixed-model, live-control and held-stock-track
+USB tests pass; the user also heard the diagnostic build clean through the
+Digitone outputs/headphones. All 76 host tests pass. This intentionally changes
+closely spaced kick overlap; it does not restrict the native voice pool to one.
+Preserving overlapping tails efficiently is tracked in [#95](https://github.com/simonjohansson/x0x/issues/95).
+The [live investigation](docs/dn2-live-artifacts.md) separates the confirmed
+overload from the buffer-handoff fault, records the original-image A/B,
+sixteen-slot qualification and remaining broader device/fidelity checks.
+Matched fresh-project measurements put stock-DSP all-FM playback at about
+414k handler cycles, versus 420k with x0x installed but unused, 439k with one
+808 plus fifteen FM tracks, and 444k with one 909 plus fifteen FM tracks.
+These are handler averages, not total DSP utilization.
+The exact low-level handoff owner remains unproven; this fix prevents the
+tested kick workload from accumulating over-budget synthesis work.

@@ -1,5 +1,6 @@
 """Independent field encoding, actual parcels and isolated voice lifecycle."""
 import struct
+import statistics
 import tempfile
 from pathlib import Path
 import unittest
@@ -29,6 +30,14 @@ class SharcFieldTests(unittest.TestCase):
 
     def test_native_core_matches_independent_python_traces_and_write_guards(self):
         self.assertEqual(len(dsp.python_witness(self.receipt,self.artifact)),2)
+
+    def test_body_rendering_stays_within_the_reduced_work_budget(self):
+        for model, budget in ((0, 10000), (32512, 12000)):
+            with self.subTest(model=model):
+                runner = dsp.Runner(self.receipt, self.artifact)
+                counts = [runner.call(16384, 16384, b == 0, model=model)[1]
+                          for b in range(200)]
+                self.assertLess(statistics.median(counts[50:]), budget)
 
     def test_report_links_the_generated_plot_and_includes_asm_scope(self):
         page=Path(self.folder.name)/'preview.html'

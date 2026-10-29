@@ -49,6 +49,24 @@ class Sharc909Tests(unittest.TestCase):
                          isolated.call(12345, 17001, True, model=32512, attack=23001)[0])
         mixed.check_tables()
 
+    def test_two_909_slots_keep_independent_complete_tails(self):
+        mixed = dsp.Runner(self.receipt, self.artifact)
+        left = dsp.Runner(self.receipt, self.artifact)
+        right = dsp.Runner(self.receipt, self.artifact)
+        for block in range(3066):
+            self.assertEqual(mixed.call(12345, 17001, block == 0,
+                                       model=32512, attack=23001)[0],
+                             left.call(12345, 17001, block == 0,
+                                       model=32512, attack=23001)[0])
+            self.assertEqual(mixed.call(32512, 32512, block == 64, slot=15,
+                                       model=32512, attack=0)[0],
+                             right.call(32512, 32512, block == 64, slot=15,
+                                        model=32512, attack=0)[0])
+        for slot in (0, 15):
+            self.assertEqual(mixed.core.peek(self.receipt['state_base'] + slot*dsp.STATE_BYTES),
+                             96000)
+        mixed.check_tables()
+
     def test_bad_attack_cannot_commit_selection_or_advance_state(self):
         runner = dsp.Runner(self.receipt, self.artifact)
         runner.call(16384, 16384, True)
